@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계약서 작성 - 맛남살롱 근무관리</title>
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    body {
+      background: var(--bg-light);
+    }
+
+    .top-bar {
+      background: var(--bg-white);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-xl);
+    }
+
+    /* 탭 */
+    .tab-buttons {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab-button {
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-secondary);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-button:hover {
+      color: var(--primary-color);
+    }
+
+    .tab-button.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* 폼 섹션 */
+    .form-section {
+      background: var(--bg-white);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-section h3 {
+      font-size: 18px;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-sm);
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .form-section h4 {
+      font-size: 15px;
+      color: var(--primary-color);
+      margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: var(--spacing-sm);
+      border: 2px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: 14px;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    .form-group textarea {
+      min-height: 150px;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.6;
+    }
+
+    .help-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* 요일 버튼 */
+    .day-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .day-btn {
+      padding: 10px 18px;
+      border: 2px solid var(--border-color);
+      background: var(--bg-white);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      min-width: 50px;
+    }
+
+    .day-btn:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .day-btn.active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: var(--bg-white);
+    }
+
+    /* 스케줄 아이템 */
+    .work-schedule-item {
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    /* 액션 버튼 */
+    .action-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-xl);
+    }
+
+    /* 미리보기 */
+    .preview-section {
+      background: var(--bg-white);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-xl);
+    }
+
+    .preview-content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+      background: white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .preview-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xl);
+      letter-spacing: 8px;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: var(--spacing-lg) 0;
+    }
+
+    .preview-table th,
+    .preview-table td {
+      border: 1px solid var(--border-color);
+      padding: var(--spacing-md);
+      text-align: left;
+    }
+
+    .preview-table th {
+      background: var(--bg-light);
+      font-weight: 600;
+      width: 30%;
+    }
+
+    /* 모달 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--bg-white);
+      border-radius: var(--border-radius);
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .modal-body {
+      padding: var(--spacing-lg);
+    }
+
+    .modal-footer {
+      padding: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <!-- 상단 바 -->
+  <div class="top-bar">
+    <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+      <h1 style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0;">📝 근로계약서 작성</h1>
+      <span style="color: var(--text-secondary); font-size: 14px;">| 맛남살롱 근무관리 시스템</span>
+    </div>
+    <div style="display: flex; gap: var(--spacing-sm);">
+      <button class="btn btn-secondary" onclick="window.location.href='admin.html'">🏠 관리자 홈</button>
+      <button class="btn btn-secondary" onclick="confirmGoBack()">✕ 닫기</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 탭 및 저장된 계약서 불러오기 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+      <div class="tab-buttons" style="margin-bottom: 0;">
+        <button id="formTabBtn" class="tab-button active" onclick="switchTab('form')">✍️ 작성하기</button>
+        <button id="previewTabBtn" class="tab-button" onclick="switchTab('preview')">👁️ 미리보기</button>
+      </div>
+      <button class="btn btn-secondary" onclick="showLoadContractModal()">📂 저장된 계약서 불러오기</button>
+    </div>
+
+    <!-- 작성 폼 탭 -->
+    <div id="formTab" class="tab-content active">
+      <!-- 1. 직원 및 사용자 정보 -->
+      <div class="form-section">
+        <h3>1. 기본 정보</h3>
+        
+        <h4>👤 근로자 (직원) 정보</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="employeeSelect">직원 선택 *</label>
+            <select id="employeeSelect" required onchange="loadEmployeeInfo()">
+              <option value="">선택하세요</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="employeeName">이름 *</label>
+            <input type="text" id="employeeName" placeholder="자동 입력" readonly required>
+          </div>
+          <div class="form-group">
+            <label for="employeeBirth">생년월일 *</label>
+            <input type="date" id="employeeBirth" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="employeeAddress">주소 *</label>
+            <input type="text" id="employeeAddress" required>
+          </div>
+          <div class="form-group">
+            <label for="employeePhone">연락처 *</label>
+            <input type="tel" id="employeePhone" required>
+          </div>
+        </div>
+
+        <h4>🏢 사용자 (회사) 정보</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="companySelect">회사 선택 *</label>
+            <select id="companySelect" required onchange="loadCompanyInfo()">
+              <option value="">선택하세요</option>
+            </select>
+          </div>
+          <div style="align-self: flex-end; display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="showEditCompanyModal()" style="height: 42px;">✏️ 수정</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="showAddCompanyModal()" style="height: 42px;">➕ 추가</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="companyCEO">대표자명 *</label>
+            <input type="text" id="companyCEO" placeholder="자동 입력" readonly required>
+          </div>
+          <div class="form-group">
+            <label for="companyBusinessNumber">사업자등록번호 *</label>
+            <input type="text" id="companyBusinessNumber" placeholder="자동 입력" readonly required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="companyPhone">회사 연락처 *</label>
+            <input type="tel" id="companyPhone" placeholder="자동 입력" readonly required>
+          </div>
+          <div class="form-group">
+            <label for="companyAddress">사업장 주소 *</label>
+            <input type="text" id="companyAddress" placeholder="자동 입력" readonly required>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 계약 정보 -->
+      <div class="form-section">
+        <h3>2. 계약 정보</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="contractType">계약 유형 *</label>
+            <select id="contractType" required>
+              <option value="">선택하세요</option>
+              <option value="정규직">정규직</option>
+              <option value="계약직">계약직</option>
+              <option value="시간제">시간제</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="workStore">근무 매장 *</label>
+            <select id="workStore" required>
+              <option value="">선택하세요</option>
+              <option value="부천시청점">부천시청점</option>
+              <option value="상동점">상동점</option>
+              <option value="부천역사점">부천역사점</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="startDate">계약 시작일 *</label>
+            <input type="date" id="startDate" required>
+          </div>
+          <div class="form-group">
+            <label for="endDate">계약 종료일</label>
+            <input type="date" id="endDate">
+            <p class="help-text">기간의 정함이 없는 경우 비워두세요</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="position">직책/직무 *</label>
+            <input type="text" id="position" placeholder="바리스타, 매니저 등" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 근무 조건 -->
+      <div class="form-section">
+        <h3>3. 근무 조건</h3>
+        
+        <!-- 근무 시간대 (다중 스케줄) -->
+        <div id="workScheduleContainer">
+          <div class="work-schedule-item" data-index="0">
+            <div class="form-group">
+              <label>근무일 *</label>
+              <div class="day-buttons">
+                <button type="button" class="day-btn" data-day="월" onclick="toggleDayForSchedule(this, 0)">월</button>
+                <button type="button" class="day-btn" data-day="화" onclick="toggleDayForSchedule(this, 0)">화</button>
+                <button type="button" class="day-btn" data-day="수" onclick="toggleDayForSchedule(this, 0)">수</button>
+                <button type="button" class="day-btn" data-day="목" onclick="toggleDayForSchedule(this, 0)">목</button>
+                <button type="button" class="day-btn" data-day="금" onclick="toggleDayForSchedule(this, 0)">금</button>
+                <button type="button" class="day-btn" data-day="토" onclick="toggleDayForSchedule(this, 0)">토</button>
+                <button type="button" class="day-btn" data-day="일" onclick="toggleDayForSchedule(this, 0)">일</button>
+              </div>
+            </div>
+            <div class="form-row" style="align-items: flex-end;">
+              <div class="form-group">
+                <label>시작 시간 *</label>
+                <div style="display: flex; gap: 8px;">
+                  <select class="schedule-start-hour" required onchange="updateWorkTimeDisplay()">
+                    <option value="">시</option>
+                  </select>
+                  <select class="schedule-start-minute" required onchange="updateWorkTimeDisplay()">
+                    <option value="">분</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>종료 시간 *</label>
+                <div style="display: flex; gap: 8px;">
+                  <select class="schedule-end-hour" required onchange="updateWorkTimeDisplay()">
+                    <option value="">시</option>
+                  </select>
+                  <select class="schedule-end-minute" required onchange="updateWorkTimeDisplay()">
+                    <option value="">분</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" class="btn btn-danger btn-sm" onclick="removeSchedule(0)" style="display: none; height: 42px; margin-bottom: 0;">삭제</button>
+            </div>
+          </div>
+        </div>
+        
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addSchedule()" style="margin-top: 8px;">
+          ➕ 시간대 추가
+        </button>
+        <input type="hidden" id="workDays">
+        <input type="hidden" id="workTime">
+
+        <!-- 휴게시간 -->
+        <div class="form-row" style="margin-top: var(--spacing-md);">
+          <div class="form-group">
+            <label>휴게시간 (선택사항)</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <select id="breakTimeHour" onchange="updateBreakTimeDisplay()">
+                <option value="">시간</option>
+                <option value="0">0시간</option>
+                <option value="1">1시간</option>
+                <option value="2">2시간</option>
+              </select>
+              <select id="breakTimeMinute" onchange="updateBreakTimeDisplay()">
+                <option value="">분</option>
+                <option value="0">0분</option>
+                <option value="15">15분</option>
+                <option value="30">30분</option>
+                <option value="45">45분</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>휴게시간 시작 (선택사항)</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="breakStartHour" onchange="updateBreakTimeDisplay()">
+                <option value="">시</option>
+              </select>
+              <select id="breakStartMinute" onchange="updateBreakTimeDisplay()">
+                <option value="">분</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>휴게시간 종료 (선택사항)</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="breakEndHour" onchange="updateBreakTimeDisplay()">
+                <option value="">시</option>
+              </select>
+              <select id="breakEndMinute" onchange="updateBreakTimeDisplay()">
+                <option value="">분</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="breakTime">
+        <p class="help-text" id="breakTimePreview" style="margin-top: 8px;"></p>
+      </div>
+
+      <!-- 4. 급여 조건 -->
+      <div class="form-section">
+        <h3>4. 급여 조건</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="wageType">급여 형태 *</label>
+            <select id="wageType" required>
+              <option value="">선택하세요</option>
+              <option value="시급">시급</option>
+              <option value="월급">월급</option>
+              <option value="연봉">연봉</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="wageAmount">급여액 *</label>
+            <input type="number" id="wageAmount" placeholder="금액 입력" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="paymentDay">급여 지급일 *</label>
+            <select id="paymentDay" required>
+              <option value="">선택하세요</option>
+              <option value="매월 10일">매월 10일</option>
+              <option value="매월 25일">매월 25일</option>
+              <option value="매월 말일">매월 말일</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="paymentMethod">급여 지급 방법 *</label>
+            <select id="paymentMethod" required>
+              <option value="">선택하세요</option>
+              <option value="계좌이체">계좌이체</option>
+              <option value="현금">현금</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. 계약서 본문 -->
+      <div class="form-section">
+        <h3>5. 계약서 본문 (선택사항)</h3>
+        <div class="form-group">
+          <label for="contractContent">계약서 추가 내용</label>
+          <textarea id="contractContent" placeholder="기본 템플릿이 자동으로 제공됩니다. 필요시 수정하세요." style="min-height: 500px; height: auto;"></textarea>
+          <p class="help-text">특약사항이나 추가 내용이 있으면 입력하세요</p>
+        </div>
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div class="action-buttons">
+        <button class="btn btn-secondary" onclick="window.location.href='admin.html'">← 관리자 홈</button>
+        <button class="btn btn-secondary" onclick="showSaveContractModal()">📁 계약서 저장</button>
+        <button class="btn btn-secondary" onclick="saveDraft()">📥 임시 저장</button>
+        <button class="btn btn-primary" onclick="switchTab('preview')">미리보기 →</button>
+      </div>
+    </div>
+
+    <!-- 미리보기 탭 -->
+    <div id="previewTab" class="tab-content">
+      <div class="preview-section">
+        <div class="preview-content" id="previewContent">
+          <div class="preview-title">근 로 계 약 서</div>
+          
+          <p><strong><span id="previewCompanyName">(주)ABC디저트센터</span></strong> (이하 "사용자"라 함)와 <strong id="previewName">_______</strong> (이하 "근로자"라 함)는 다음과 같이 근로계약을 체결한다.</p>
+
+          <table class="preview-table">
+            <tr>
+              <th>근로자 정보</th>
+              <td>
+                <div>성명: <span id="previewEmployeeName">_______</span></div>
+                <div>생년월일: <span id="previewBirth">_______</span></div>
+                <div>주소: <span id="previewAddress">_______</span></div>
+                <div>연락처: <span id="previewPhone">_______</span></div>
+              </td>
+            </tr>
+            <tr>
+              <th>계약 기간</th>
+              <td>
+                <span id="previewStartDate">_______</span> ~ <span id="previewEndDate">기간의 정함이 없음</span>
+              </td>
+            </tr>
+            <tr>
+              <th>근무 장소</th>
+              <td>맛남살롱 <span id="previewStore">_______</span></td>
+            </tr>
+            <tr>
+              <th>업무 내용</th>
+              <td><span id="previewPosition">_______</span></td>
+            </tr>
+            <tr>
+              <th>근무 일시</th>
+              <td>
+                <div>근무일: <span id="previewWorkDays">_______</span></div>
+                <div>근무시간: <span id="previewWorkTime">_______</span></div>
+                <div>휴게시간: <span id="previewBreakTime">_______</span></div>
+              </td>
+            </tr>
+            <tr>
+              <th>급여 조건</th>
+              <td>
+                <div><span id="previewWageType">_______</span>: <span id="previewWageAmount">_______</span>원</div>
+                <div>지급일: <span id="previewPaymentDay">_______</span></div>
+                <div>지급방법: <span id="previewPaymentMethod">_______</span></div>
+              </td>
+            </tr>
+          </table>
+
+          <div id="previewContractBody"></div>
+
+          <p style="text-align: center; margin-top: 40px;">
+            <strong id="previewContractDate">20__년 __월 __일</strong>
+          </p>
+
+          <div style="margin-top: 40px; display: flex; justify-content: space-around;">
+            <div style="text-align: center;">
+              <p>사용자 <span id="previewCompanyName2">(주)ABC디저트센터</span></p>
+              <p style="margin-top: 20px;">대표이사: <span id="previewCEO">_______</span> (인)</p>
+            </div>
+            <div style="text-align: center;">
+              <p>근로자</p>
+              <p style="margin-top: 20px;"><span id="previewEmployeeName2">_______</span> (인)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div class="action-buttons">
+        <button class="btn btn-secondary" onclick="switchTab('form')">← 수정하기</button>
+        <button class="btn btn-primary" onclick="generateContract()">계약서 생성</button>
+      </div>
+
+      <!-- 서명 링크 표시 영역 -->
+      <div id="signLinkSection" style="display: none; margin-top: var(--spacing-lg);">
+        <div class="form-section">
+          <h3 style="color: var(--success-color);">✅ 계약서 생성 완료!</h3>
+          <p style="margin-bottom: var(--spacing-md);">계약서가 성공적으로 생성되었습니다. 아래 링크를 직원에게 전송하여 서명을 요청하세요.</p>
+          
+          <div style="margin-bottom: var(--spacing-md);">
+            <label style="font-weight: 600; margin-bottom: 8px; display: block;">📋 계약서 ID</label>
+            <div id="contractIdDisplay" style="padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius); font-family: monospace;"></div>
+          </div>
+
+          <div style="margin-bottom: var(--spacing-md);">
+            <label style="font-weight: 600; margin-bottom: 8px; display: block;">🔗 서명 링크</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="signLinkInput" readonly style="flex: 1; padding: var(--spacing-md); border: 2px solid var(--success-color); border-radius: var(--border-radius);">
+              <button class="btn btn-primary" onclick="copySignLink()">📋 복사</button>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="window.location.href='admin.html'">← 관리자 페이지로</button>
+            <button class="btn btn-primary" onclick="window.location.href='contract.html'">+ 새 계약서 작성</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회사 추가 모달 -->
+  <div id="addCompanyModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="companyModalTitle">🏢 회사 추가</h3>
+        <button class="modal-close" onclick="closeAddCompanyModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editCompanyId" value="">
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyName">회사명 *</label>
+          <input type="text" id="newCompanyName" placeholder="예: (주)ABC디저트센터">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyCEO">대표자명 *</label>
+          <input type="text" id="newCompanyCEO" placeholder="예: 홍길동">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyBusinessNumber">사업자등록번호 *</label>
+          <input type="text" id="newCompanyBusinessNumber" placeholder="예: 123-45-67890">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyPhone">회사 연락처 *</label>
+          <input type="tel" id="newCompanyPhone" placeholder="예: 032-123-4567">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyAddress">사업장 주소 *</label>
+          <input type="text" id="newCompanyAddress" placeholder="예: 경기도 부천시 원미구 74">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="deleteCompanyBtnContainer" style="margin-right: auto; display: none;">
+          <button class="btn btn-danger" onclick="deleteCompany()">🗑️ 삭제</button>
+        </div>
+        <button class="btn btn-secondary" onclick="closeAddCompanyModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveCompany()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 계약서 저장 모달 -->
+  <div id="saveContractModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 계약서 저장</h3>
+        <button class="modal-close" onclick="closeSaveContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text" style="margin-bottom: var(--spacing-md);">
+          저장할 계약서의 이름을 입력하세요.
+        </p>
+        <div class="form-group">
+          <label for="contractSaveName">계약서 이름 *</label>
+          <input type="text" id="contractSaveName" placeholder="예: 홍길동_바리스타_2024년">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeSaveContractModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveContract()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 저장된 계약서 불러오기 모달 -->
+  <div id="loadContractModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📂 저장된 계약서 불러오기</h3>
+        <button class="modal-close" onclick="closeLoadContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text" style="margin-bottom: var(--spacing-md);">
+          불러올 계약서를 선택하세요. 현재 작성 중인 내용은 덮어씌워집니다.
+        </p>
+        <div id="savedContractsList">
+          <p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">
+            저장된 계약서가 없습니다.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeLoadContractModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/contract.js"></script>
+</body>
+</html>
