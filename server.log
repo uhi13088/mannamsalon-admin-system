@@ -384,3 +384,18 @@
 10.64.38.82 - - [30/Oct/2025 07:52:53] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
 10.64.38.82 - - [30/Oct/2025 07:52:54] "HEAD /employee.html HTTP/1.1" 200 -
 10.64.38.82 - - [30/Oct/2025 07:52:54] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:53:40] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:53:41] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:53:41] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:53:41] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:54:43] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:54:45] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:54:46] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 07:54:46] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 07:54:48] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:54:49] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 07:54:49] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 07:57:59] "GET /contract-sign.html?id=C1761811047028 HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 07:57:59] "GET /js/contract-sign.js HTTP/1.1" 304 -
+10.64.38.82 - - [30/Oct/2025 07:57:59] "GET /css/common.css HTTP/1.1" 304 -
+10.64.38.82 - - [30/Oct/2025 07:58:14] "GET /admin-dashboard.html HTTP/1.1" 304 -

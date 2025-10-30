@@ -987,13 +987,36 @@
       }
       try {
         const contract = JSON.parse(contractData);
-        showContractViewModal(contract);
+        
+        // 같은 직원의 모든 계약서 찾기
+        const allContracts = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('contract_C')) {
+            try {
+              const c = JSON.parse(localStorage.getItem(key));
+              // 주민번호로 같은 직원 확인
+              if (c.employeeBirth === contract.employeeBirth && c.employeeName === contract.employeeName) {
+                allContracts.push({
+                  id: key.replace('contract_', ''),
+                  data: c,
+                  createdAt: c.createdAt || Date.now()
+                });
+              }
+            } catch (e) {}
+          }
+        }
+        
+        // 날짜순 정렬 (최신순)
+        allContracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        showContractViewModal(contract, id, allContracts);
       } catch (e) {
         alert('⚠️ 계약서 데이터를 불러올 수 없습니다.');
       }
     }
 
-    function showContractViewModal(contract) {
+    function showContractViewModal(contract, currentId, allContracts = []) {
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
       modal.style.display = 'flex';
@@ -1005,6 +1028,32 @@
       const signLink = `${window.location.origin}${directory}contract-sign.html?id=${contract.id}`;
       const docKey = `employee_docs_${contract.employeeName}_${getEmployeeIdFromContract(contract)}`;
       const employeeDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
+      
+      // 계약서 선택 드롭다운 생성 (여러 계약서가 있을 경우)
+      let contractSelectorHtml = '';
+      if (allContracts.length > 1) {
+        const options = allContracts.map((c, index) => {
+          const date = new Date(c.createdAt);
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          const label = `${dateStr} ${timeStr}${index === 0 ? ' (최신)' : ''}`;
+          const selected = c.id === currentId ? 'selected' : '';
+          return `<option value="${c.id}" ${selected}>${label}</option>`;
+        }).join('');
+        
+        contractSelectorHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: #e3f2fd; border-radius: var(--border-radius); border-left: 4px solid #2196f3;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <label style="font-weight: 600; color: var(--text-primary); margin: 0; white-space: nowrap;">📋 계약서 선택:</label>
+              <select id="contractVersionSelector" class="form-control" style="flex: 1; font-size: 14px; padding: 8px;" onchange="switchContractVersion(this.value)">
+                ${options}
+              </select>
+              <span class="badge" style="background: var(--primary-color); color: white;">총 ${allContracts.length}건</span>
+            </div>
+            <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--text-secondary);">💡 드롭다운에서 이전 계약서를 선택하여 확인할 수 있습니다.</p>
+          </div>
+        `;
+      }
       
       let bankAccountHtml = '';
       if (employeeDocs.bankAccount) {
@@ -1042,6 +1091,7 @@
             <button class="modal-close" onclick="closeContractViewModal()">✕</button>
           </div>
           <div class="modal-body">
+            ${contractSelectorHtml}
             <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
               <h4>👤 근로자 정보</h4>
               <p><strong>이름:</strong> ${contract.employeeName}</p>
@@ -1086,6 +1136,12 @@
       const modal = document.getElementById('contractViewModal');
       if (modal) modal.remove();
     }
+    
+    // 계약서 버전 전환 함수
+    window.switchContractVersion = function(contractId) {
+      closeContractViewModal();
+      viewContract(contractId);
+    };
 
     function copySignLink(link) {
       const tempInput = document.createElement('input');
@@ -1273,9 +1329,10 @@
             </td>
             <td><span class="badge ${statusClass}" id="status-${latestContract.id}">${latestContract.status}</span></td>
             <td>
-              <div id="buttons-${latestContract.id}">
+              <div id="buttons-${latestContract.id}" style="display: flex; gap: 4px; flex-wrap: wrap;">
                 <button class="btn btn-sm btn-secondary" onclick="viewContract('${latestContract.id}')">📄 보기</button>
                 ${latestContract.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${latestContract.id}')">📧 링크전송</button>` : ''}
+                <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="deleteContract('${latestContract.id}', '${latestContract.name}')">🗑️ 삭제</button>
               </div>
             </td>
           </tr>
@@ -1304,10 +1361,43 @@
       // 버튼 업데이트
       const buttonsDiv = document.getElementById(`buttons-${selectId.replace('contract-select-', '')}`);
       if (buttonsDiv) {
+        const employeeName = contractData.employeeName || '';
         buttonsDiv.innerHTML = `
           <button class="btn btn-sm btn-secondary" onclick="viewContract('${contractId}')">📄 보기</button>
           ${status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${contractId}')">📧 링크전송</button>` : ''}
+          <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="deleteContract('${contractId}', '${employeeName}')">🗑️ 삭제</button>
         `;
+      }
+    };
+    
+    // 계약서 삭제 함수
+    window.deleteContract = function(contractId, employeeName) {
+      if (!confirm(`⚠️ 정말로 "${employeeName}"님의 계약서를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+      }
+      
+      try {
+        // localStorage에서 계약서 삭제
+        localStorage.removeItem(`contract_${contractId}`);
+        
+        // signedContracts 배열에서도 제거
+        const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+        const updatedSignedContracts = signedContracts.filter(sc => sc.id !== contractId);
+        localStorage.setItem('signedContracts', JSON.stringify(updatedSignedContracts));
+        
+        console.log(`✅ 계약서 삭제 완료: ${contractId}`);
+        alert(`✅ "${employeeName}"님의 계약서가 삭제되었습니다.`);
+        
+        // 계약서 목록 새로고침
+        loadContracts();
+        
+        // 대시보드도 업데이트
+        if (currentTab === 'dashboard') {
+          loadDashboard();
+        }
+      } catch (error) {
+        console.error('❌ 계약서 삭제 실패:', error);
+        alert('❌ 계약서 삭제에 실패했습니다: ' + error.message);
       }
     };
 
