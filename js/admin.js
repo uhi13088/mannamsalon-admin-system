@@ -12,44 +12,8 @@ let isAuthenticated = false; // 관리자 인증 상태
 let currentTab = 'dashboard'; // 현재 활성 탭
 
 // ===================================================================
-// 더미 데이터
+// 더미 데이터 제거됨 - 실제 Firebase 데이터 사용
 // ===================================================================
-
-const DUMMY_EMPLOYEES = [
-  { id: 1, name: '김민수', store: '부천시청점', position: '매니저', hourlyWage: '15,000원', startDate: '2023-01-15', status: '재직' },
-  { id: 2, name: '이지은', store: '상동점', position: '바리스타', hourlyWage: '10,500원', startDate: '2023-03-20', status: '재직' },
-  { id: 3, name: '박서준', store: '부천역사점', position: '바리스타', hourlyWage: '10,000원', startDate: '2023-05-10', status: '재직' },
-  { id: 4, name: '최영희', store: '부천시청점', position: '바리스타', hourlyWage: '10,000원', startDate: '2023-08-01', status: '재직' },
-  { id: 5, name: '정수민', store: '상동점', position: '바리스타', hourlyWage: '10,500원', startDate: '2023-09-15', status: '재직' },
-  { id: 6, name: '강호동', store: '부천역사점', position: '바리스타', hourlyWage: '10,000원', startDate: '2024-01-10', status: '재직' }
-];
-
-const DUMMY_ATTENDANCE = [
-  { id: 1, date: '2025-01-28', name: '김민수', store: '부천시청점', clockIn: '09:00', clockOut: '18:00', workType: '정규근무', status: '정상' },
-  { id: 2, date: '2025-01-28', name: '이지은', store: '상동점', clockIn: '09:05', clockOut: '18:00', workType: '정규근무', status: '지각' },
-  { id: 3, date: '2025-01-28', name: '박서준', store: '부천역사점', clockIn: '14:00', clockOut: '22:00', workType: '정규근무', status: '정상' },
-  { id: 4, date: '2025-01-27', name: '최영희', store: '부천시청점', clockIn: '09:00', clockOut: '18:30', workType: '추가근무', status: '정상' },
-  { id: 5, date: '2025-01-27', name: '정수민', store: '상동점', clockIn: '13:00', clockOut: '21:00', workType: '정규근무', status: '정상' },
-  { id: 6, date: '2025-01-27', name: '강호동', store: '부천역사점', clockIn: '09:00', clockOut: '17:50', workType: '정규근무', status: '조퇴' }
-];
-
-const DUMMY_SALARIES = [
-  { id: 1, name: '김민수', store: '부천시청점', basicPay: 3000000, overtimePay: 200000, deductions: 300000, totalPay: 2900000 },
-  { id: 2, name: '이지은', store: '상동점', basicPay: 1800000, overtimePay: 150000, deductions: 195000, totalPay: 1755000 },
-  { id: 3, name: '박서준', store: '부천역사점', basicPay: 1900000, overtimePay: 100000, deductions: 200000, totalPay: 1800000 }
-];
-
-const DUMMY_APPROVALS = [
-  { id: 1, type: '추가근무', name: '김민수', date: '2025-01-27', content: '재고정리 (2시간)', status: '대기' },
-  { id: 2, type: '대체근무', name: '이지은', date: '2025-01-28', content: '박서준 대신 근무', status: '대기' },
-  { id: 3, type: '추가근무', name: '박서준', date: '2025-01-26', content: '행사 준비 (3시간)', status: '승인' }
-];
-
-const DUMMY_CONTRACTS = [
-  { id: 1, name: '김민수', type: '정규직', period: '2023-01-15 ~ 2024-01-14', createdAt: '2023-01-10', status: '서명완료' },
-  { id: 2, name: '이지은', type: '시간제', period: '2023-03-20 ~ 2024-03-19', createdAt: '2023-03-15', status: '서명완료' },
-  { id: 3, name: '최영희', type: '시간제', period: '2025-02-01 ~ 2026-01-31', createdAt: '2025-01-28', status: '서명대기' }
-];
 
 // ===================================================================
 // 초기화 및 페이지 로드
@@ -160,27 +124,12 @@ function handleAdminKeyPress(event) {
 /**
  * 로그아웃 처리
  */
-async function logout() {
+function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
-    try {
-      // Firebase 로그아웃
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        await firebase.auth().signOut();
-        console.log('✅ Firebase 로그아웃 성공');
-      }
-      
-      // 세션 정리
-      isAuthenticated = false;
-      sessionStorage.clear();
-      
-      // 로그인 페이지로 이동
-      window.location.href = 'admin-login.html';
-    } catch (error) {
-      console.error('❌ 로그아웃 오류:', error);
-      // 에러가 나도 강제로 로그아웃 처리
-      sessionStorage.clear();
-      window.location.href = 'admin-login.html';
-    }
+    isAuthenticated = false;
+    sessionStorage.removeItem('admin_authenticated');
+    sessionStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_ROLE);
+    showLoginScreen();
   }
 }
 
@@ -408,29 +357,52 @@ function loadEmployees() {
 /**
  * 근태 목록 로드 및 표시
  */
-function loadAttendanceList() {
+async function loadAttendanceList() {
   debugLog('근태 목록 로드');
   
   const tbody = document.getElementById('attendanceTableBody');
   if (!tbody) return;
   
-  tbody.innerHTML = DUMMY_ATTENDANCE.map(att => {
-    const statusClass = getStatusBadgeClass(att.status);
-    return `
-      <tr>
-        <td>${att.date}</td>
-        <td>${att.name}</td>
-        <td>${att.store}</td>
-        <td>${att.clockIn}</td>
-        <td>${att.clockOut}</td>
-        <td>${att.workType}</td>
-        <td><span class="badge badge-${statusClass}">${att.status}</span></td>
-        <td>
-          <button class="btn btn-sm btn-secondary" onclick="viewAttendanceDetail(${att.id})">상세</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보를 불러오는 중...</td></tr>';
+  
+  try {
+    // Firestore에서 근태 데이터 가져오기
+    const attendanceSnapshot = await firebase.firestore().collection('attendance')
+      .orderBy('date', 'desc')
+      .limit(100)
+      .get();
+    
+    if (attendanceSnapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
+      return;
+    }
+    
+    const attendanceList = [];
+    attendanceSnapshot.forEach(doc => {
+      attendanceList.push({ id: doc.id, ...doc.data() });
+    });
+    
+    tbody.innerHTML = attendanceList.map(att => {
+      const statusClass = getStatusBadgeClass(att.status || '정상');
+      return `
+        <tr>
+          <td>${att.date || '-'}</td>
+          <td>${att.employeeName || att.name || '-'}</td>
+          <td>${att.store || '-'}</td>
+          <td>${att.clockIn || att.checkIn || '-'}</td>
+          <td>${att.clockOut || att.checkOut || '-'}</td>
+          <td>${att.workType || '정규근무'}</td>
+          <td><span class="badge badge-${statusClass}">${att.status || '정상'}</span></td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="viewAttendanceDetail('${att.id}')">상세</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('근태 목록 로드 실패:', error);
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger-color);">❌ 근태 정보를 불러오는데 실패했습니다.</td></tr>';
+  }
 }
 
 /**
@@ -455,26 +427,49 @@ function viewAttendanceDetail(id) {
 /**
  * 급여 목록 로드 및 표시
  */
-function loadSalaryList() {
+async function loadSalaryList() {
   debugLog('급여 목록 로드');
   
   const tbody = document.getElementById('salaryTableBody');
   if (!tbody) return;
   
-  tbody.innerHTML = DUMMY_SALARIES.map(sal => `
-    <tr>
-      <td>${sal.name}</td>
-      <td>${sal.store}</td>
-      <td>${sal.basicPay.toLocaleString()}원</td>
-      <td>${sal.overtimePay.toLocaleString()}원</td>
-      <td>${sal.deductions.toLocaleString()}원</td>
-      <td><strong>${sal.totalPay.toLocaleString()}원</strong></td>
-      <td>
-        <button class="btn btn-sm btn-primary" onclick="viewSalaryDetail(${sal.id})">명세서</button>
-        <button class="btn btn-sm btn-success" onclick="paySalary(${sal.id})">지급</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">급여 정보를 불러오는 중...</td></tr>';
+  
+  try {
+    // Firestore에서 급여 데이터 가져오기
+    const salarySnapshot = await firebase.firestore().collection('salaries')
+      .orderBy('month', 'desc')
+      .limit(100)
+      .get();
+    
+    if (salarySnapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
+      return;
+    }
+    
+    const salaryList = [];
+    salarySnapshot.forEach(doc => {
+      salaryList.push({ id: doc.id, ...doc.data() });
+    });
+    
+    tbody.innerHTML = salaryList.map(sal => `
+      <tr>
+        <td>${sal.employeeName || sal.name || '-'}</td>
+        <td>${sal.store || '-'}</td>
+        <td>${(sal.basicPay || 0).toLocaleString()}원</td>
+        <td>${(sal.overtimePay || 0).toLocaleString()}원</td>
+        <td>${(sal.deductions || 0).toLocaleString()}원</td>
+        <td><strong>${(sal.totalPay || 0).toLocaleString()}원</strong></td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="viewSalaryDetail('${sal.id}')">명세서</button>
+          <button class="btn btn-sm btn-success" onclick="paySalary('${sal.id}')">지급</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('급여 목록 로드 실패:', error);
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">❌ 급여 정보를 불러오는데 실패했습니다.</td></tr>';
+  }
 }
 
 /**
@@ -518,29 +513,54 @@ function paySalary(id) {
 /**
  * 승인 목록 로드 및 표시
  */
-function loadApprovals() {
+async function loadApprovals() {
   debugLog('승인 목록 로드');
   
   const tbody = document.getElementById('approvalsTableBody');
   if (!tbody) return;
   
-  tbody.innerHTML = DUMMY_APPROVALS.map(app => {
-    const statusClass = getApprovalStatusClass(app.status);
-    const actions = app.status === '대기' 
-      ? `<button class="btn btn-sm btn-success" onclick="approveRequest(${app.id})">승인</button>
-         <button class="btn btn-sm btn-danger" onclick="rejectRequest(${app.id})">반려</button>`
-      : `<span class="badge badge-${statusClass}">${app.status}</span>`;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 정보를 불러오는 중...</td></tr>';
+  
+  try {
+    // Firestore에서 승인 데이터 가져오기
+    const approvalsSnapshot = await firebase.firestore().collection('approvals')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
     
-    return `
-      <tr>
-        <td><span class="badge badge-info">${app.type}</span></td>
-        <td>${app.name}</td>
-        <td>${app.date}</td>
-        <td>${app.content}</td>
-        <td>${actions}</td>
-      </tr>
-    `;
-  }).join('');
+    if (approvalsSnapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td></tr>';
+      return;
+    }
+    
+    const approvalsList = [];
+    approvalsSnapshot.forEach(doc => {
+      approvalsList.push({ id: doc.id, ...doc.data() });
+    });
+    
+    tbody.innerHTML = approvalsList.map(app => {
+      const statusClass = getApprovalStatusClass(app.status || '대기');
+      const actions = app.status === '대기' || !app.status
+        ? `<button class="btn btn-sm btn-success" onclick="approveRequest('${app.id}')">승인</button>
+           <button class="btn btn-sm btn-danger" onclick="rejectRequest('${app.id}')">반려</button>`
+        : `<span class="badge badge-${statusClass}">${app.status}</span>`;
+      
+      return `
+        <tr>
+          <td><span class="badge badge-info">${app.type || '-'}</span></td>
+          <td>${app.employeeName || app.name || '-'}</td>
+          <td>${app.requestDate || app.date || '-'}</td>
+          <td>${app.content || app.description || '-'}</td>
+          <td>${app.amount || '-'}</td>
+          <td><span class="badge badge-${statusClass}">${app.status || '대기'}</span></td>
+          <td>${actions}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('승인 목록 로드 실패:', error);
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">❌ 승인 정보를 불러오는데 실패했습니다.</td></tr>';
+  }
 }
 
 /**
@@ -608,10 +628,7 @@ function loadContracts() {
     }
   }
   
-  // 더미 데이터도 포함 (비어있을 경우 대비)
-  if (allContracts.length === 0) {
-    allContracts.push(...DUMMY_CONTRACTS);
-  }
+  // 더미 데이터 제거됨 - 실제 데이터만 사용
   
   // 최신순 정렬
   allContracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
