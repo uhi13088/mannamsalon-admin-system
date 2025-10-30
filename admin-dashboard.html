@@ -1452,7 +1452,11 @@
           endMinuteEl.innerHTML += `<option value="${i}">${m}분</option>`;
         }
         
-        console.log('✅ 근무시간 드롭다운 초기화 완료');
+        // 디폴트: 00분 선택
+        startMinuteEl.value = '0';
+        endMinuteEl.value = '0';
+        
+        console.log('✅ 근무시간 드롭다운 초기화 완료 (분 디폴트: 00분)');
       } else {
         console.error('❌ 근무시간 드롭다운 요소를 찾을 수 없음');
       }
@@ -1476,7 +1480,11 @@
           breakEndMinute.innerHTML += `<option value="${i}">${m}분</option>`;
         }
         
-        console.log('✅ 휴게시간 드롭다운 초기화 완료');
+        // 디폴트: 00분 선택
+        breakStartMinute.value = '0';
+        breakEndMinute.value = '0';
+        
+        console.log('✅ 휴게시간 드롭다운 초기화 완료 (분 디폴트: 00분)');
       }
       
       // 직원 목록 - Firestore users 컬렉션에서 로드
