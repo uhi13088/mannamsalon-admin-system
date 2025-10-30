@@ -1323,9 +1323,31 @@
         console.error('❌ 일부 이미지 로드 실패했지만 계속 진행:', err);
       }
       
-      // 추가 안전장치: 100ms 대기
-      await new Promise(resolve => setTimeout(resolve, 100));
+      loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">이미지 렌더링 대기 중... (1초)</p>';
       
+      // 🔥 넉넉한 대기 시간: 1초
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // DOM 완전 렌더링 대기 (requestAnimationFrame 2번)
+      await new Promise(resolve => requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+      }));
+      
+      // 🔍 최종 확인: 이미지가 실제로 렌더링됐는지 체크
+      const finalCheck = element.querySelectorAll('img[alt="서명"]');
+      console.log('🔍 최종 이미지 확인:', finalCheck.length + '개');
+      finalCheck.forEach((img, idx) => {
+        console.log(`  - 이미지 ${idx + 1}:`, {
+          src: img.src.substring(0, 50) + '...',
+          complete: img.complete,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          width: img.width,
+          height: img.height
+        });
+      });
+      
+      console.log('✅ 렌더링 완료, PDF 생성 시작');
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">문서 변환 중...</p>';
       
       const opt = {
