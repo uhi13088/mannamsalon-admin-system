@@ -1076,18 +1076,18 @@
       if (isSigned && signedContract.signature) {
         const signDate = new Date(signedContract.signedAt);
         signatureHtml = `
-          <div class="avoid-page-break" style="margin-top: 40px; text-align: right;">
-            <p style="margin-bottom: 15px; font-size: 13px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
-            <div style="display: inline-block; border: 2px solid #333; padding: 8px; border-radius: 4px; background: #fafafa;">
-              <img src="${signedContract.signature}" alt="서명" crossorigin="anonymous" style="width: 180px; height: 70px; display: block; max-width: 180px; max-height: 70px;">
-              <p style="margin-top: 6px; text-align: center; font-weight: 600; font-size: 11px;">근로자: ${contract.employeeName} (서명)</p>
+          <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
+              <img src="${signedContract.signature}" alt="서명" crossorigin="anonymous" style="width: 200px; height: 80px; display: block;">
+              <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
             </div>
           </div>
         `;
       } else {
         signatureHtml = `
-          <div class="avoid-page-break" style="margin-top: 40px; text-align: right; padding: 15px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
-            <p style="color: #856404; font-weight: 600; font-size: 12px;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
+          <div class="avoid-page-break" style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
+            <p style="color: #856404; font-weight: 600;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
           </div>
         `;
       }
@@ -1110,21 +1110,21 @@
           </div>
           
           <!-- A4 계약서 본문 -->
-          <div id="contractPrintArea" style="width: 190mm; min-height: 277mm; margin: 0 auto; padding: 15mm; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); font-family: 'Malgun Gothic', sans-serif;">
+          <div id="contractPrintArea" style="width: 210mm; margin: 0 auto; padding: 20mm; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
             
             <!-- 계약서 제목 -->
-            <h1 style="text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 10px; margin: 20px 0 30px 0;">근 로 계 약 서</h1>
+            <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 40px 0;">근 로 계 약 서</h1>
             
             <!-- 서문 -->
-            <p style="line-height: 1.6; margin-bottom: 20px; font-size: 12px;">
+            <p style="line-height: 1.8; margin-bottom: 30px; font-size: 14px;">
               <strong>${contract.companyName}</strong> (이하 "사용자"라 함)와 <strong>${contract.employeeName}</strong> (이하 "근로자"라 함)는 다음과 같이 근로계약을 체결한다.
             </p>
             
             <!-- 계약 내용 테이블 -->
-            <table class="avoid-page-break" style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; page-break-inside: avoid;">
+            <table class="avoid-page-break" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; page-break-inside: avoid;">
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left; font-size: 11px;">근로자 정보</th>
-                <td style="border: 1px solid #333; padding: 8px; line-height: 1.6; font-size: 11px;">
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left;">근로자 정보</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
                   <div>성명: ${contract.employeeName}</div>
                   <div>주민등록번호: ${contract.employeeBirth}</div>
                   <div>주소: ${contract.employeeAddress}</div>
@@ -1132,8 +1132,8 @@
                 </td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">사용자 정보</th>
-                <td style="border: 1px solid #333; padding: 8px; line-height: 1.6; font-size: 11px;">
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">사용자 정보</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
                   <div>회사명: ${contract.companyName}</div>
                   <div>대표자: ${contract.companyCEO || '-'}</div>
                   <div>사업자등록번호: ${contract.companyBusinessNumber || '-'}</div>
@@ -1142,28 +1142,28 @@
                 </td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">계약 기간</th>
-                <td style="border: 1px solid #333; padding: 8px; font-size: 11px;">${contract.startDate} ~ ${contract.endDate}</td>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">계약 기간</th>
+                <td style="border: 1px solid #333; padding: 12px;">${contract.startDate} ~ ${contract.endDate}</td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">근무 장소</th>
-                <td style="border: 1px solid #333; padding: 8px; font-size: 11px;">맛남살롱 ${contract.workStore}</td>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 장소</th>
+                <td style="border: 1px solid #333; padding: 12px;">맛남살롱 ${contract.workStore}</td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">업무 내용</th>
-                <td style="border: 1px solid #333; padding: 8px; font-size: 11px;">${contract.position}</td>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">업무 내용</th>
+                <td style="border: 1px solid #333; padding: 12px;">${contract.position}</td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">근무 일시</th>
-                <td style="border: 1px solid #333; padding: 8px; line-height: 1.6; font-size: 11px;">
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 일시</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
                   <div>근무일: ${contract.workDays}</div>
                   <div>근무시간: ${contract.workTime}</div>
                   <div>휴게시간: ${contract.breakTime || '근로기준법 준수'}</div>
                 </td>
               </tr>
               <tr>
-                <th style="border: 1px solid #333; padding: 8px; background: #f5f5f5; font-weight: 600; text-align: left; font-size: 11px;">급여 조건</th>
-                <td style="border: 1px solid #333; padding: 8px; line-height: 1.6; font-size: 11px;">
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">급여 조건</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
                   <div>${contract.wageType}: ${contract.wageAmount}원</div>
                   <div>지급일: ${contract.paymentDay || '매월 말일'}</div>
                   <div>지급방법: ${contract.paymentMethod || '계좌이체'}</div>
@@ -1173,13 +1173,13 @@
             
             <!-- 계약서 본문 (contractContent 또는 contractBody) -->
             ${(contract.contractContent || contract.contractBody) ? `
-              <div style="white-space: pre-line; line-height: 1.6; margin-bottom: 20px; font-size: 11px; border: 1px solid #ddd; padding: 15px; background: #fafafa; page-break-inside: avoid;">
+              <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 30px; font-size: 13px; border: 1px solid #ddd; padding: 20px; background: #fafafa; page-break-inside: avoid;">
                 ${contract.contractContent || contract.contractBody}
               </div>
             ` : ''}
             
             <!-- 계약 일자 -->
-            <p class="avoid-page-break" style="text-align: center; margin-top: 30px; margin-bottom: 40px; font-size: 13px; font-weight: 600; page-break-inside: avoid;">
+            <p class="avoid-page-break" style="text-align: center; margin-top: 50px; margin-bottom: 60px; font-size: 16px; font-weight: 600; page-break-inside: avoid;">
               ${contract.contractDate || new Date(contract.createdAt).toLocaleDateString('ko-KR')}
             </p>
             
@@ -1243,22 +1243,12 @@
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">잠시만 기다려주세요</p>';
       document.body.appendChild(loadingDiv);
       
-      // PDF 생성을 위해 임시로 크기 조정
-      const originalWidth = element.style.width;
-      const originalPadding = element.style.padding;
-      const originalBoxShadow = element.style.boxShadow;
-      
-      element.style.width = '100%';
-      element.style.maxWidth = '210mm';
-      element.style.padding = '10mm';
-      element.style.boxShadow = 'none';
-      
       const opt = {
-        margin: [10, 10, 10, 10], // 상단, 우측, 하단, 좌측 여백 (mm)
+        margin: 0,
         filename: fileName,
         image: { 
           type: 'jpeg', 
-          quality: 0.95 
+          quality: 0.98 
         },
         html2canvas: { 
           scale: 2, 
@@ -1266,9 +1256,7 @@
           allowTaint: true,
           logging: false,
           letterRendering: true,
-          imageTimeout: 0,
-          windowWidth: 794, // A4 width in pixels at 96 DPI (210mm)
-          windowHeight: 1123 // A4 height in pixels at 96 DPI (297mm)
+          imageTimeout: 0
         },
         jsPDF: { 
           unit: 'mm', 
@@ -1285,19 +1273,9 @@
       };
       
       html2pdf().set(opt).from(element).save().then(() => {
-        // 원래 스타일로 복원
-        element.style.width = originalWidth;
-        element.style.padding = originalPadding;
-        element.style.boxShadow = originalBoxShadow;
-        
         document.body.removeChild(loadingDiv);
         console.log('✅ PDF 생성 완료:', fileName);
       }).catch(err => {
-        // 원래 스타일로 복원
-        element.style.width = originalWidth;
-        element.style.padding = originalPadding;
-        element.style.boxShadow = originalBoxShadow;
-        
         document.body.removeChild(loadingDiv);
         console.error('❌ PDF 생성 실패:', err);
         alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
