@@ -1261,49 +1261,70 @@
       console.log('🔍 찾은 서명 이미지:', signatureImages.length + '개');
       const blobUrls = []; // 나중에 정리용
       
+      // 🔥 Blob URL 변환과 로드를 동시에 처리
+      const imageLoadPromises = [];
+      
       for (const img of signatureImages) {
         const base64Src = img.src;
         console.log('🔍 이미지 src 타입:', base64Src.substring(0, 30) + '...');
         
         if (base64Src.startsWith('data:image')) {
-          try {
-            // base64를 Blob으로 변환
-            const response = await fetch(base64Src);
-            const blob = await response.blob();
-            
-            // Blob URL 생성
-            const blobUrl = URL.createObjectURL(blob);
-            blobUrls.push(blobUrl);
-            
-            // img src를 Blob URL로 교체
-            img.src = blobUrl;
-            img.removeAttribute('crossorigin'); // Blob URL에는 CORS 불필요
-            
-            console.log('✅ 서명 이미지 Blob URL 변환 완료:', blobUrl);
-          } catch (err) {
-            console.error('❌ 서명 이미지 변환 실패:', err);
-          }
+          // 이미지별로 변환 + 로드를 하나의 Promise로 처리
+          const loadPromise = (async () => {
+            try {
+              // base64를 Blob으로 변환
+              const response = await fetch(base64Src);
+              const blob = await response.blob();
+              
+              // Blob URL 생성
+              const blobUrl = URL.createObjectURL(blob);
+              blobUrls.push(blobUrl);
+              
+              console.log('✅ Blob URL 생성:', blobUrl);
+              
+              // img src 교체하고 로드 대기를 Promise로 래핑
+              return new Promise((resolve, reject) => {
+                img.onload = () => {
+                  console.log('✅ 이미지 로드 완료:', blobUrl);
+                  resolve();
+                };
+                img.onerror = (err) => {
+                  console.error('❌ 이미지 로드 실패:', blobUrl, err);
+                  reject(err);
+                };
+                
+                // src 변경 (이벤트 핸들러 등록 후 변경해야 함)
+                img.removeAttribute('crossorigin');
+                img.src = blobUrl;
+                
+                // 혹시 이미 로드된 경우 즉시 resolve
+                if (img.complete && img.naturalWidth > 0) {
+                  console.log('✅ 이미지 이미 로드됨');
+                  resolve();
+                }
+              });
+            } catch (err) {
+              console.error('❌ Blob 변환 실패:', err);
+              throw err;
+            }
+          })();
+          
+          imageLoadPromises.push(loadPromise);
         } else {
           console.log('⚠️ base64 아님 - 건너뜀');
         }
       }
       
-      // Blob URL로 변환된 이미지 로드 대기
-      const imagePromises = Array.from(signatureImages).map(img => {
-        return new Promise((resolve) => {
-          if (img.complete) {
-            resolve();
-          } else {
-            img.onload = () => resolve();
-            img.onerror = () => {
-              console.error('❌ 이미지 로드 실패:', img.src);
-              resolve(); // 에러나도 계속 진행
-            };
-          }
-        });
-      });
+      // 모든 이미지 변환+로드 완료 대기
+      try {
+        await Promise.all(imageLoadPromises);
+        console.log('✅ 모든 서명 이미지 준비 완료');
+      } catch (err) {
+        console.error('❌ 일부 이미지 로드 실패했지만 계속 진행:', err);
+      }
       
-      await Promise.all(imagePromises);
+      // 추가 안전장치: 100ms 대기
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">문서 변환 중...</p>';
       
