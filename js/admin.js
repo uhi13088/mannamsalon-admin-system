@@ -284,17 +284,30 @@ async function loadEmployees() {
   
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) {
-    console.error('employeeTableBody 요소를 찾을 수 없습니다');
+    console.error('❌ employeeTableBody 요소를 찾을 수 없습니다');
     return;
   }
   
   tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">직원 목록을 불러오는 중...</td></tr>';
   
   try {
+    console.log('🔍 Firebase에서 직원 데이터 조회 시작...');
+    console.log('📍 컬렉션: users, 조건: userType == employee');
+    
     // Firebase users 컬렉션에서 직원 데이터 가져오기
     const usersSnapshot = await firebase.firestore().collection('users')
       .where('userType', '==', 'employee')
       .get();
+    
+    console.log(`📊 조회 결과: ${usersSnapshot.size}명의 직원`);
+    
+    // 디버깅: 모든 users 컬렉션 데이터 확인
+    const allUsersSnapshot = await firebase.firestore().collection('users').get();
+    console.log(`📊 전체 users 컬렉션: ${allUsersSnapshot.size}개 문서`);
+    allUsersSnapshot.forEach(doc => {
+      const data = doc.data();
+      console.log(`  - ${doc.id}: ${data.name} (userType: ${data.userType || 'undefined'})`);
+    });
     
     if (usersSnapshot.empty) {
       tbody.innerHTML = `
@@ -302,6 +315,9 @@ async function loadEmployees() {
           <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
             <p style="margin-bottom: var(--spacing-md);">등록된 직원이 없습니다.</p>
             <p style="font-size: 14px; color: var(--text-secondary);">직원 가입 페이지에서 먼저 직원을 등록해주세요.</p>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+              💡 전체 users: ${allUsersSnapshot.size}명 (콘솔에서 상세 확인)
+            </p>
           </td>
         </tr>
       `;
@@ -311,6 +327,7 @@ async function loadEmployees() {
     const employees = [];
     usersSnapshot.forEach(doc => {
       const data = doc.data();
+      console.log(`✅ 직원 로드: ${data.name} (${doc.id})`);
       employees.push({
         uid: doc.id,
         name: data.name || '-',
@@ -322,6 +339,8 @@ async function loadEmployees() {
         email: data.email || '-'
       });
     });
+    
+    console.log(`✅ ${employees.length}명의 직원 목록 표시`);
     
     tbody.innerHTML = employees.map(emp => `
       <tr>
@@ -338,7 +357,7 @@ async function loadEmployees() {
       </tr>
     `).join('');
   } catch (error) {
-    console.error('직원 목록 로드 실패:', error);
+    console.error('❌ 직원 목록 로드 실패:', error);
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">❌ 직원 목록을 불러오는데 실패했습니다.</td></tr>';
   }
 }
