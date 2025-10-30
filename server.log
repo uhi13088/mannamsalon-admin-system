@@ -1,0 +1,119 @@
+10.64.207.48 - - [30/Oct/2025 05:00:59] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:01:00] "GET / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:01:00] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:01:00] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:01:00] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:01:00] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:01:00] "HEAD /employee-register.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:03:17] "GET / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:03:52] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:03:52] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:03:52] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:03:52] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:03:52] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:03:53] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:15] "GET /index.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:16] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:16] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:16] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:16] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:16] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:16] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:16] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:17] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:17] "GET /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:22] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:24] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:24] "GET /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:26] "GET /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /css/common.css HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /js/config.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /js/api.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /js/utils.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /js/auth.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:27] "GET /js/employee.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:28] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:05:28] "GET /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:05:30] "GET /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:32] "GET /contract-sign.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:05:32] "GET /js/contract-sign.js HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:17] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:17] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:17] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:17] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:17] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:17] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:34] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:34] "GET /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:48] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:48] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:48] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:48] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:48] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:49] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:51] "GET /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:55] "GET /index.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:06:55] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:55] "HEAD /admin-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:56] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:06:56] "HEAD /employee-login.html HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:06:56] "HEAD /employee-register.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:32] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:52] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:52] "GET /admin-dashboard.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:52] "GET /employee.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:52] "GET /employee-register.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:07:52] "GET /contract-sign.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:03] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:03] "GET / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:03] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:04] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:04] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:16] "GET / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:16] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:17] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:17] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:17] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:08:19] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:08:19] "GET /admin-login.html HTTP/1.1" 404 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /admin-dashboard.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /admin-index.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /admin-login.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /contract-sign.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /employee-index.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /employee-login.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /employee-register.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /employee.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /index-multi-project.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /index-spa.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2025 05:12:02] "GET /register-index.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:14:19] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:14:19] "GET / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:14:20] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:14:20] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:14:20] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:21:19] "HEAD / HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:21:19] "GET / HTTP/1.1" 304 -
+10.64.207.48 - - [30/Oct/2025 05:21:20] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:21:20] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:21:20] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:32] "GET /admin-login.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:36] "GET /index.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:37] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:37] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:37] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:37] "GET /employee-login.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:39] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:39] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:40] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:22:53] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:24:14] code 404, message File not found
+10.64.207.48 - - [30/Oct/2025 05:24:14] "GET /admin-dashboard.htmlcontract-sign.html?id=C1761801841602 HTTP/1.1" 404 -
+10.64.207.48 - - [30/Oct/2025 05:25:33] "GET /index.html HTTP/1.1" 304 -
+10.64.207.48 - - [30/Oct/2025 05:25:33] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:25:33] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:25:33] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:25:43] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:25:43] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.207.48 - - [30/Oct/2025 05:25:43] "HEAD /employee-register.html HTTP/1.1" 200 -

@@ -1,0 +1,3265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>맛남살롱 관리자 페이지</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary-color: #8b7355; --primary-dark: #6b5d4f; --bg-light: #f5f1e8; --bg-white: #fdfcfa;
+      --text-primary: #6b5d4f; --text-secondary: #9b8a76; --border-color: #e8dfd0; --border-radius: 8px;
+      --shadow-sm: 0 2px 8px rgba(107, 93, 79, 0.08); --shadow-lg: 0 8px 24px rgba(107, 93, 79, 0.15);
+      --spacing-xs: 6px; --spacing-sm: 12px; --spacing-md: 16px; --spacing-lg: 24px; --spacing-xl: 32px;
+      --success-color: #7a9b7a; --warning-color: #d4a574; --danger-color: #c67b7b;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: var(--bg-light); color: var(--text-primary); }
+    .hidden { display: none !important; }
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-box { background: var(--bg-white); border-radius: 12px; padding: 48px 40px; box-shadow: var(--shadow-lg); max-width: 420px; width: 100%; border: 1px solid var(--border-color); text-align: center; }
+    .login-logo { font-size: 64px; margin-bottom: 16px; }
+    .login-box h1 { font-size: 28px; color: var(--text-primary); margin-bottom: 8px; }
+    .login-subtitle { color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+    .form-group { margin-bottom: 20px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary); font-size: 14px; }
+    .form-group input { width: 100%; padding: 14px 16px; border: 2px solid var(--border-color); border-radius: var(--border-radius); font-size: 15px; }
+    .btn { padding: 12px 24px; border-radius: var(--border-radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border: none; }
+    .btn-primary { background: var(--primary-color); color: var(--bg-white); }
+    .btn-primary:hover { background: var(--primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-secondary { background: var(--bg-light); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
+    .btn-danger { background: var(--danger-color); color: var(--bg-white); }
+    .btn-success { background: var(--success-color); color: var(--bg-white); }
+    .container { max-width: 1200px; margin: 0 auto; padding: var(--spacing-lg); }
+    .top-bar { background: var(--bg-white); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); }
+    .admin-badge { background: var(--primary-color); color: var(--bg-white); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+    .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl); }
+    .dashboard-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); }
+    .dashboard-card-icon { font-size: 36px; margin-bottom: var(--spacing-sm); }
+    .dashboard-card-label { color: var(--text-secondary); font-size: 13px; margin-bottom: var(--spacing-xs); }
+    .dashboard-card-value { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+    .dashboard-card-sub { font-size: 13px; color: var(--text-secondary); margin-top: var(--spacing-xs); }
+    .tabs { display: flex; gap: var(--spacing-xs); margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--border-color); overflow-x: auto; flex-wrap: wrap; }
+    .tab { padding: var(--spacing-md) var(--spacing-lg); background: none; border: none; color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg); box-shadow: var(--shadow-sm); }
+    .card-header { padding: var(--spacing-lg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .card-body { padding: var(--spacing-lg); }
+    table { width: 100%; border-collapse: collapse; }
+    table th { background: var(--bg-light); padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); border-bottom: 2px solid var(--border-color); font-size: 13px; }
+    table td { padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-primary); }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+    .badge-success { background: #e6f2e6; color: #4a6b4a; }
+    .badge-warning { background: #f5ead9; color: #8b6846; }
+    .badge-danger { background: #f5e3e3; color: #8b5555; }
+    .badge-info { background: #e3ebf2; color: #5a708a; }
+    .badge-primary { background: #e3ebf2; color: #5a708a; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .modal-content { background: var(--bg-white); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); }
+    .modal-header { padding: 25px 30px; border-bottom: 2px solid var(--bg-light); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 30px; }
+    .modal-footer { padding: 20px 30px; border-top: 2px solid var(--bg-light); text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-close { background: none; border: none; font-size: 28px; color: var(--text-secondary); cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
+    .modal-close:hover { background: var(--bg-light); color: var(--text-primary); }
+    .filters { display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 200px; }
+    .filter-group label { display: block; margin-bottom: var(--spacing-xs); font-weight: 600; color: var(--text-primary); font-size: 13px; }
+    .filter-group input, .filter-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: 14px; }
+    
+    /* 계약서 모달 전용 스타일 */
+    #contractModal { z-index: 10000; }
+    #contractModal .modal-content { max-width: 95%; width: 1400px; max-height: 95vh; }
+    #contractModal .tab-buttons { display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--border-color); }
+    #contractModal .tab-button { padding: var(--spacing-md) var(--spacing-lg); background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    #contractModal .tab-button:hover { color: var(--primary-color); }
+    #contractModal .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    #contractModal .tab-content { display: none; }
+    #contractModal .tab-content.active { display: block; }
+    #contractModal .form-section { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-xl); margin-bottom: var(--spacing-lg); }
+    #contractModal .form-section h3 { font-size: 18px; color: var(--text-primary); margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--border-color); }
+    #contractModal .form-section h4 { font-size: 15px; color: var(--primary-color); margin: var(--spacing-lg) 0 var(--spacing-md) 0; }
+    #contractModal .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-md); }
+    #contractModal .form-group { display: flex; flex-direction: column; }
+    #contractModal .form-group label { font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-xs); font-size: 14px; }
+    #contractModal .form-group input, #contractModal .form-group select, #contractModal .form-group textarea { padding: var(--spacing-sm); border: 2px solid var(--border-color); border-radius: var(--border-radius); font-size: 14px; transition: border-color 0.2s ease; }
+    #contractModal .form-group input:focus, #contractModal .form-group select:focus, #contractModal .form-group textarea:focus { outline: none; border-color: var(--primary-color); }
+    #contractModal .form-group textarea { min-height: 150px; resize: vertical; font-family: inherit; line-height: 1.6; }
+    #contractModal .help-text { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    #contractModal .day-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    #contractModal .day-btn { padding: 10px 18px; border: 2px solid var(--border-color); background: var(--bg-white); color: var(--text-secondary); border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; min-width: 50px; }
+    #contractModal .day-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+    #contractModal .day-btn.active { background: var(--primary-color); border-color: var(--primary-color); color: var(--bg-white); }
+    #contractModal .work-schedule-item { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-md); margin-bottom: var(--spacing-md); }
+    #contractModal .action-buttons { display: flex; gap: var(--spacing-md); justify-content: flex-end; margin-top: var(--spacing-xl); }
+    #contractModal .preview-section { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-xl); }
+    #contractModal .preview-content { max-width: 800px; margin: 0 auto; padding: 40px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    #contractModal .preview-title { text-align: center; font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: var(--spacing-xl); letter-spacing: 8px; }
+    #contractModal .preview-table { width: 100%; border-collapse: collapse; margin: var(--spacing-lg) 0; }
+    #contractModal .preview-table th, #contractModal .preview-table td { border: 1px solid var(--border-color); padding: var(--spacing-md); text-align: left; }
+    #contractModal .preview-table th { background: var(--bg-light); font-weight: 600; width: 30%; }
+  </style>
+</head>
+<body>
+  <div id="mainScreen">
+    <div class="top-bar">
+      <h1 style="font-size: 20px; font-weight: 700; margin: 0;">🏪 맛남살롱 근무관리</h1>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <span class="admin-badge">관리자</span>
+        <button class="btn btn-secondary" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="dashboard-cards">
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">👥</div>
+          <div class="dashboard-card-label">총 직원 수</div>
+          <div class="dashboard-card-value" id="totalEmployees">0</div>
+          <div class="dashboard-card-sub">명</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">✅</div>
+          <div class="dashboard-card-label">오늘 출근</div>
+          <div class="dashboard-card-value" id="todayAttendance">0</div>
+          <div class="dashboard-card-sub">명</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">⏰</div>
+          <div class="dashboard-card-label">승인 대기</div>
+          <div class="dashboard-card-value" id="pendingApprovals">0</div>
+          <div class="dashboard-card-sub">건</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">📄</div>
+          <div class="dashboard-card-label">미서명 계약서</div>
+          <div class="dashboard-card-value" id="unsignedContracts">0</div>
+          <div class="dashboard-card-sub">건</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 대시보드</button>
+        <button class="tab" data-tab="employees" onclick="switchTab('employees')">👥 직원 관리</button>
+        <button class="tab" data-tab="attendance" onclick="switchTab('attendance')">📋 근태 관리</button>
+        <button class="tab" data-tab="salary" onclick="switchTab('salary')">💰 급여 관리</button>
+        <button class="tab" data-tab="approvals" onclick="switchTab('approvals')">✔️ 승인 관리</button>
+        <button class="tab" data-tab="contracts" onclick="switchTab('contracts')">📝 계약서 관리</button>
+        <button class="tab" data-tab="notice" onclick="switchTab('notice')">📢 공지사항</button>
+        <button class="tab" data-tab="stores" onclick="switchTab('stores')">🏪 매장 관리</button>
+      </div>
+
+      <div id="tabDashboard" class="tab-content active">
+        <div class="card">
+          <div class="card-header"><h3>📊 현황 요약</h3></div>
+          <div class="card-body"><p style="color: var(--text-secondary);">관리자 페이지에 오신 것을 환영합니다.</p></div>
+        </div>
+      </div>
+
+      <div id="tabEmployees" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>👥 직원 목록</h3>
+          </div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>매장</label>
+                <select id="employeeStoreFilter">
+                  <option value="">전체</option>
+                  <option value="부천시청점">부천시청점</option>
+                  <option value="상동점">상동점</option>
+                  <option value="부천역사점">부천역사점</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>상태</label>
+                <select id="employeeStatusFilter">
+                  <option value="">전체</option>
+                  <option value="재직">재직</option>
+                  <option value="퇴사">퇴사</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadEmployees()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>직급</th>
+                  <th>연락처</th>
+                  <th>주민등록번호</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">직원 정보를 불러오는 중...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabAttendance" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>📋 근태 기록</h3></div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>조회 월</label>
+                <input type="month" id="attendanceMonth">
+              </div>
+              <div class="filter-group">
+                <label>매장</label>
+                <select id="attendanceStoreFilter">
+                  <option value="">전체</option>
+                  <option value="부천시청점">부천시청점</option>
+                  <option value="상동점">상동점</option>
+                  <option value="부천역사점">부천역사점</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadAttendanceList()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>출근</th>
+                  <th>퇴근</th>
+                  <th>근무시간</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabSalary" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>💰 급여 내역</h3></div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>조회 월</label>
+                <input type="month" id="salaryMonth">
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadSalaryList()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>기본급</th>
+                  <th>추가수당</th>
+                  <th>공제</th>
+                  <th>실지급액</th>
+                </tr>
+              </thead>
+              <tbody id="salaryTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabApprovals" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>✔️ 승인 대기 목록</h3></div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>유형</th>
+                  <th>신청자</th>
+                  <th>날짜</th>
+                  <th>내용</th>
+                  <th>상태</th>
+                  <th>처리</th>
+                </tr>
+              </thead>
+              <tbody id="approvalsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabContracts" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>📝 계약서 목록</h3>
+            <button class="btn btn-primary" onclick="openContractPage()">+ 새 계약서 작성</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>직원명</th>
+                  <th>계약 유형</th>
+                  <th>계약 기간</th>
+                  <th>작성일</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="contractsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">계약서 정보를 불러오는 중...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabNotice" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>📢 공지사항 관리</h3></div>
+          <div class="card-body">
+            <p style="color: var(--text-secondary);">공지사항 기능은 개발 중입니다.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabStores" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>🏪 매장 관리</h3>
+            <button class="btn btn-primary" onclick="showAddStoreModal()">+ 매장 추가</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>매장명</th>
+                  <th>주소</th>
+                  <th>연락처</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="storesTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">로딩 중...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 매장 추가/수정 모달 -->
+  <div id="storeModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="storeModalTitle" style="margin: 0;">🏪 매장 추가</h2>
+        <button class="modal-close" onclick="closeStoreModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editStoreId">
+        <div class="form-group">
+          <label for="storeName">매장명 *</label>
+          <input type="text" id="storeName" placeholder="부천시청점" required>
+        </div>
+        <div class="form-group">
+          <label for="storeAddress">주소</label>
+          <input type="text" id="storeAddress" placeholder="경기도 부천시...">
+        </div>
+        <div class="form-group">
+          <label for="storePhone">연락처</label>
+          <input type="tel" id="storePhone" placeholder="032-123-4567">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeStoreModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveStore()">저장</button>
+        <button id="deleteStoreBtn" class="btn btn-danger" onclick="deleteStore()" style="display: none; margin-right: auto;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr3Tq2T7oy5rVlK1c33m_G0TlUWv0-g3k",
+      authDomain: "abcdc-staff-system.firebaseapp.com",
+      projectId: "abcdc-staff-system",
+      storageBucket: "abcdc-staff-system.firebasestorage.app",
+      messagingSenderId: "442207878284",
+      appId: "1:442207878284:web:49b157573851b124d28fa9",
+      measurementId: "G-WYPQ3YEJRT"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let isAuthenticated = false;
+    let currentTab = 'dashboard';
+
+    const DUMMY_EMPLOYEES = [
+      { id: 1, name: '김민수', store: '부천시청점', position: '매니저', hourlyWage: '15,000원', startDate: '2023-01-15', status: '재직' },
+    ];
+
+    const DUMMY_ATTENDANCE = [
+      { id: 1, date: '2025-01-28', name: '김민수', store: '부천시청점', clockIn: '09:00', clockOut: '18:00', workTime: '8시간', status: '정상' },
+    ];
+
+    const DUMMY_SALARIES = [
+      { id: 1, name: '김민수', store: '부천시청점', basicPay: 3000000, overtimePay: 200000, deductions: 300000, totalPay: 2900000 },
+      { id: 2, name: '이지은', store: '상동점', basicPay: 1800000, overtimePay: 150000, deductions: 195000, totalPay: 1755000 },
+    ];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date();
+      const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const monthFilters = ['attendanceMonth', 'salaryMonth'];
+      monthFilters.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.value = currentMonth;
+      });
+      checkAuthStatus();
+    });
+
+    function checkAuthStatus() {
+      const savedAuth = sessionStorage.getItem('admin_authenticated');
+      if (savedAuth === 'true') {
+        isAuthenticated = true;
+        showMainScreen();
+      } else {
+        // 인증되지 않은 경우 로그인 페이지로 리다이렉트
+        alert('⚠️ 로그인이 필요합니다.');
+        window.location.href = 'admin-login.html';
+      }
+    }
+
+    // handleAdminLogin 함수는 admin-login.html로 이동됨
+
+    async function logout() {
+      if (confirm('로그아웃 하시겠습니까?')) {
+        try {
+          await auth.signOut();
+          isAuthenticated = false;
+          sessionStorage.removeItem('admin_authenticated');
+          window.location.href = 'admin-login.html';
+        } catch (error) {
+          console.error('로그아웃 오류:', error);
+        }
+      }
+    }
+
+    function showMainScreen() {
+      document.getElementById('mainScreen').classList.remove('hidden');
+      loadDashboard();
+      switchTab('employees');
+    }
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+      });
+      const selectedTab = document.querySelector(`[data-tab="${tabName}"]`);
+      if (selectedTab) selectedTab.classList.add('active');
+      const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+      const tabId = `tab${capitalize(tabName)}`;
+      const selectedContent = document.getElementById(tabId);
+      if (selectedContent) {
+        selectedContent.classList.add('active');
+        selectedContent.style.display = 'block';
+      }
+      switch(tabName) {
+        case 'dashboard': loadDashboard(); break;
+        case 'employees': loadEmployees(); break;
+        case 'attendance': loadAttendanceList(); break;
+        case 'salary': loadSalaryList(); break;
+        case 'approvals': loadApprovals(); break;
+        case 'contracts': loadContracts(); break;
+        case 'notice': loadNotice(); break;
+        case 'stores': loadStores(); break;
+      }
+    }
+
+    async function loadDashboard() {
+      let totalEmployees = 1; // 기본 더미 1명
+      let totalContracts = 0;
+      let unsignedContracts = 0;
+      
+      // Firestore에서 직원 수 가져오기 시도
+      try {
+        const snapshot = await db.collection('employees')
+          .where('userType', '==', 'employee')
+          .where('status', '==', 'active')
+          .get();
+        
+        if (!snapshot.empty) {
+          totalEmployees = snapshot.size;
+        }
+      } catch (error) {
+        console.warn('⚠️ Firestore 직원 수 조회 실패, 더미 사용');
+      }
+      
+      // localStorage에서 계약서 수 카운트
+      const employeeMap = new Map();
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('contract_C')) {
+          try {
+            const contractData = JSON.parse(localStorage.getItem(key));
+            const contractId = key.replace('contract_', '');
+            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const isSigned = signedContracts.some(sc => sc.id === contractId);
+            
+            const empKey = contractData.employeeName + '_' + contractData.employeeBirth;
+            if (!employeeMap.has(empKey)) {
+              employeeMap.set(empKey, true);
+              totalContracts++;
+            }
+            
+            if (!isSigned) unsignedContracts++;
+          } catch(e) {}
+        }
+      }
+      
+      document.getElementById('totalEmployees').textContent = totalEmployees;
+      document.getElementById('todayAttendance').textContent = '0';
+      document.getElementById('pendingApprovals').textContent = '0';
+      document.getElementById('unsignedContracts').textContent = unsignedContracts;
+    }
+
+    function updateDashboardCard(id, value, subtitle) {
+      const valueElement = document.getElementById(id);
+      if (valueElement) {
+        valueElement.textContent = value;
+        if (subtitle) {
+          const subElement = valueElement.nextElementSibling;
+          if (subElement) subElement.textContent = subtitle;
+        }
+      }
+    }
+
+    async function loadEmployees() {
+      const tbody = document.getElementById('employeeTableBody');
+      if (!tbody) return;
+      
+      // 로딩 표시
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 40px;">
+            <div>⏳ 직원 목록을 불러오는 중...</div>
+          </td>
+        </tr>
+      `;
+      
+      try {
+        console.log('📋 직원 목록 로드 시작...');
+        
+        let employees = [];
+        
+        // Firestore에서 employees 컬렉션 가져오기 시도
+        try {
+          const snapshot = await db.collection('employees')
+            .where('userType', '==', 'employee')
+            .where('status', '==', 'active')
+            .orderBy('createdAt', 'desc')
+            .get();
+          
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            employees.push({
+              uid: doc.id,
+              name: data.name,
+              email: data.email,
+              birth: data.birth,
+              phone: data.phone,
+              address: data.address,
+              store: data.store,
+              position: data.position,
+              status: data.status,
+              createdAt: data.createdAt
+            });
+          });
+          
+          console.log(`✅ Firestore에서 ${employees.length}명 로드`);
+        } catch (firestoreError) {
+          console.warn('⚠️ Firestore 로드 실패, 더미 데이터 사용:', firestoreError.message);
+        }
+        
+        // 데이터가 없으면 더미 데이터 사용
+        if (employees.length === 0) {
+          console.log('📝 더미 데이터 사용');
+          employees = [
+            {
+              uid: 'dummy_1',
+              name: '김민수',
+              email: 'minsu@example.com',
+              birth: '900315-1234567',
+              phone: '010-1234-5678',
+              address: '경기도 부천시 원미구',
+              store: '부천시청점',
+              position: '바리스타',
+              status: 'active'
+            }
+          ];
+        }
+        
+        tbody.innerHTML = employees.map(emp => {
+          return `
+            <tr>
+              <td>${emp.name}</td>
+              <td>${emp.store}</td>
+              <td>${emp.position}</td>
+              <td>${emp.phone}</td>
+              <td>${emp.birth || '-'}</td>
+              <td><span class="badge badge-success">${emp.status === 'active' ? '활성' : '비활성'}</span></td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('❌ 직원 목록 로드 실패:', error);
+        
+        // 에러 발생 시 더미 데이터 표시
+        const dummyEmployees = [
+          {
+            uid: 'dummy_1',
+            name: '김민수',
+            email: 'minsu@example.com',
+            birth: '900315-1234567',
+            phone: '010-1234-5678',
+            address: '경기도 부천시 원미구',
+            store: '부천시청점',
+            position: '바리스타',
+            status: 'active'
+          }
+        ];
+        
+        tbody.innerHTML = dummyEmployees.map(emp => {
+          return `
+            <tr>
+              <td>${emp.name}</td>
+              <td>${emp.store}</td>
+              <td>${emp.position}</td>
+              <td>${emp.phone}</td>
+              <td>${emp.birth}</td>
+              <td><span class="badge badge-success">활성 (더미)</span></td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="alert('더미 데이터입니다. 실제 직원을 가입시켜주세요.')">📝 계약서 작성</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+        tbody.innerHTML += `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; background: #fff9e6; color: #8b6914;">
+              <p style="margin-bottom: 8px;">⚠️ Firestore 연결 실패. 더미 데이터를 표시합니다.</p>
+              <p style="font-size: 13px;">실제 직원이 <a href="employee-register.html" target="_blank" style="color: var(--primary-color);">가입</a>하면 여기에 표시됩니다.</p>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function showEmployeeContractList(employeeName) {
+      const contracts = [];
+      let employeeId = null;
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('contract_C')) {
+          const contractData = JSON.parse(localStorage.getItem(key));
+          if (contractData.employeeName === employeeName) {
+            const contractId = key.replace('contract_', '');
+            if (!employeeId) employeeId = getEmployeeIdFromContract(contractData);
+            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const isSigned = signedContracts.some(sc => sc.id === contractId);
+            contracts.push({
+              id: contractId,
+              data: contractData,
+              isSigned: isSigned,
+              createdAt: contractData.createdAt || null
+            });
+          }
+        }
+      }
+      
+      if (contracts.length === 0) {
+        alert('⚠️ 해당 직원의 계약서가 없습니다.');
+        return;
+      }
+      
+      contracts.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB - dateA;
+      });
+      
+      const docKey = `employee_docs_${employeeName}_${employeeId}`;
+      const employeeDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
+      
+      let bankAccountHtml = '';
+      if (employeeDocs.bankAccount) {
+        const ba = employeeDocs.bankAccount;
+        bankAccountHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: #f0f9ff; border-radius: var(--border-radius); border-left: 4px solid #3b82f6;">
+            <h4 style="margin-bottom: var(--spacing-sm);">🏦 통장사본</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-md);">
+              <div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 4px 0;">은행명</p>
+                <p style="font-weight: 600; margin: 0;">${ba.bankName || '-'}</p>
+              </div>
+              <div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 4px 0;">계좌번호</p>
+                <p style="font-weight: 600; margin: 0;">${ba.accountNumber || '-'}</p>
+              </div>
+              <div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 4px 0;">예금주</p>
+                <p style="font-weight: 600; margin: 0;">${ba.accountHolder || '-'}</p>
+              </div>
+            </div>
+            <p style="font-size: 11px; color: var(--text-secondary); margin: 8px 0 0 0;">
+              최종 업데이트: ${ba.updatedAt ? new Date(ba.updatedAt).toLocaleString('ko-KR') : '-'}
+            </p>
+          </div>
+        `;
+      } else {
+        bankAccountHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: #fff3cd; border-radius: var(--border-radius); border-left: 4px solid #ffc107;">
+            <p style="margin: 0; font-size: 14px;">🏦 <strong>통장사본</strong> - 직원이 아직 등록하지 않았습니다.</p>
+          </div>
+        `;
+      }
+      
+      let healthCertHtml = '';
+      if (employeeDocs.healthCert) {
+        const hc = employeeDocs.healthCert;
+        const expiryDate = hc.expiryDate ? new Date(hc.expiryDate) : null;
+        const isExpired = expiryDate && expiryDate < new Date();
+        const expiryBadge = isExpired ? 
+          '<span class="badge badge-danger" style="margin-left: 8px;">⚠️ 만료됨</span>' : 
+          '<span class="badge badge-success" style="margin-left: 8px;">✅ 유효</span>';
+        
+        healthCertHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: ${isExpired ? '#fee2e2' : '#f0fdf4'}; border-radius: var(--border-radius); border-left: 4px solid ${isExpired ? '#ef4444' : '#22c55e'};">
+            <h4 style="margin-bottom: var(--spacing-sm);">🩺 보건증 ${expiryBadge}</h4>
+            ${hc.imageData ? `
+              <div style="margin-bottom: var(--spacing-md); text-align: center;">
+                <img src="${hc.imageData}" 
+                     style="max-width: 100%; max-height: 200px; border: 2px solid var(--border-color); border-radius: var(--border-radius); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" 
+                     onclick="window.open('${hc.imageData}', '_blank')"
+                     title="클릭하면 크게 볼 수 있습니다">
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">💡 이미지를 클릭하면 크게 볼 수 있습니다</p>
+              </div>
+            ` : '<p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">업로드된 이미지가 없습니다.</p>'}
+            <div>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 4px 0;">유효기간</p>
+              <p style="font-weight: 600; margin: 0; font-size: 16px; color: ${isExpired ? '#ef4444' : '#22c55e'};">${hc.expiryDate || '-'}</p>
+            </div>
+            <p style="font-size: 11px; color: var(--text-secondary); margin: 8px 0 0 0;">
+              최종 업데이트: ${hc.updatedAt ? new Date(hc.updatedAt).toLocaleString('ko-KR') : '-'}
+            </p>
+          </div>
+        `;
+      } else {
+        healthCertHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: #fff3cd; border-radius: var(--border-radius); border-left: 4px solid #ffc107;">
+            <p style="margin: 0; font-size: 14px;">🩺 <strong>보건증</strong> - 직원이 아직 등록하지 않았습니다.</p>
+          </div>
+        `;
+      }
+      
+      const contractRows = contracts.map((contract, index) => {
+        const createdDate = contract.createdAt ? new Date(contract.createdAt).toLocaleDateString('ko-KR') : '-';
+        const statusBadge = contract.isSigned ? 
+          '<span class="badge badge-success">✅ 서명완료</span>' : 
+          '<span class="badge badge-warning">⏰ 서명대기</span>';
+        const isLatest = index === 0 ? '<span class="badge badge-primary" style="margin-left: 8px;">최신</span>' : '';
+        
+        return `
+          <tr>
+            <td>${contracts.length - index}</td>
+            <td>${contract.data.contractType || '근로계약서'}${isLatest}</td>
+            <td>${contract.data.startDate} ~ ${contract.data.endDate}</td>
+            <td>${createdDate}</td>
+            <td>${statusBadge}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="viewContract('${contract.id}')">📄 보기</button>
+              <button class="btn btn-sm btn-primary" onclick="sendContractLink('${contract.id}')">📧 전송</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.display = 'flex';
+      modal.id = 'employeeContractListModal';
+      
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+          <div class="modal-header">
+            <h3>📋 ${employeeName}님의 정보</h3>
+            <button class="modal-close" onclick="closeEmployeeContractListModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom: var(--spacing-xl);">
+              <h4 style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--border-color);">
+                📄 제출 서류
+              </h4>
+              ${bankAccountHtml}
+              ${healthCertHtml}
+            </div>
+            <div>
+              <h4 style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--border-color);">
+                📋 계약서 목록
+              </h4>
+              <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+                  💡 총 <strong>${contracts.length}개</strong>의 계약서가 작성되었습니다.
+                </p>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">번호</th>
+                    <th>계약유형</th>
+                    <th>계약기간</th>
+                    <th>작성일</th>
+                    <th style="width: 120px;">상태</th>
+                    <th style="width: 180px;">관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${contractRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEmployeeContractListModal()">닫기</button>
+            <button class="btn btn-danger" onclick="resignEmployee('${employeeName}', ${employeeId})">🚪 퇴사 처리</button>
+            <button class="btn btn-primary" onclick="openContractPage()">➕ 새 계약서 작성</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    function closeEmployeeContractListModal() {
+      const modal = document.getElementById('employeeContractListModal');
+      if (modal) modal.remove();
+    }
+
+    function resignEmployee(employeeName, employeeId) {
+      const confirmMsg = `⚠️ ${employeeName}님을 퇴사 처리하시겠습니까?\n\n다음 데이터가 삭제됩니다:\n• 통장사본\n• 보건증\n• 직원 서류 전체\n\n※ 계약서와 근태 기록은 보존됩니다.`;
+      if (!confirm(confirmMsg)) return;
+      
+      try {
+        const docKey = `employee_docs_${employeeName}_${employeeId}`;
+        localStorage.removeItem(docKey);
+        alert(`✅ ${employeeName}님이 퇴사 처리되었습니다.`);
+        closeEmployeeContractListModal();
+        loadEmployees();
+      } catch (error) {
+        alert('❌ 퇴사 처리 중 오류가 발생했습니다.');
+      }
+    }
+
+    function getEmployeeIdFromContract(contract) {
+      const employeeMap = {
+        '김민수': 1, '이지은': 2, '박서준': 3, '최영희': 4, '정수민': 5, '강호동': 6
+      };
+      return employeeMap[contract.employeeName] || 0;
+    }
+
+    function viewContract(id) {
+      const contractData = localStorage.getItem(`contract_${id}`);
+      if (!contractData) {
+        alert('⚠️ 계약서를 찾을 수 없습니다.');
+        return;
+      }
+      try {
+        const contract = JSON.parse(contractData);
+        showContractViewModal(contract);
+      } catch (e) {
+        alert('⚠️ 계약서 데이터를 불러올 수 없습니다.');
+      }
+    }
+
+    function showContractViewModal(contract) {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.display = 'flex';
+      modal.id = 'contractViewModal';
+      
+      const signLink = `${window.location.href.split('?')[0].replace('index.html', '')}contract-sign.html?id=${contract.id}`;
+      const docKey = `employee_docs_${contract.employeeName}_${getEmployeeIdFromContract(contract)}`;
+      const employeeDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
+      
+      let bankAccountHtml = '';
+      if (employeeDocs.bankAccount) {
+        const ba = employeeDocs.bankAccount;
+        bankAccountHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+            <h4 style="margin-bottom: var(--spacing-sm);">🏦 통장사본</h4>
+            <p><strong>은행명:</strong> ${ba.bankName || '-'}</p>
+            <p><strong>계좌번호:</strong> ${ba.accountNumber || '-'}</p>
+            <p><strong>예금주:</strong> ${ba.accountHolder || '-'}</p>
+          </div>
+        `;
+      }
+      
+      let healthCertHtml = '';
+      if (employeeDocs.healthCert) {
+        const hc = employeeDocs.healthCert;
+        healthCertHtml = `
+          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+            <h4 style="margin-bottom: var(--spacing-sm);">🩺 보건증</h4>
+            ${hc.imageData ? `
+              <div style="margin-bottom: var(--spacing-md);">
+                <img src="${hc.imageData}" style="max-width: 100%; max-height: 300px; border: 1px solid var(--border-color); border-radius: var(--border-radius); cursor: pointer;" onclick="window.open('${hc.imageData}', '_blank')">
+              </div>
+            ` : ''}
+            <p><strong>유효기간:</strong> ${hc.expiryDate || '-'}</p>
+          </div>
+        `;
+      }
+      
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+          <div class="modal-header">
+            <h3>📄 계약서 상세보기</h3>
+            <button class="modal-close" onclick="closeContractViewModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+              <h4>👤 근로자 정보</h4>
+              <p><strong>이름:</strong> ${contract.employeeName}</p>
+              <p><strong>생년월일:</strong> ${contract.employeeBirth}</p>
+              <p><strong>주소:</strong> ${contract.employeeAddress}</p>
+              <p><strong>연락처:</strong> ${contract.employeePhone}</p>
+            </div>
+            ${bankAccountHtml}
+            ${healthCertHtml}
+            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+              <h4>🏢 회사 정보</h4>
+              <p><strong>회사명:</strong> ${contract.companyName}</p>
+              <p><strong>근무매장:</strong> ${contract.workStore}</p>
+              <p><strong>직책:</strong> ${contract.position}</p>
+            </div>
+            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+              <h4>📋 계약 정보</h4>
+              <p><strong>계약기간:</strong> ${contract.startDate} ~ ${contract.endDate}</p>
+              <p><strong>근무일:</strong> ${contract.workDays}</p>
+              <p><strong>근무시간:</strong> ${contract.workTime}</p>
+              <p><strong>${contract.wageType}:</strong> ${contract.wageAmount}원</p>
+            </div>
+            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
+              <h4>🔗 서명 링크</h4>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" value="${signLink}" readonly style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px;">
+                <button class="btn btn-primary btn-sm" onclick="copySignLink('${signLink}')">📋 복사</button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeContractViewModal()">닫기</button>
+            <button class="btn btn-primary" onclick="sendContractLink('${contract.id}')">📧 링크 전송</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    function closeContractViewModal() {
+      const modal = document.getElementById('contractViewModal');
+      if (modal) modal.remove();
+    }
+
+    function copySignLink(link) {
+      const tempInput = document.createElement('input');
+      tempInput.value = link;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      alert('✅ 서명 링크가 복사되었습니다!');
+    }
+
+    function sendContractLink(id) {
+      const contractData = localStorage.getItem(`contract_${id}`);
+      if (!contractData) {
+        alert('⚠️ 계약서를 찾을 수 없습니다.');
+        return;
+      }
+      
+      try {
+        const contract = JSON.parse(contractData);
+        const signLink = `${window.location.href.split('?')[0].replace('index.html', '')}contract-sign.html?id=${id}`;
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.id = 'sendLinkModal';
+        
+        modal.innerHTML = `
+          <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+              <h3>📧 서명 링크 전송</h3>
+              <button class="modal-close" onclick="closeSendLinkModal()">✕</button>
+            </div>
+            <div class="modal-body">
+              <p style="margin-bottom: 16px;"><strong>${contract.employeeName}</strong>님께 서명 링크를 전송합니다.</p>
+              <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">📱 연락처</label>
+                <input type="tel" value="${contract.employeePhone}" readonly style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-light);">
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">🔗 서명 링크</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="linkToCopy" value="${signLink}" readonly style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px;">
+                  <button class="btn btn-primary btn-sm" onclick="copyLinkToSend()">📋 복사</button>
+                </div>
+              </div>
+              <div style="padding: 16px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffc107;">
+                <p style="margin: 0; font-size: 14px;">💡 <strong>링크 복사 후</strong> 카카오톡, 문자 등으로 직원에게 전달하세요.</p>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closeSendLinkModal()">닫기</button>
+              <button class="btn btn-primary" onclick="copyAndClose()">📋 복사하고 닫기</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+      } catch (e) {
+        alert('⚠️ 오류가 발생했습니다.');
+      }
+    }
+
+    function closeSendLinkModal() {
+      const modal = document.getElementById('sendLinkModal');
+      if (modal) modal.remove();
+    }
+
+    function copyLinkToSend() {
+      const input = document.getElementById('linkToCopy');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ 서명 링크가 복사되었습니다!');
+    }
+
+    function copyAndClose() {
+      copyLinkToSend();
+      setTimeout(() => closeSendLinkModal(), 500);
+    }
+
+    function loadAttendanceList() {
+      const tbody = document.getElementById('attendanceTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
+    }
+
+    function loadSalaryList() {
+      const tbody = document.getElementById('salaryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
+    }
+
+    function loadApprovals() {
+      const tbody = document.getElementById('approvalsTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td></tr>';
+    }
+
+    function loadContracts() {
+      const tbody = document.getElementById('contractsTableBody');
+      if (!tbody) return;
+      
+      const allContracts = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('contract_C')) {
+          try {
+            const contractData = JSON.parse(localStorage.getItem(key));
+            const contractId = key.replace('contract_', '');
+            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const isSigned = signedContracts.some(sc => sc.id === contractId);
+            
+            allContracts.push({
+              id: contractId,
+              name: contractData.employeeName,
+              type: contractData.contractType,
+              period: `${contractData.startDate} ~ ${contractData.endDate}`,
+              createdAt: new Date(contractData.createdAt).toLocaleDateString('ko-KR'),
+              status: isSigned ? '서명완료' : '서명대기',
+              data: contractData
+            });
+          } catch (e) {}
+        }
+      }
+      
+      if (allContracts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);"><p style="margin-bottom: 16px;">생성된 계약서가 없습니다.</p><button class="btn btn-primary" onclick="openContractPage()">+ 첫 계약서 작성하기</button></td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = allContracts.map(con => {
+        const statusClass = con.status === '서명완료' ? 'badge-success' : 'badge-warning';
+        return `
+          <tr>
+            <td>${con.name}</td>
+            <td>${con.type}</td>
+            <td>${con.period}</td>
+            <td>${con.createdAt}</td>
+            <td><span class="badge ${statusClass}">${con.status}</span></td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="viewContract('${con.id}')">📄 보기</button>
+              ${con.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${con.id}')">📧 링크전송</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function loadNotice() {
+      // 공지사항 기능 추후 구현
+    }
+
+    // 매장 관리 함수들
+    function loadStores() {
+      const tbody = document.getElementById('storesTableBody');
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      
+      // 기본 매장이 없으면 추가
+      if (stores.length === 0) {
+        stores.push(
+          { id: '1', name: '부천시청점', address: '경기도 부천시 원미구', phone: '032-123-4567' },
+          { id: '2', name: '상동점', address: '경기도 부천시 상동', phone: '032-123-4568' },
+          { id: '3', name: '부천역사점', address: '경기도 부천시 부천역 인근', phone: '032-123-4569' }
+        );
+        localStorage.setItem('stores', JSON.stringify(stores));
+      }
+      
+      if (stores.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              <p style="margin-bottom: 16px;">등록된 매장이 없습니다.</p>
+              <button class="btn btn-primary" onclick="showAddStoreModal()">+ 첫 매장 추가하기</button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = stores.map(store => `
+        <tr>
+          <td>${store.name}</td>
+          <td>${store.address || '-'}</td>
+          <td>${store.phone || '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="showEditStoreModal('${store.id}')">✏️ 수정</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function showAddStoreModal() {
+      document.getElementById('storeModalTitle').textContent = '🏪 매장 추가';
+      document.getElementById('editStoreId').value = '';
+      document.getElementById('storeName').value = '';
+      document.getElementById('storeAddress').value = '';
+      document.getElementById('storePhone').value = '';
+      document.getElementById('deleteStoreBtn').style.display = 'none';
+      document.getElementById('storeModal').style.display = 'flex';
+    }
+
+    function showEditStoreModal(storeId) {
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      const store = stores.find(s => s.id === storeId);
+      
+      if (!store) {
+        alert('매장 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
+      document.getElementById('storeModalTitle').textContent = '🏪 매장 수정';
+      document.getElementById('editStoreId').value = store.id;
+      document.getElementById('storeName').value = store.name;
+      document.getElementById('storeAddress').value = store.address || '';
+      document.getElementById('storePhone').value = store.phone || '';
+      document.getElementById('deleteStoreBtn').style.display = 'block';
+      document.getElementById('storeModal').style.display = 'flex';
+    }
+
+    function closeStoreModal() {
+      document.getElementById('storeModal').style.display = 'none';
+    }
+
+    function saveStore() {
+      const storeId = document.getElementById('editStoreId').value;
+      const name = document.getElementById('storeName').value.trim();
+      const address = document.getElementById('storeAddress').value.trim();
+      const phone = document.getElementById('storePhone').value.trim();
+      
+      if (!name) {
+        alert('⚠️ 매장명을 입력해주세요.');
+        return;
+      }
+      
+      let stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      
+      if (storeId) {
+        // 수정
+        const index = stores.findIndex(s => s.id === storeId);
+        if (index >= 0) {
+          stores[index] = { ...stores[index], name, address, phone };
+        }
+      } else {
+        // 추가
+        const newId = String(Date.now());
+        stores.push({ id: newId, name, address, phone });
+      }
+      
+      localStorage.setItem('stores', JSON.stringify(stores));
+      closeStoreModal();
+      loadStores();
+      
+      // employee-register.html의 매장 선택도 업데이트되도록 알림
+      alert('✅ 매장 정보가 저장되었습니다.\n\n직원 가입 페이지에서도 자동으로 반영됩니다.');
+    }
+
+    function deleteStore() {
+      if (!confirm('⚠️ 정말 이 매장을 삭제하시겠습니까?')) {
+        return;
+      }
+      
+      const storeId = document.getElementById('editStoreId').value;
+      let stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      
+      stores = stores.filter(s => s.id !== storeId);
+      
+      localStorage.setItem('stores', JSON.stringify(stores));
+      closeStoreModal();
+      loadStores();
+      alert('✅ 매장이 삭제되었습니다.');
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // 특정 직원을 위한 계약서 작성 페이지 열기
+    function openContractPageForEmployee(uid, name, birth, phone, address) {
+      console.log('📝 특정 직원 계약서 작성:', name);
+      
+      // 계약서 모달 열기
+      openContractPage();
+      
+      // 직원 정보 자동 입력
+      setTimeout(() => {
+        document.getElementById('employeeName').value = name;
+        document.getElementById('employeeBirth').value = birth;
+        document.getElementById('employeePhone').value = phone;
+        document.getElementById('employeeAddress').value = address;
+        
+        // employeeSelect는 숨기거나 readonly로 설정
+        const employeeSelect = document.getElementById('employeeSelect');
+        if (employeeSelect) {
+          employeeSelect.value = ''; // 선택 안함
+          employeeSelect.style.display = 'none'; // 숨김
+        }
+        
+        console.log('✅ 직원 정보 자동 입력 완료');
+      }, 500);
+    }
+
+    // 계약서 작성 모달 열기/닫기
+    function openContractPage() {
+      console.log('🚀 계약서 모달 열기');
+      const modal = document.getElementById('contractModal');
+      if (!modal) {
+        console.error('❌ contractModal을 찾을 수 없습니다');
+        return;
+      }
+      
+      // 모달 표시
+      modal.style.display = 'flex';
+      
+      // 작성하기 탭 강제 활성화
+      const formTab = document.getElementById('formTab');
+      const formTabBtn = document.getElementById('formTabBtn');
+      const previewTab = document.getElementById('previewTab');
+      const previewTabBtn = document.getElementById('previewTabBtn');
+      
+      console.log('📍 탭 요소 확인:', { formTab, formTabBtn, previewTab, previewTabBtn });
+      
+      if (formTab && formTabBtn) {
+        formTab.classList.add('active');
+        formTab.style.display = 'block'; // 강제 표시
+        formTabBtn.classList.add('active');
+        console.log('✅ 작성하기 탭 활성화');
+      }
+      
+      if (previewTab && previewTabBtn) {
+        previewTab.classList.remove('active');
+        previewTab.style.display = 'none';
+        previewTabBtn.classList.remove('active');
+      }
+      
+      // 모달이 화면에 렌더링될 때까지 대기
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          console.log('✅ 모달 렌더링 완료, 초기화 시작');
+          
+          // 폼 컨텐츠 가시성 재확인
+          const formTabCheck = document.getElementById('formTab');
+          if (formTabCheck) {
+            const computedStyle = window.getComputedStyle(formTabCheck);
+            console.log('📊 formTab computed display:', computedStyle.display);
+            console.log('📊 formTab classList:', formTabCheck.classList.toString());
+          }
+          
+          initializeContractFormNow();
+        });
+      });
+    }
+    
+    function initializeContractFormNow() {
+      console.log('📝 계약서 폼 강제 초기화 시작');
+      
+      // formTab 최종 확인
+      const formTab = document.getElementById('formTab');
+      if (formTab) {
+        console.log('✅ formTab 발견, 내부 HTML 길이:', formTab.innerHTML.length);
+        console.log('📊 formTab 첫 100자:', formTab.innerHTML.substring(0, 100));
+      } else {
+        console.error('❌ formTab을 찾을 수 없음!');
+        return;
+      }
+      
+      // 오늘 날짜
+      const today = new Date().toISOString().split('T')[0];
+      const startDateEl = document.getElementById('startDate');
+      if (startDateEl) {
+        startDateEl.value = today;
+        console.log('✅ 시작일 설정:', today);
+      } else {
+        console.error('❌ startDate 요소를 찾을 수 없음');
+      }
+      
+      // 시간 드롭다운
+      const startHourEl = document.querySelector('.schedule-start-hour');
+      const startMinuteEl = document.querySelector('.schedule-start-minute');
+      const endHourEl = document.querySelector('.schedule-end-hour');
+      const endMinuteEl = document.querySelector('.schedule-end-minute');
+      
+      console.log('시간 요소 확인:', { startHourEl, startMinuteEl, endHourEl, endMinuteEl });
+      
+      if (startHourEl && startMinuteEl && endHourEl && endMinuteEl) {
+        // 시 옵션
+        for (let i = 0; i <= 23; i++) {
+          const h = String(i).padStart(2, '0');
+          startHourEl.innerHTML += `<option value="${i}">${h}시</option>`;
+          endHourEl.innerHTML += `<option value="${i}">${h}시</option>`;
+        }
+        
+        // 분 옵션
+        for (let i = 0; i <= 59; i++) {
+          const m = String(i).padStart(2, '0');
+          startMinuteEl.innerHTML += `<option value="${i}">${m}분</option>`;
+          endMinuteEl.innerHTML += `<option value="${i}">${m}분</option>`;
+        }
+        
+        console.log('✅ 근무시간 드롭다운 초기화 완료');
+      } else {
+        console.error('❌ 근무시간 드롭다운 요소를 찾을 수 없음');
+      }
+      
+      // 휴게시간
+      const breakStartHour = document.getElementById('breakStartHour');
+      const breakStartMinute = document.getElementById('breakStartMinute');
+      const breakEndHour = document.getElementById('breakEndHour');
+      const breakEndMinute = document.getElementById('breakEndMinute');
+      
+      if (breakStartHour && breakStartMinute && breakEndHour && breakEndMinute) {
+        for (let i = 0; i <= 23; i++) {
+          const h = String(i).padStart(2, '0');
+          breakStartHour.innerHTML += `<option value="${i}">${h}시</option>`;
+          breakEndHour.innerHTML += `<option value="${i}">${h}시</option>`;
+        }
+        
+        for (let i = 0; i <= 59; i++) {
+          const m = String(i).padStart(2, '0');
+          breakStartMinute.innerHTML += `<option value="${i}">${m}분</option>`;
+          breakEndMinute.innerHTML += `<option value="${i}">${m}분</option>`;
+        }
+        
+        console.log('✅ 휴게시간 드롭다운 초기화 완료');
+      }
+      
+      // 직원 목록 - Firestore에서 로드
+      const employeeSelect = document.getElementById('employeeSelect');
+      if (employeeSelect) {
+        employeeSelect.innerHTML = '<option value="">새 직원 (직접 입력)</option>';
+        
+        // 더미 직원 먼저 추가
+        const dummyEmployee = {
+          id: 'dummy_1',
+          name: '김민수',
+          birth: '900315-1234567',
+          phone: '010-1234-5678',
+          address: '경기도 부천시 원미구'
+        };
+        employeeSelect.innerHTML += `<option value="${dummyEmployee.id}" data-name="${dummyEmployee.name}" data-birth="${dummyEmployee.birth}" data-phone="${dummyEmployee.phone}" data-address="${dummyEmployee.address}">${dummyEmployee.name} (${dummyEmployee.phone}) [더미]</option>`;
+        
+        // Firestore에서 직원 목록 가져오기
+        db.collection('employees')
+          .where('userType', '==', 'employee')
+          .where('status', '==', 'active')
+          .get()
+          .then(snapshot => {
+            if (!snapshot.empty) {
+              snapshot.forEach(doc => {
+                const emp = doc.data();
+                employeeSelect.innerHTML += `<option value="${doc.id}" data-name="${emp.name}" data-birth="${emp.birth}" data-phone="${emp.phone}" data-address="${emp.address}">${emp.name} (${emp.phone})</option>`;
+              });
+              console.log(`✅ ${snapshot.size}명의 직원 목록 로드 완료`);
+            } else {
+              console.log('📋 등록된 직원이 없습니다 (더미 데이터 사용 중)');
+            }
+          })
+          .catch(error => {
+            console.error('❌ 직원 목록 로드 실패, 더미 데이터 사용:', error);
+          });
+      }
+      
+      // 회사 목록
+      const companySelect = document.getElementById('companySelect');
+      if (companySelect) {
+        const saved = localStorage.getItem('companies');
+        companies = saved ? JSON.parse(saved) : [
+          { id: '1', name: '(주)ABC디저트센터', ceo: '홍길동', businessNumber: '123-45-67890', phone: '032-123-4567', address: '경기도 부천시 원미구 74' }
+        ];
+        
+        companySelect.innerHTML = '<option value="">선택하세요</option>';
+        companies.forEach(company => {
+          companySelect.innerHTML += `<option value="${company.id}">${company.name}</option>`;
+        });
+        
+        if (companies.length > 0) {
+          companySelect.value = companies[0].id;
+          // 회사 정보 자동 입력
+          const company = companies[0];
+          document.getElementById('companyCEO').value = company.ceo;
+          document.getElementById('companyBusinessNumber').value = company.businessNumber;
+          document.getElementById('companyPhone').value = company.phone;
+          document.getElementById('companyAddress').value = company.address;
+        }
+        
+        console.log('✅ 회사 목록 로드 완료');
+      }
+      
+      // 기본 템플릿
+      const contentEl = document.getElementById('contractContent');
+      if (contentEl) {
+        const template = `제1조 (근로계약 기간)
+본 계약의 기간은 위 표에 명시된 바와 같다.
+
+제2조 (근무 장소 및 업무 내용)
+근로자는 위 표에 명시된 근무 장소에서 명시된 업무를 수행한다.
+
+제3조 (근로시간 및 휴게시간)
+1. 근로시간은 위 표에 명시된 바와 같다.
+2. 휴게시간은 근로시간 중 위 표에 명시된 바와 같다.
+
+제4조 (근무일 및 휴일)
+1. 근무일은 위 표에 명시된 바와 같다.
+2. 주휴일은 근로기준법에 따라 부여한다.
+
+제5조 (임금)
+1. 근로자의 임금은 위 표에 명시된 바와 같다.
+2. 임금은 위 표에 명시된 지급일에 지급한다.
+3. 연장·야간·휴일 근로 시에는 근로기준법에 따라 가산임금을 지급한다.
+
+제6조 (연차유급휴가)
+연차유급휴가는 근로기준법에 따라 부여한다.
+
+제7조 (사회보험 가입)
+사용자는 근로자를 4대 사회보험에 가입시킨다.
+
+제8조 (계약의 해지)
+1. 본 계약을 해지하고자 할 때는 30일 전에 예고하여야 한다.
+2. 해고 예고 기간을 두지 않을 경우 30일분의 통상임금을 지급한다.
+
+제9조 (기타)
+이 계약서에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.`;
+        
+        contentEl.value = template;
+        console.log('✅ 기본 템플릿 로드 완료');
+      }
+      
+      console.log('🎉 모든 초기화 완료!');
+    }
+    
+    function closeContractModal() {
+      if (confirm('작성 중인 내용이 저장되지 않을 수 있습니다.\n닫으시겠습니까?')) {
+        document.getElementById('contractModal').style.display = 'none';
+      }
+    }
+    
+    function resetContractForm() {
+      document.getElementById('contractFormTab').querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'date' && el.id === 'startDate') {
+          el.value = new Date().toISOString().split('T')[0];
+        } else if (el.tagName === 'TEXTAREA' && el.id === 'contractContent') {
+          loadDefaultTemplate();
+        } else {
+          el.value = '';
+        }
+      });
+      document.getElementById('signLinkSection').style.display = 'none';
+      switchContractTab('form');
+    }
+  </script>
+  
+  <!-- 계약서 전용 JavaScript (모든 코드 인라인) -->
+  <script>
+    // ===================================================================
+    // config.js - 설정 및 디버그 함수
+    // ===================================================================
+    
+    const CONFIG = {
+      APPS_SCRIPT_URL: 'YOUR_APPS_SCRIPT_URL_HERE',
+      STORES: [
+        { id: 'busan_city', name: '부천시청점', address: '경기도 부천시 원미구' },
+        { id: 'sangdong', name: '상동점', address: '경기도 부천시 상동' },
+        { id: 'bucheon_station', name: '부천역사점', address: '경기도 부천시 역곡동' }
+      ],
+      WORK_TYPES: [
+        { id: 'regular', name: '정규근무', color: '#4CAF50' },
+        { id: 'overtime', name: '초과근무', color: '#FF9800' },
+        { id: 'substitute', name: '대타근무', color: '#2196F3' }
+      ],
+      ATTENDANCE_STATUS: [
+        { id: 'normal', name: '정상', color: '#4CAF50' },
+        { id: 'late', name: '지각', color: '#FF9800' },
+        { id: 'early', name: '조퇴', color: '#FFC107' },
+        { id: 'absent', name: '결근', color: '#F44336' }
+      ],
+      EMPLOYMENT_TYPES: [
+        { id: 'hourly', name: '시급제' },
+        { id: 'monthly', name: '월급제' }
+      ],
+      CONTRACT_TYPES: [
+        { id: 'fulltime', name: '정규직 근로계약서', template: 'template_fulltime' },
+        { id: 'parttime', name: '시간제 근로계약서', template: 'template_parttime' },
+        { id: 'intern', name: '인턴 근로계약서', template: 'template_intern' },
+        { id: 'temporary', name: '임시직 근로계약서', template: 'template_temporary' }
+      ],
+      INSURANCE_RATES: {
+        national_pension: 0.045,
+        health_insurance: 0.03545,
+        long_term_care: 0.004591,
+        employment_insurance: 0.009
+      },
+      FREELANCE_TAX_RATE: 0.033,
+      TARDINESS_THRESHOLD: 1,
+      EARLY_LEAVE_THRESHOLD: 1,
+      WEEKLY_HOLIDAY_PAY: {
+        MIN_WEEKLY_HOURS: 15,
+        WEEKLY_HOURS: 40
+      },
+      RETIREMENT_PAY: {
+        MIN_MONTHS: 12,
+        AVERAGE_MONTHS: 3
+      },
+      PAGINATION: {
+        DEFAULT_PAGE_SIZE: 20,
+        PAGE_SIZE_OPTIONS: [10, 20, 50, 100]
+      },
+      STORAGE_KEYS: {
+        USER_INFO: 'matnamsalon_user',
+        CURRENT_ROLE: 'matnamsalon_role',
+        LAST_LOGIN: 'matnamsalon_last_login'
+      },
+      DATE_FORMAT: {
+        DISPLAY: 'YYYY-MM-DD',
+        DATETIME_DISPLAY: 'YYYY-MM-DD HH:mm:ss',
+        TIME_DISPLAY: 'HH:mm'
+      },
+      API_TIMEOUT: 30000,
+      AUTO_CONFIRM_TIME: '00:00',
+      DATA_RETENTION_YEARS: 2,
+      DEBUG_MODE: true
+    };
+
+    function getConfig(key) {
+      const keys = key.split('.');
+      let value = CONFIG;
+      
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          console.warn(`[미검증] 설정 키를 찾을 수 없음: ${key}`);
+          return null;
+        }
+      }
+      
+      return value;
+    }
+
+    function isConfigured() {
+      return CONFIG.APPS_SCRIPT_URL && CONFIG.APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_URL_HERE';
+    }
+
+    function debugLog(...args) {
+      if (CONFIG.DEBUG_MODE) {
+        console.log('[DEBUG]', ...args);
+      }
+    }
+
+    // ===================================================================
+    // utils.js - 유틸리티 함수 (contract.js에서 필요한 것만)
+    // ===================================================================
+
+    function formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDateTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    function formatTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    function parseTime(timeStr, baseDate = new Date()) {
+      if (!timeStr) return null;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const date = new Date(baseDate);
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    }
+
+    function getMinutesDifference(startTime, endTime) {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+      return Math.round((end - start) / (1000 * 60));
+    }
+
+    function getHoursDifference(startTime, endTime) {
+      const minutes = getMinutesDifference(startTime, endTime);
+      return parseFloat((minutes / 60).toFixed(2));
+    }
+
+    function formatMinutesToHourMin(minutes) {
+      if (!minutes || minutes < 0) return '0분';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (hours === 0) return `${mins}분`;
+      if (mins === 0) return `${hours}시간`;
+      return `${hours}시간 ${mins}분`;
+    }
+
+    function formatNumber(num) {
+      if (num === null || num === undefined || isNaN(num)) return '0';
+      return Math.round(num).toLocaleString('ko-KR');
+    }
+
+    function formatCurrency(amount) {
+      return `${formatNumber(amount)}원`;
+    }
+
+    function extractNumber(str) {
+      if (!str) return 0;
+      const num = String(str).replace(/[^\d.-]/g, '');
+      return parseFloat(num) || 0;
+    }
+
+    function isEmpty(value) {
+      return value === null || value === undefined || value === '' || 
+             (Array.isArray(value) && value.length === 0) ||
+             (typeof value === 'object' && Object.keys(value).length === 0);
+    }
+
+    function generateId(prefix = '') {
+      const timestamp = Date.now().toString(36);
+      const random = Math.random().toString(36).substring(2, 9);
+      return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
+    }
+
+    function getUrlParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // ===================================================================
+    // contract.js - 계약서 작성 시스템 (전체 코드)
+    // ===================================================================
+
+    // 전역 변수
+    let companies = [];
+    let savedContracts = [];
+
+    // 더미 직원 데이터 (contract.js용 - 기존 DUMMY_EMPLOYEES와 동일인물)
+    const CONTRACT_DUMMY_EMPLOYEES = [
+      { id: '1', name: '김민수', birth: '1990-03-15', address: '경기도 부천시 원미구', phone: '010-1234-5678' },
+    ];
+
+    // 초기화 함수
+    function initializeContractForm() {
+      console.log('📝 계약서 폼 초기화');
+      
+      const today = new Date().toISOString().split('T')[0];
+      const startDateEl = document.getElementById('startDate');
+      if (startDateEl) startDateEl.value = today;
+      
+      initializeTimeDropdowns();
+      loadEmployeeList();
+      loadCompanyList();
+      loadDefaultTemplate();
+    }
+
+    // 탭 전환 함수 - switchContractTab로 변경하여 기존 switchTab과 충돌 방지
+    function switchContractTab(tabName) {
+      console.log('🔄 계약서 탭 전환 요청:', tabName);
+      
+      if (tabName === 'preview') {
+        if (!validateForm()) {
+          console.log('❌ 유효성 검사 실패');
+          return;
+        }
+        updatePreview();
+      }
+      
+      const formTab = document.getElementById('formTab');
+      const formTabBtn = document.getElementById('formTabBtn');
+      const previewTab = document.getElementById('previewTab');
+      const previewTabBtn = document.getElementById('previewTabBtn');
+      
+      // 모든 탭 비활성화
+      formTabBtn.classList.remove('active');
+      previewTabBtn.classList.remove('active');
+      formTab.classList.remove('active');
+      previewTab.classList.remove('active');
+      
+      if (tabName === 'form') {
+        formTabBtn.classList.add('active');
+        formTab.classList.add('active');
+        formTab.style.display = 'block';  // 명시적 표시
+        previewTab.style.display = 'none';  // 명시적 숨김
+        console.log('✅ 작성하기 탭 활성화');
+      } else if (tabName === 'preview') {
+        previewTabBtn.classList.add('active');
+        previewTab.classList.add('active');
+        previewTab.style.display = 'block';  // 명시적 표시
+        formTab.style.display = 'none';  // 명시적 숨김
+        console.log('✅ 미리보기 탭 활성화');
+        
+        // 미리보기 탭 맨 위로 스크롤
+        setTimeout(() => {
+          const modalBody = document.querySelector('#contractModal .modal-body');
+          if (modalBody) modalBody.scrollTop = 0;
+        }, 50);
+      }
+    }
+
+    // 직원 정보
+    function loadEmployeeList() {
+      console.log('👥 직원 목록 로드 시작');
+      const select = document.getElementById('employeeSelect');
+      console.log('employeeSelect 요소:', select);
+      if (!select) {
+        console.error('❌ employeeSelect 요소를 찾을 수 없습니다!');
+        return;
+      }
+      select.innerHTML = '<option value="">새 직원 (직접 입력)</option>';
+      
+      const employeeMap = new Map();
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('contract_C')) {
+          try {
+            const contractData = JSON.parse(localStorage.getItem(key));
+            const empKey = contractData.employeeName + '_' + contractData.employeeBirth;
+            
+            if (!employeeMap.has(empKey)) {
+              employeeMap.set(empKey, {
+                id: empKey,
+                name: contractData.employeeName,
+                birth: contractData.employeeBirth,
+                address: contractData.employeeAddress,
+                phone: contractData.employeePhone
+              });
+            }
+          } catch (e) {
+            console.error('직원 데이터 로드 오류:', e);
+          }
+        }
+      }
+      
+      const employees = Array.from(employeeMap.values());
+      
+      if (employees.length === 0) {
+        CONTRACT_DUMMY_EMPLOYEES.forEach(emp => {
+          const option = document.createElement('option');
+          option.value = emp.id;
+          option.textContent = `${emp.name} (${emp.phone})`;
+          select.appendChild(option);
+        });
+      } else {
+        employees.forEach(emp => {
+          const option = document.createElement('option');
+          option.value = emp.id;
+          option.textContent = `${emp.name} (${emp.phone})`;
+          select.appendChild(option);
+        });
+      }
+    }
+
+    async function loadEmployeeInfo() {
+      const employeeSelect = document.getElementById('employeeSelect');
+      const employeeId = employeeSelect.value;
+      
+      if (!employeeId) {
+        document.getElementById('employeeName').value = '';
+        document.getElementById('employeeBirth').value = '';
+        document.getElementById('employeeAddress').value = '';
+        document.getElementById('employeePhone').value = '';
+        document.getElementById('employeeName').readOnly = false;
+        return;
+      }
+      
+      try {
+        console.log('📋 직원 정보 로드:', employeeId);
+        
+        // 더미 데이터 처리
+        if (employeeId === 'dummy_1') {
+          const dummyEmployee = {
+            name: '김민수',
+            birth: '900315-1234567',
+            phone: '010-1234-5678',
+            address: '경기도 부천시 원미구'
+          };
+          
+          document.getElementById('employeeName').value = dummyEmployee.name;
+          document.getElementById('employeeBirth').value = dummyEmployee.birth;
+          document.getElementById('employeeAddress').value = dummyEmployee.address;
+          document.getElementById('employeePhone').value = dummyEmployee.phone;
+          document.getElementById('employeeName').readOnly = true;
+          
+          console.log('✅ 더미 직원 정보 로드 완료:', dummyEmployee.name);
+          return;
+        }
+        
+        // Firestore에서 직원 정보 가져오기
+        const doc = await db.collection('employees').doc(employeeId).get();
+        
+        if (doc.exists) {
+          const employee = doc.data();
+          
+          document.getElementById('employeeName').value = employee.name;
+          document.getElementById('employeeBirth').value = employee.birth;
+          document.getElementById('employeeAddress').value = employee.address;
+          document.getElementById('employeePhone').value = employee.phone;
+          document.getElementById('employeeName').readOnly = true;
+          
+          console.log('✅ 직원 정보 로드 완료:', employee.name);
+        } else {
+          console.error('❌ 직원 정보를 찾을 수 없음');
+          alert('직원 정보를 찾을 수 없습니다.');
+        }
+      } catch (error) {
+        console.error('❌ 직원 정보 로드 실패:', error);
+        alert('직원 정보를 불러오는데 실패했습니다: ' + error.message);
+      }
+    }
+
+    // 회사 정보
+    function loadCompanyList() {
+      console.log('🏢 회사 목록 로드 시작');
+      const saved = localStorage.getItem('companies');
+      companies = saved ? JSON.parse(saved) : [
+        { 
+          id: '1', 
+          name: '(주)ABC디저트센터', 
+          ceo: '홍길동', 
+          businessNumber: '123-45-67890',
+          phone: '032-123-4567',
+          address: '경기도 부천시 원미구 74'
+        }
+      ];
+      
+      const select = document.getElementById('companySelect');
+      if (!select) return;
+      select.innerHTML = '<option value="">선택하세요</option>';
+      
+      companies.forEach(company => {
+        const option = document.createElement('option');
+        option.value = company.id;
+        option.textContent = company.name;
+        select.appendChild(option);
+      });
+      
+      if (companies.length > 0) {
+        select.value = companies[0].id;
+        loadCompanyInfo();
+      }
+    }
+
+    function loadCompanyInfo() {
+      const companyId = document.getElementById('companySelect').value;
+      
+      if (!companyId) {
+        document.getElementById('companyCEO').value = '';
+        document.getElementById('companyBusinessNumber').value = '';
+        document.getElementById('companyPhone').value = '';
+        document.getElementById('companyAddress').value = '';
+        return;
+      }
+      
+      const company = companies.find(c => c.id === companyId);
+      if (company) {
+        document.getElementById('companyCEO').value = company.ceo || '';
+        document.getElementById('companyBusinessNumber').value = company.businessNumber || '';
+        document.getElementById('companyPhone').value = company.phone || '';
+        document.getElementById('companyAddress').value = company.address || '';
+      }
+    }
+
+    function showAddCompanyModal() {
+      document.getElementById('companyModalTitle').textContent = '🏢 회사 추가';
+      document.getElementById('editCompanyId').value = '';
+      document.getElementById('deleteCompanyBtnContainer').style.display = 'none';
+      document.getElementById('addCompanyModal').style.display = 'flex';
+    }
+
+    function showEditCompanyModal() {
+      const companyId = document.getElementById('companySelect').value;
+      
+      if (!companyId) {
+        alert('⚠️ 수정할 회사를 먼저 선택해주세요.');
+        return;
+      }
+      
+      const company = companies.find(c => c.id === companyId);
+      
+      if (!company) {
+        alert('⚠️ 회사 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
+      document.getElementById('companyModalTitle').textContent = '✏️ 회사 수정';
+      document.getElementById('editCompanyId').value = companyId;
+      document.getElementById('deleteCompanyBtnContainer').style.display = 'block';
+      
+      document.getElementById('newCompanyName').value = company.name;
+      document.getElementById('newCompanyCEO').value = company.ceo;
+      document.getElementById('newCompanyBusinessNumber').value = company.businessNumber;
+      document.getElementById('newCompanyPhone').value = company.phone;
+      document.getElementById('newCompanyAddress').value = company.address;
+      
+      document.getElementById('addCompanyModal').style.display = 'flex';
+    }
+
+    function closeAddCompanyModal() {
+      document.getElementById('addCompanyModal').style.display = 'none';
+      document.getElementById('editCompanyId').value = '';
+      document.getElementById('newCompanyName').value = '';
+      document.getElementById('newCompanyCEO').value = '';
+      document.getElementById('newCompanyBusinessNumber').value = '';
+      document.getElementById('newCompanyPhone').value = '';
+      document.getElementById('newCompanyAddress').value = '';
+    }
+
+    function saveCompany() {
+      const name = document.getElementById('newCompanyName').value.trim();
+      const ceo = document.getElementById('newCompanyCEO').value.trim();
+      const businessNumber = document.getElementById('newCompanyBusinessNumber').value.trim();
+      const phone = document.getElementById('newCompanyPhone').value.trim();
+      const address = document.getElementById('newCompanyAddress').value.trim();
+      const editId = document.getElementById('editCompanyId').value;
+      
+      if (!name || !ceo || !businessNumber || !phone || !address) {
+        alert('⚠️ 모든 필수 항목을 입력해주세요.');
+        return;
+      }
+      
+      if (editId) {
+        const companyIndex = companies.findIndex(c => c.id === editId);
+        
+        if (companyIndex >= 0) {
+          companies[companyIndex] = {
+            id: editId,
+            name: name,
+            ceo: ceo,
+            businessNumber: businessNumber,
+            phone: phone,
+            address: address
+          };
+          
+          localStorage.setItem('companies', JSON.stringify(companies));
+          
+          loadCompanyList();
+          document.getElementById('companySelect').value = editId;
+          loadCompanyInfo();
+          closeAddCompanyModal();
+          
+          alert('✅ 회사 정보가 수정되었습니다.');
+        }
+      } else {
+        const newCompany = {
+          id: Date.now().toString(),
+          name: name,
+          ceo: ceo,
+          businessNumber: businessNumber,
+          phone: phone,
+          address: address
+        };
+        
+        companies.push(newCompany);
+        localStorage.setItem('companies', JSON.stringify(companies));
+        
+        loadCompanyList();
+        document.getElementById('companySelect').value = newCompany.id;
+        loadCompanyInfo();
+        closeAddCompanyModal();
+        
+        alert('✅ 회사가 추가되었습니다.');
+      }
+    }
+
+    function deleteCompany() {
+      const editId = document.getElementById('editCompanyId').value;
+      
+      if (!editId) {
+        return;
+      }
+      
+      const company = companies.find(c => c.id === editId);
+      
+      if (!company) {
+        return;
+      }
+      
+      if (!confirm(`"${company.name}" 회사를 삭제하시겠습니까?\n\n⚠️ 이 회사로 작성된 계약서는 영향을 받지 않지만,\n새로운 계약서 작성 시 선택할 수 없게 됩니다.`)) {
+        return;
+      }
+      
+      companies = companies.filter(c => c.id !== editId);
+      localStorage.setItem('companies', JSON.stringify(companies));
+      
+      closeAddCompanyModal();
+      loadCompanyList();
+      
+      alert('✅ 회사가 삭제되었습니다.');
+    }
+
+    // 시간 드롭다운 초기화
+    function initializeTimeDropdowns() {
+      console.log('⏰ 시간 드롭다운 초기화 시작');
+      
+      const startHour = document.querySelector('.schedule-start-hour');
+      const startMinute = document.querySelector('.schedule-start-minute');
+      const endHour = document.querySelector('.schedule-end-hour');
+      const endMinute = document.querySelector('.schedule-end-minute');
+      
+      console.log('근무시간 요소:', { startHour, startMinute, endHour, endMinute });
+      
+      if (!startHour || !startMinute || !endHour || !endMinute) {
+        console.error('❌ 근무시간 드롭다운 요소를 찾을 수 없습니다!');
+        return;
+      }
+      
+      populateHourOptions(startHour);
+      populateHourOptions(endHour);
+      populateMinuteOptions(startMinute);
+      populateMinuteOptions(endMinute);
+      
+      const breakStartHour = document.getElementById('breakStartHour');
+      const breakStartMinute = document.getElementById('breakStartMinute');
+      const breakEndHour = document.getElementById('breakEndHour');
+      const breakEndMinute = document.getElementById('breakEndMinute');
+      
+      console.log('휴게시간 요소:', { breakStartHour, breakStartMinute, breakEndHour, breakEndMinute });
+      
+      populateHourOptions(breakStartHour);
+      populateHourOptions(breakEndHour);
+      populateMinuteOptions(breakStartMinute);
+      populateMinuteOptions(breakEndMinute);
+      
+      console.log('✅ 시간 드롭다운 초기화 완료');
+    }
+
+    function populateHourOptions(select) {
+      if (!select) return;
+      for (let i = 0; i <= 23; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = String(i).padStart(2, '0') + '시';
+        select.appendChild(option);
+      }
+    }
+
+    function populateMinuteOptions(select) {
+      if (!select) return;
+      for (let i = 0; i <= 59; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = String(i).padStart(2, '0') + '분';
+        select.appendChild(option);
+      }
+      select.value = '0';
+    }
+
+    // 근무 일정 관리
+    function toggleDayForSchedule(button, scheduleIndex) {
+      button.classList.toggle('active');
+      updateWorkTimeDisplay();
+    }
+
+    let scheduleCounter = 1;
+
+    function addSchedule() {
+      const container = document.getElementById('workScheduleContainer');
+      const newIndex = scheduleCounter++;
+      
+      const newItem = document.createElement('div');
+      newItem.className = 'work-schedule-item';
+      newItem.setAttribute('data-index', newIndex);
+      
+      newItem.innerHTML = `
+        <div class="form-group">
+          <label>근무일 *</label>
+          <div class="day-buttons">
+            <button type="button" class="day-btn" data-day="월" onclick="toggleDayForSchedule(this, ${newIndex})">월</button>
+            <button type="button" class="day-btn" data-day="화" onclick="toggleDayForSchedule(this, ${newIndex})">화</button>
+            <button type="button" class="day-btn" data-day="수" onclick="toggleDayForSchedule(this, ${newIndex})">수</button>
+            <button type="button" class="day-btn" data-day="목" onclick="toggleDayForSchedule(this, ${newIndex})">목</button>
+            <button type="button" class="day-btn" data-day="금" onclick="toggleDayForSchedule(this, ${newIndex})">금</button>
+            <button type="button" class="day-btn" data-day="토" onclick="toggleDayForSchedule(this, ${newIndex})">토</button>
+            <button type="button" class="day-btn" data-day="일" onclick="toggleDayForSchedule(this, ${newIndex})">일</button>
+          </div>
+        </div>
+        <div class="form-row" style="align-items: flex-end;">
+          <div class="form-group">
+            <label>시작 시간 *</label>
+            <div style="display: flex; gap: 8px;">
+              <select class="schedule-start-hour" required onchange="updateWorkTimeDisplay()">
+                <option value="">시</option>
+              </select>
+              <select class="schedule-start-minute" required onchange="updateWorkTimeDisplay()">
+                <option value="">분</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>종료 시간 *</label>
+            <div style="display: flex; gap: 8px;">
+              <select class="schedule-end-hour" required onchange="updateWorkTimeDisplay()">
+                <option value="">시</option>
+              </select>
+              <select class="schedule-end-minute" required onchange="updateWorkTimeDisplay()">
+                <option value="">분</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeSchedule(${newIndex})" style="height: 42px; margin-bottom: 0;">삭제</button>
+        </div>
+      `;
+      
+      container.appendChild(newItem);
+      
+      const newStartHour = newItem.querySelector('.schedule-start-hour');
+      const newStartMinute = newItem.querySelector('.schedule-start-minute');
+      const newEndHour = newItem.querySelector('.schedule-end-hour');
+      const newEndMinute = newItem.querySelector('.schedule-end-minute');
+      
+      populateHourOptions(newStartHour);
+      populateHourOptions(newEndHour);
+      populateMinuteOptions(newStartMinute);
+      populateMinuteOptions(newEndMinute);
+      
+      const firstDeleteBtn = container.querySelector('[data-index="0"] .btn-danger');
+      if (firstDeleteBtn) firstDeleteBtn.style.display = 'inline-block';
+    }
+
+    function removeSchedule(index) {
+      const item = document.querySelector(`[data-index="${index}"]`);
+      if (item) {
+        item.remove();
+        updateWorkTimeDisplay();
+        
+        const container = document.getElementById('workScheduleContainer');
+        if (container.children.length === 1) {
+          const firstDeleteBtn = container.querySelector('.btn-danger');
+          if (firstDeleteBtn) firstDeleteBtn.style.display = 'none';
+        }
+      }
+    }
+
+    function updateWorkTimeDisplay() {
+      const allDays = [];
+      const schedules = [];
+      
+      const scheduleItems = document.querySelectorAll('.work-schedule-item');
+      
+      scheduleItems.forEach((item) => {
+        const selectedDays = [];
+        
+        const activeDayBtns = item.querySelectorAll('.day-btn.active');
+        activeDayBtns.forEach(btn => {
+          const day = btn.getAttribute('data-day');
+          selectedDays.push(day);
+          if (!allDays.includes(day)) {
+            allDays.push(day);
+          }
+        });
+        
+        const startHour = item.querySelector('.schedule-start-hour')?.value;
+        const startMinute = item.querySelector('.schedule-start-minute')?.value;
+        const endHour = item.querySelector('.schedule-end-hour')?.value;
+        const endMinute = item.querySelector('.schedule-end-minute')?.value;
+        
+        if (selectedDays.length > 0 && startHour !== '' && startMinute !== '' && endHour !== '' && endMinute !== '') {
+          const startTime = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`;
+          const endTime = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+          schedules.push(`${selectedDays.join(', ')}: ${startTime}~${endTime}`);
+        }
+      });
+      
+      document.getElementById('workDays').value = allDays.join(', ');
+      document.getElementById('workTime').value = schedules.join(' / ');
+    }
+
+    // 휴게시간 관리
+    function updateBreakTimeDisplay() {
+      const hour = document.getElementById('breakTimeHour')?.value;
+      const minute = document.getElementById('breakTimeMinute')?.value;
+      const startHour = document.getElementById('breakStartHour')?.value;
+      const startMinute = document.getElementById('breakStartMinute')?.value;
+      const endHour = document.getElementById('breakEndHour')?.value;
+      const endMinute = document.getElementById('breakEndMinute')?.value;
+      
+      let breakTimeText = '';
+      
+      if (hour || minute) {
+        const h = hour || '0';
+        const m = minute || '0';
+        breakTimeText = `${h}시간 ${m}분`;
+        
+        if (startHour !== '' && startMinute !== '' && endHour !== '' && endMinute !== '') {
+          const start = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`;
+          const end = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+          breakTimeText += ` (${start}~${end})`;
+        }
+      }
+      
+      document.getElementById('breakTime').value = breakTimeText;
+      const previewEl = document.getElementById('breakTimePreview');
+      if (previewEl) previewEl.textContent = breakTimeText ? `휴게시간: ${breakTimeText}` : '';
+    }
+
+    // 유효성 검사
+    function validateForm() {
+      const requiredFields = [
+        { id: 'employeeName', name: '이름' },
+        { id: 'employeeBirth', name: '생년월일' },
+        { id: 'employeeAddress', name: '주소' },
+        { id: 'employeePhone', name: '연락처' },
+        { id: 'companySelect', name: '회사' },
+        { id: 'contractType', name: '계약 유형' },
+        { id: 'workStore', name: '근무 매장' },
+        { id: 'startDate', name: '계약 시작일' },
+        { id: 'position', name: '직책/직무' },
+        { id: 'wageType', name: '급여 형태' },
+        { id: 'wageAmount', name: '급여액' },
+        { id: 'paymentDay', name: '급여 지급일' },
+        { id: 'paymentMethod', name: '급여 지급 방법' }
+      ];
+      
+      for (const field of requiredFields) {
+        const element = document.getElementById(field.id);
+        if (!element || !element.value || element.value.trim() === '') {
+          alert(`⚠️ ${field.name}을(를) 입력해주세요.`);
+          if (element) element.focus();
+          return false;
+        }
+      }
+      
+      const workDays = document.getElementById('workDays').value;
+      const workTime = document.getElementById('workTime').value;
+      
+      if (!workDays || workDays.trim() === '') {
+        alert('⚠️ 근무일을 선택해주세요.');
+        return false;
+      }
+      
+      if (!workTime || workTime.trim() === '') {
+        alert('⚠️ 근무시간을 설정해주세요.');
+        return false;
+      }
+      
+      return true;
+    }
+
+    // 미리보기 업데이트
+    function updatePreview() {
+      console.log('🔍 미리보기 업데이트');
+      
+      const employeeName = document.getElementById('employeeName').value;
+      document.getElementById('previewName').textContent = employeeName || '_______';
+      document.getElementById('previewEmployeeName').textContent = employeeName || '_______';
+      document.getElementById('previewEmployeeName2').textContent = employeeName || '_______';
+      document.getElementById('previewBirth').textContent = document.getElementById('employeeBirth').value || '_______';
+      document.getElementById('previewAddress').textContent = document.getElementById('employeeAddress').value || '_______';
+      document.getElementById('previewPhone').textContent = document.getElementById('employeePhone').value || '_______';
+      
+      // 회사 정보: 선택된 회사 또는 직접 입력된 정보 사용
+      const companyId = document.getElementById('companySelect').value;
+      const company = companies.find(c => c.id === companyId);
+      
+      // 회사명: 선택된 회사가 있으면 그 이름, 없으면 입력된 이름 사용
+      const companyNameInput = company ? company.name : '(주)ABC디저트센터';
+      document.getElementById('previewCompanyName').textContent = companyNameInput;
+      document.getElementById('previewCompanyName2').textContent = companyNameInput;
+      
+      // CEO: 입력 필드 값 우선, 없으면 선택된 회사 정보
+      const ceoInput = document.getElementById('companyCEO').value;
+      document.getElementById('previewCEO').textContent = ceoInput || (company ? company.ceo : '_______');
+      
+      document.getElementById('previewStartDate').textContent = document.getElementById('startDate').value || '_______';
+      const endDate = document.getElementById('endDate').value;
+      document.getElementById('previewEndDate').textContent = endDate || '기간의 정함이 없음';
+      document.getElementById('previewStore').textContent = document.getElementById('workStore').value || '_______';
+      document.getElementById('previewPosition').textContent = document.getElementById('position').value || '_______';
+      
+      document.getElementById('previewWorkDays').textContent = document.getElementById('workDays').value || '_______';
+      document.getElementById('previewWorkTime').textContent = document.getElementById('workTime').value || '_______';
+      document.getElementById('previewBreakTime').textContent = document.getElementById('breakTime').value || '없음';
+      
+      document.getElementById('previewWageType').textContent = document.getElementById('wageType').value || '_______';
+      const wageAmount = document.getElementById('wageAmount').value;
+      document.getElementById('previewWageAmount').textContent = wageAmount ? Number(wageAmount).toLocaleString() : '_______';
+      document.getElementById('previewPaymentDay').textContent = document.getElementById('paymentDay').value || '_______';
+      document.getElementById('previewPaymentMethod').textContent = document.getElementById('paymentMethod').value || '_______';
+      
+      const contractContent = document.getElementById('contractContent').value;
+      const bodyDiv = document.getElementById('previewContractBody');
+      if (contractContent && contractContent.trim()) {
+        bodyDiv.innerHTML = '<div style="white-space: pre-wrap; line-height: 1.8; margin: 30px 0;">' + contractContent + '</div>';
+      } else {
+        bodyDiv.innerHTML = '';
+      }
+      
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      document.getElementById('previewContractDate').textContent = `${year}년 ${month}월 ${day}일`;
+      
+      console.log('✅ 미리보기 업데이트 완료');
+    }
+
+    // 계약서 템플릿
+    function loadDefaultTemplate() {
+      console.log('📄 기본 템플릿 로드 시작');
+      const contentEl = document.getElementById('contractContent');
+      console.log('contractContent 요소:', contentEl);
+      if (!contentEl) {
+        console.error('❌ contractContent 요소를 찾을 수 없습니다!');
+        return;
+      }
+      
+      const template = `제1조 (근로계약 기간)
+본 계약의 기간은 위 표에 명시된 바와 같다.
+
+제2조 (근무 장소 및 업무 내용)
+근로자는 위 표에 명시된 근무 장소에서 명시된 업무를 수행한다.
+
+제3조 (근로시간 및 휴게시간)
+1. 근로시간은 위 표에 명시된 바와 같다.
+2. 휴게시간은 근로시간 중 위 표에 명시된 바와 같다.
+
+제4조 (근무일 및 휴일)
+1. 근무일은 위 표에 명시된 바와 같다.
+2. 주휴일은 근로기준법에 따라 부여한다.
+
+제5조 (임금)
+1. 근로자의 임금은 위 표에 명시된 바와 같다.
+2. 임금은 위 표에 명시된 지급일에 지급한다.
+3. 연장·야간·휴일 근로 시에는 근로기준법에 따라 가산임금을 지급한다.
+
+제6조 (연차유급휴가)
+연차유급휴가는 근로기준법에 따라 부여한다.
+
+제7조 (사회보험 가입)
+사용자는 근로자를 4대 사회보험에 가입시킨다.
+
+제8조 (계약의 해지)
+1. 본 계약을 해지하고자 할 때는 30일 전에 예고하여야 한다.
+2. 해고 예고 기간을 두지 않을 경우 30일분의 통상임금을 지급한다.
+
+제9조 (기타)
+이 계약서에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.`;
+
+      contentEl.value = template;
+      console.log('✅ 기본 템플릿 로드 완료');
+    }
+
+    // 스케줄 데이터 수집 및 복원
+    function collectScheduleData() {
+      const schedules = [];
+      const scheduleItems = document.querySelectorAll('.work-schedule-item');
+      
+      scheduleItems.forEach((item, index) => {
+        const selectedDays = [];
+        const activeDayBtns = item.querySelectorAll('.day-btn.active');
+        activeDayBtns.forEach(btn => {
+          selectedDays.push(btn.getAttribute('data-day'));
+        });
+        
+        const startHour = item.querySelector('.schedule-start-hour')?.value || '';
+        const startMinute = item.querySelector('.schedule-start-minute')?.value || '';
+        const endHour = item.querySelector('.schedule-end-hour')?.value || '';
+        const endMinute = item.querySelector('.schedule-end-minute')?.value || '';
+        
+        schedules.push({
+          index: index,
+          days: selectedDays,
+          startHour: startHour,
+          startMinute: startMinute,
+          endHour: endHour,
+          endMinute: endMinute
+        });
+      });
+      
+      return schedules;
+    }
+
+    function restoreScheduleData(schedules, breakTimeData) {
+      if (!schedules || schedules.length === 0) return;
+      
+      const container = document.getElementById('workScheduleContainer');
+      const items = container.querySelectorAll('.work-schedule-item');
+      for (let i = items.length - 1; i > 0; i--) {
+        items[i].remove();
+      }
+      
+      schedules.forEach((schedule, index) => {
+        let scheduleItem;
+        
+        if (index === 0) {
+          scheduleItem = container.querySelector('.work-schedule-item[data-index="0"]');
+        } else {
+          addSchedule();
+          scheduleItem = container.querySelector(`.work-schedule-item[data-index="${scheduleCounter - 1}"]`);
+        }
+        
+        if (scheduleItem) {
+          schedule.days.forEach(day => {
+            const dayBtn = scheduleItem.querySelector(`.day-btn[data-day="${day}"]`);
+            if (dayBtn) {
+              dayBtn.classList.add('active');
+            }
+          });
+          
+          const startHourSelect = scheduleItem.querySelector('.schedule-start-hour');
+          const startMinuteSelect = scheduleItem.querySelector('.schedule-start-minute');
+          const endHourSelect = scheduleItem.querySelector('.schedule-end-hour');
+          const endMinuteSelect = scheduleItem.querySelector('.schedule-end-minute');
+          
+          if (startHourSelect) startHourSelect.value = schedule.startHour;
+          if (startMinuteSelect) startMinuteSelect.value = schedule.startMinute;
+          if (endHourSelect) endHourSelect.value = schedule.endHour;
+          if (endMinuteSelect) endMinuteSelect.value = schedule.endMinute;
+        }
+      });
+      
+      if (breakTimeData) {
+        if (breakTimeData.hour) document.getElementById('breakTimeHour').value = breakTimeData.hour;
+        if (breakTimeData.minute) document.getElementById('breakTimeMinute').value = breakTimeData.minute;
+        if (breakTimeData.startHour) document.getElementById('breakStartHour').value = breakTimeData.startHour;
+        if (breakTimeData.startMinute) document.getElementById('breakStartMinute').value = breakTimeData.startMinute;
+        if (breakTimeData.endHour) document.getElementById('breakEndHour').value = breakTimeData.endHour;
+        if (breakTimeData.endMinute) document.getElementById('breakEndMinute').value = breakTimeData.endMinute;
+      }
+      
+      updateWorkTimeDisplay();
+      updateBreakTimeDisplay();
+    }
+
+    // 계약서 저장
+    function showSaveContractModal() {
+      if (!validateForm()) {
+        return;
+      }
+      document.getElementById('saveContractModal').style.display = 'flex';
+      const employeeName = document.getElementById('employeeName').value;
+      const position = document.getElementById('position').value;
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('contractSaveName').value = `${employeeName}_${position}_${today}`;
+    }
+
+    function closeSaveContractModal() {
+      document.getElementById('saveContractModal').style.display = 'none';
+      document.getElementById('contractSaveName').value = '';
+    }
+
+    function saveContract() {
+      const contractName = document.getElementById('contractSaveName').value.trim();
+      
+      if (!contractName) {
+        alert('⚠️ 계약서 이름을 입력해주세요.');
+        return;
+      }
+      
+      if (!validateForm()) {
+        closeSaveContractModal();
+        return;
+      }
+      
+      const schedules = collectScheduleData();
+      
+      const breakTimeData = {
+        hour: document.getElementById('breakTimeHour')?.value || '',
+        minute: document.getElementById('breakTimeMinute')?.value || '',
+        startHour: document.getElementById('breakStartHour')?.value || '',
+        startMinute: document.getElementById('breakStartMinute')?.value || '',
+        endHour: document.getElementById('breakEndHour')?.value || '',
+        endMinute: document.getElementById('breakEndMinute')?.value || ''
+      };
+      
+      const contractData = {
+        name: contractName,
+        employeeId: document.getElementById('employeeSelect').value,
+        employeeName: document.getElementById('employeeName').value,
+        employeeBirth: document.getElementById('employeeBirth').value,
+        employeeAddress: document.getElementById('employeeAddress').value,
+        employeePhone: document.getElementById('employeePhone').value,
+        companyId: document.getElementById('companySelect').value,
+        contractType: document.getElementById('contractType').value,
+        workStore: document.getElementById('workStore').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        position: document.getElementById('position').value,
+        workDays: document.getElementById('workDays').value,
+        workTime: document.getElementById('workTime').value,
+        breakTime: document.getElementById('breakTime').value,
+        wageType: document.getElementById('wageType').value,
+        wageAmount: document.getElementById('wageAmount').value,
+        paymentDay: document.getElementById('paymentDay').value,
+        paymentMethod: document.getElementById('paymentMethod').value,
+        contractContent: document.getElementById('contractContent').value,
+        schedules: schedules,
+        breakTimeData: breakTimeData,
+        savedAt: new Date().toISOString()
+      };
+      
+      const saved = localStorage.getItem('savedContracts');
+      savedContracts = saved ? JSON.parse(saved) : [];
+      
+      const existingIndex = savedContracts.findIndex(c => c.name === contractName);
+      if (existingIndex >= 0) {
+        if (!confirm('⚠️ 같은 이름의 계약서가 이미 존재합니다.\n덮어쓰시겠습니까?')) {
+          return;
+        }
+        savedContracts[existingIndex] = contractData;
+      } else {
+        savedContracts.unshift(contractData);
+      }
+      
+      localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
+      
+      closeSaveContractModal();
+      alert('✅ 계약서가 저장되었습니다.');
+    }
+
+    // 저장된 계약서 불러오기
+    function showLoadContractModal() {
+      const saved = localStorage.getItem('savedContracts');
+      savedContracts = saved ? JSON.parse(saved) : [];
+      
+      const listDiv = document.getElementById('savedContractsList');
+      
+      if (savedContracts.length === 0) {
+        listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">저장된 계약서가 없습니다.</p>';
+      } else {
+        listDiv.innerHTML = savedContracts.map((contract, index) => {
+          const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
+          const savedDate = new Date(contract.savedAt).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          return `
+            <div style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.backgroundColor='var(--bg-light)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='white';" onclick="loadSavedContract(${index})">
+              <div>
+                <div style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">📄 ${displayName}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${savedDate}</div>
+              </div>
+              <button onclick="event.stopPropagation(); deleteSavedContract(${index});" style="padding: 6px 12px; background: var(--danger-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
+            </div>
+          `;
+        }).join('');
+      }
+      
+      document.getElementById('loadContractModal').style.display = 'flex';
+    }
+
+    function closeLoadContractModal() {
+      document.getElementById('loadContractModal').style.display = 'none';
+    }
+
+    function loadSavedContract(index) {
+      const contract = savedContracts[index];
+      
+      if (confirm('현재 작성 중인 내용이 덮어씌워집니다. 계속하시겠습니까?')) {
+        document.getElementById('employeeSelect').value = contract.employeeId;
+        loadEmployeeInfo();
+        document.getElementById('companySelect').value = contract.companyId;
+        loadCompanyInfo();
+        
+        document.getElementById('contractType').value = contract.contractType;
+        document.getElementById('workStore').value = contract.workStore;
+        document.getElementById('startDate').value = contract.startDate;
+        document.getElementById('endDate').value = contract.endDate;
+        document.getElementById('position').value = contract.position;
+        document.getElementById('wageType').value = contract.wageType;
+        document.getElementById('wageAmount').value = contract.wageAmount;
+        document.getElementById('paymentDay').value = contract.paymentDay;
+        document.getElementById('paymentMethod').value = contract.paymentMethod;
+        document.getElementById('contractContent').value = contract.contractContent;
+        
+        if (contract.schedules && contract.schedules.length > 0) {
+          restoreScheduleData(contract.schedules, contract.breakTimeData);
+        }
+        
+        closeLoadContractModal();
+        alert('✅ 계약서를 불러왔습니다.');
+      }
+    }
+
+    function deleteSavedContract(index) {
+      const contract = savedContracts[index];
+      const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
+      
+      if (confirm(`"${displayName}" 계약서를 삭제하시겠습니까?`)) {
+        savedContracts.splice(index, 1);
+        localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
+        showLoadContractModal();
+        alert('✅ 계약서가 삭제되었습니다.');
+      }
+    }
+
+    // 계약서 생성
+    function generateContract() {
+      const contractId = 'C' + Date.now();
+      const baseUrl = window.location.href.split('?')[0].replace('index.html', '');
+      const signLink = `${baseUrl}contract-sign.html?id=${contractId}`;
+      
+      const company = companies.find(c => c.id === document.getElementById('companySelect').value);
+      
+      const contractData = {
+        id: contractId,
+        employeeName: document.getElementById('employeeName').value,
+        employeeBirth: document.getElementById('employeeBirth').value,
+        employeeAddress: document.getElementById('employeeAddress').value,
+        employeePhone: document.getElementById('employeePhone').value,
+        companyName: company?.name || '',
+        companyCEO: company?.ceo || '',
+        companyBusinessNumber: company?.businessNumber || '',
+        companyPhone: company?.phone || '',
+        companyAddress: company?.address || '',
+        contractType: document.getElementById('contractType').value,
+        workStore: document.getElementById('workStore').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value || '기간의 정함이 없음',
+        position: document.getElementById('position').value,
+        workDays: document.getElementById('workDays').value,
+        workTime: document.getElementById('workTime').value,
+        breakTime: document.getElementById('breakTime').value,
+        wageType: document.getElementById('wageType').value,
+        wageAmount: document.getElementById('wageAmount').value,
+        paymentDay: document.getElementById('paymentDay').value,
+        paymentMethod: document.getElementById('paymentMethod').value,
+        contractContent: document.getElementById('contractContent').value,
+        contractDate: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+        createdAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`contract_${contractId}`, JSON.stringify(contractData));
+      
+      document.getElementById('signLinkSection').style.display = 'block';
+      document.getElementById('contractIdDisplay').textContent = contractId;
+      document.getElementById('signLinkInput').value = signLink;
+      
+      alert('✅ 계약서가 생성되었습니다!');
+      
+      document.getElementById('signLinkSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copySignLink() {
+      const input = document.getElementById('signLinkInput');
+      input.select();
+      document.execCommand('copy');
+      alert('✅ 링크가 복사되었습니다!');
+    }
+  </script>
+
+  <!-- 계약서 작성 모달 -->
+  <div id="contractModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 style="margin: 0;">📝 근로계약서 작성</h2>
+        <button class="modal-close" onclick="closeContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 탭 및 저장된 계약서 불러오기 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+          <div class="tab-buttons" style="margin-bottom: 0;">
+            <button id="formTabBtn" class="tab-button active" onclick="switchContractTab('form')">✍️ 작성하기</button>
+            <button id="previewTabBtn" class="tab-button" onclick="switchContractTab('preview')">👁️ 미리보기</button>
+          </div>
+          <button class="btn btn-secondary" onclick="showLoadContractModal()">📂 저장된 계약서 불러오기</button>
+        </div>
+
+        <!-- 작성 폼 탭 -->
+        <div id="formTab" class="tab-content active">
+          <!-- 1. 직원 및 사용자 정보 -->
+          <div class="form-section">
+            <h3>1. 기본 정보</h3>
+            
+            <h4>👤 근로자 (직원) 정보</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="employeeSelect">직원 선택 *</label>
+                <select id="employeeSelect" required onchange="loadEmployeeInfo()">
+                  <option value="">선택하세요</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="employeeName">이름 *</label>
+                <input type="text" id="employeeName" placeholder="자동 입력" readonly required>
+              </div>
+              <div class="form-group">
+                <label for="employeeBirth">생년월일 *</label>
+                <input type="date" id="employeeBirth" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="employeeAddress">주소 *</label>
+                <input type="text" id="employeeAddress" required>
+              </div>
+              <div class="form-group">
+                <label for="employeePhone">연락처 *</label>
+                <input type="tel" id="employeePhone" required>
+              </div>
+            </div>
+
+            <h4>🏢 사용자 (회사) 정보</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="companySelect">회사 선택 *</label>
+                <select id="companySelect" required onchange="loadCompanyInfo()">
+                  <option value="">선택하세요</option>
+                </select>
+              </div>
+              <div style="align-self: flex-end; display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="showEditCompanyModal()" style="height: 42px;">✏️ 수정</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="showAddCompanyModal()" style="height: 42px;">➕ 추가</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="companyCEO">대표자명 *</label>
+                <input type="text" id="companyCEO" placeholder="자동 입력" readonly required>
+              </div>
+              <div class="form-group">
+                <label for="companyBusinessNumber">사업자등록번호 *</label>
+                <input type="text" id="companyBusinessNumber" placeholder="자동 입력" readonly required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="companyPhone">회사 연락처 *</label>
+                <input type="tel" id="companyPhone" placeholder="자동 입력" readonly required>
+              </div>
+              <div class="form-group">
+                <label for="companyAddress">사업장 주소 *</label>
+                <input type="text" id="companyAddress" placeholder="자동 입력" readonly required>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 계약 정보 -->
+          <div class="form-section">
+            <h3>2. 계약 정보</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="contractType">계약 유형 *</label>
+                <select id="contractType" required>
+                  <option value="">선택하세요</option>
+                  <option value="정규직">정규직</option>
+                  <option value="계약직">계약직</option>
+                  <option value="시간제">시간제</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="workStore">근무 매장 *</label>
+                <select id="workStore" required>
+                  <option value="">선택하세요</option>
+                  <option value="부천시청점">부천시청점</option>
+                  <option value="상동점">상동점</option>
+                  <option value="부천역사점">부천역사점</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="startDate">계약 시작일 *</label>
+                <input type="date" id="startDate" required>
+              </div>
+              <div class="form-group">
+                <label for="endDate">계약 종료일</label>
+                <input type="date" id="endDate">
+                <p class="help-text">기간의 정함이 없는 경우 비워두세요</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="position">직책/직무 *</label>
+                <input type="text" id="position" placeholder="바리스타, 매니저 등" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 근무 조건 -->
+          <div class="form-section">
+            <h3>3. 근무 조건</h3>
+            
+            <!-- 근무 시간대 (다중 스케줄) -->
+            <div id="workScheduleContainer">
+              <div class="work-schedule-item" data-index="0">
+                <div class="form-group">
+                  <label>근무일 *</label>
+                  <div class="day-buttons">
+                    <button type="button" class="day-btn" data-day="월" onclick="toggleDayForSchedule(this, 0)">월</button>
+                    <button type="button" class="day-btn" data-day="화" onclick="toggleDayForSchedule(this, 0)">화</button>
+                    <button type="button" class="day-btn" data-day="수" onclick="toggleDayForSchedule(this, 0)">수</button>
+                    <button type="button" class="day-btn" data-day="목" onclick="toggleDayForSchedule(this, 0)">목</button>
+                    <button type="button" class="day-btn" data-day="금" onclick="toggleDayForSchedule(this, 0)">금</button>
+                    <button type="button" class="day-btn" data-day="토" onclick="toggleDayForSchedule(this, 0)">토</button>
+                    <button type="button" class="day-btn" data-day="일" onclick="toggleDayForSchedule(this, 0)">일</button>
+                  </div>
+                </div>
+                <div class="form-row" style="align-items: flex-end;">
+                  <div class="form-group">
+                    <label>시작 시간 *</label>
+                    <div style="display: flex; gap: 8px;">
+                      <select class="schedule-start-hour" required onchange="updateWorkTimeDisplay()">
+                        <option value="">시</option>
+                      </select>
+                      <select class="schedule-start-minute" required onchange="updateWorkTimeDisplay()">
+                        <option value="">분</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>종료 시간 *</label>
+                    <div style="display: flex; gap: 8px;">
+                      <select class="schedule-end-hour" required onchange="updateWorkTimeDisplay()">
+                        <option value="">시</option>
+                      </select>
+                      <select class="schedule-end-minute" required onchange="updateWorkTimeDisplay()">
+                        <option value="">분</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="removeSchedule(0)" style="display: none; height: 42px; margin-bottom: 0;">삭제</button>
+                </div>
+              </div>
+            </div>
+            
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addSchedule()" style="margin-top: 8px;">
+              ➕ 시간대 추가
+            </button>
+            <input type="hidden" id="workDays">
+            <input type="hidden" id="workTime">
+
+            <!-- 휴게시간 -->
+            <div class="form-row" style="margin-top: var(--spacing-md);">
+              <div class="form-group">
+                <label>휴게시간 (선택사항)</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <select id="breakTimeHour" onchange="updateBreakTimeDisplay()">
+                    <option value="">시간</option>
+                    <option value="0">0시간</option>
+                    <option value="1">1시간</option>
+                    <option value="2">2시간</option>
+                  </select>
+                  <select id="breakTimeMinute" onchange="updateBreakTimeDisplay()">
+                    <option value="">분</option>
+                    <option value="0">0분</option>
+                    <option value="15">15분</option>
+                    <option value="30">30분</option>
+                    <option value="45">45분</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>휴게시간 시작 (선택사항)</label>
+                <div style="display: flex; gap: 8px;">
+                  <select id="breakStartHour" onchange="updateBreakTimeDisplay()">
+                    <option value="">시</option>
+                  </select>
+                  <select id="breakStartMinute" onchange="updateBreakTimeDisplay()">
+                    <option value="">분</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>휴게시간 종료 (선택사항)</label>
+                <div style="display: flex; gap: 8px;">
+                  <select id="breakEndHour" onchange="updateBreakTimeDisplay()">
+                    <option value="">시</option>
+                  </select>
+                  <select id="breakEndMinute" onchange="updateBreakTimeDisplay()">
+                    <option value="">분</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="breakTime">
+            <p class="help-text" id="breakTimePreview" style="margin-top: 8px;"></p>
+          </div>
+
+          <!-- 4. 급여 조건 -->
+          <div class="form-section">
+            <h3>4. 급여 조건</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="wageType">급여 형태 *</label>
+                <select id="wageType" required>
+                  <option value="">선택하세요</option>
+                  <option value="시급">시급</option>
+                  <option value="월급">월급</option>
+                  <option value="연봉">연봉</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="wageAmount">급여액 *</label>
+                <input type="number" id="wageAmount" placeholder="금액 입력" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="paymentDay">급여 지급일 *</label>
+                <select id="paymentDay" required>
+                  <option value="">선택하세요</option>
+                  <option value="매월 10일">매월 10일</option>
+                  <option value="매월 25일">매월 25일</option>
+                  <option value="매월 말일">매월 말일</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="paymentMethod">급여 지급 방법 *</label>
+                <select id="paymentMethod" required>
+                  <option value="">선택하세요</option>
+                  <option value="계좌이체">계좌이체</option>
+                  <option value="현금">현금</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. 계약서 본문 -->
+          <div class="form-section">
+            <h3>5. 계약서 본문 (선택사항)</h3>
+            <div class="form-group">
+              <label for="contractContent">계약서 추가 내용</label>
+              <textarea id="contractContent" placeholder="기본 템플릿이 자동으로 제공됩니다. 필요시 수정하세요." style="min-height: 500px; height: auto;"></textarea>
+              <p class="help-text">특약사항이나 추가 내용이 있으면 입력하세요</p>
+            </div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="closeContractModal()">← 닫기</button>
+            <button class="btn btn-secondary" onclick="showSaveContractModal()">📁 계약서 저장</button>
+            <button class="btn btn-primary" onclick="switchContractTab('preview')">미리보기 →</button>
+          </div>
+        </div>
+
+        <!-- 미리보기 탭 -->
+        <div id="previewTab" class="tab-content">
+          <div class="preview-section">
+            <div class="preview-content" id="previewContent">
+              <div class="preview-title">근 로 계 약 서</div>
+              
+              <p><strong><span id="previewCompanyName">(주)ABC디저트센터</span></strong> (이하 "사용자"라 함)와 <strong id="previewName">_______</strong> (이하 "근로자"라 함)는 다음과 같이 근로계약을 체결한다.</p>
+
+              <table class="preview-table">
+                <tr>
+                  <th>근로자 정보</th>
+                  <td>
+                    <div>성명: <span id="previewEmployeeName">_______</span></div>
+                    <div>생년월일: <span id="previewBirth">_______</span></div>
+                    <div>주소: <span id="previewAddress">_______</span></div>
+                    <div>연락처: <span id="previewPhone">_______</span></div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>계약 기간</th>
+                  <td>
+                    <span id="previewStartDate">_______</span> ~ <span id="previewEndDate">기간의 정함이 없음</span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>근무 장소</th>
+                  <td>맛남살롱 <span id="previewStore">_______</span></td>
+                </tr>
+                <tr>
+                  <th>업무 내용</th>
+                  <td><span id="previewPosition">_______</span></td>
+                </tr>
+                <tr>
+                  <th>근무 일시</th>
+                  <td>
+                    <div>근무일: <span id="previewWorkDays">_______</span></div>
+                    <div>근무시간: <span id="previewWorkTime">_______</span></div>
+                    <div>휴게시간: <span id="previewBreakTime">_______</span></div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>급여 조건</th>
+                  <td>
+                    <div><span id="previewWageType">_______</span>: <span id="previewWageAmount">_______</span>원</div>
+                    <div>지급일: <span id="previewPaymentDay">_______</span></div>
+                    <div>지급방법: <span id="previewPaymentMethod">_______</span></div>
+                  </td>
+                </tr>
+              </table>
+
+              <div id="previewContractBody"></div>
+
+              <p style="text-align: center; margin-top: 40px;">
+                <strong id="previewContractDate">20__년 __월 __일</strong>
+              </p>
+
+              <div style="margin-top: 40px; display: flex; justify-content: space-around;">
+                <div style="text-align: center;">
+                  <p>사용자 <span id="previewCompanyName2">(주)ABC디저트센터</span></p>
+                  <p style="margin-top: 20px;">대표이사: <span id="previewCEO">_______</span> (인)</p>
+                </div>
+                <div style="text-align: center;">
+                  <p>근로자</p>
+                  <p style="margin-top: 20px;"><span id="previewEmployeeName2">_______</span> (인)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="switchContractTab('form')">← 수정하기</button>
+            <button class="btn btn-primary" onclick="generateContract()">계약서 생성</button>
+          </div>
+
+          <!-- 서명 링크 표시 영역 -->
+          <div id="signLinkSection" style="display: none; margin-top: var(--spacing-lg);">
+            <div class="form-section">
+              <h3 style="color: var(--success-color);">✅ 계약서 생성 완료!</h3>
+              <p style="margin-bottom: var(--spacing-md);">계약서가 성공적으로 생성되었습니다. 아래 링크를 직원에게 전송하여 서명을 요청하세요.</p>
+              
+              <div style="margin-bottom: var(--spacing-md);">
+                <label style="font-weight: 600; margin-bottom: 8px; display: block;">📋 계약서 ID</label>
+                <div id="contractIdDisplay" style="padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius); font-family: monospace;"></div>
+              </div>
+
+              <div style="margin-bottom: var(--spacing-md);">
+                <label style="font-weight: 600; margin-bottom: 8px; display: block;">🔗 서명 링크</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="signLinkInput" readonly style="flex: 1; padding: var(--spacing-md); border: 2px solid var(--success-color); border-radius: var(--border-radius);">
+                  <button class="btn btn-primary" onclick="copySignLink()">📋 복사</button>
+                </div>
+              </div>
+
+              <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="closeContractModal()">← 닫기</button>
+                <button class="btn btn-primary" onclick="resetContractForm()">+ 새 계약서 작성</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회사 추가 모달 -->
+  <div id="addCompanyModal" class="modal-overlay" style="display: none; z-index: 10001;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="companyModalTitle">🏢 회사 추가</h3>
+        <button class="modal-close" onclick="closeAddCompanyModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editCompanyId" value="">
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyName">회사명 *</label>
+          <input type="text" id="newCompanyName" placeholder="예: (주)ABC디저트센터">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyCEO">대표자명 *</label>
+          <input type="text" id="newCompanyCEO" placeholder="예: 홍길동">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyBusinessNumber">사업자등록번호 *</label>
+          <input type="text" id="newCompanyBusinessNumber" placeholder="예: 123-45-67890">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyPhone">회사 연락처 *</label>
+          <input type="tel" id="newCompanyPhone" placeholder="예: 032-123-4567">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--spacing-md);">
+          <label for="newCompanyAddress">사업장 주소 *</label>
+          <input type="text" id="newCompanyAddress" placeholder="예: 경기도 부천시 원미구 74">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="deleteCompanyBtnContainer" style="margin-right: auto; display: none;">
+          <button class="btn btn-danger" onclick="deleteCompany()">🗑️ 삭제</button>
+        </div>
+        <button class="btn btn-secondary" onclick="closeAddCompanyModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveCompany()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 계약서 저장 모달 -->
+  <div id="saveContractModal" class="modal-overlay" style="display: none; z-index: 10001;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💾 계약서 저장</h3>
+        <button class="modal-close" onclick="closeSaveContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text" style="margin-bottom: var(--spacing-md);">
+          저장할 계약서의 이름을 입력하세요.
+        </p>
+        <div class="form-group">
+          <label for="contractSaveName">계약서 이름 *</label>
+          <input type="text" id="contractSaveName" placeholder="예: 홍길동_바리스타_2024년">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeSaveContractModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveContract()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 저장된 계약서 불러오기 모달 -->
+  <div id="loadContractModal" class="modal-overlay" style="display: none; z-index: 10001;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📂 저장된 계약서 불러오기</h3>
+        <button class="modal-close" onclick="closeLoadContractModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text" style="margin-bottom: var(--spacing-md);">
+          불러올 계약서를 선택하세요. 현재 작성 중인 내용은 덮어씌워집니다.
+        </p>
+        <div id="savedContractsList">
+          <p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">
+            저장된 계약서가 없습니다.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeLoadContractModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
