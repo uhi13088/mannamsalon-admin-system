@@ -633,6 +633,7 @@ function loadContracts() {
           type: contractData.contractType,
           period: `${contractData.startDate} ~ ${contractData.endDate}`,
           createdAt: new Date(contractData.createdAt).toLocaleDateString('ko-KR'),
+          createdAtRaw: contractData.createdAt,
           status: isSigned ? '서명완료' : '서명대기',
           data: contractData
         });
@@ -642,28 +643,44 @@ function loadContracts() {
     }
   }
   
-  // 더미 데이터 제거됨 - 실제 데이터만 사용
+  // 직원별로 그룹화
+  const employeeGroups = {};
+  allContracts.forEach(contract => {
+    if (!employeeGroups[contract.name]) {
+      employeeGroups[contract.name] = [];
+    }
+    employeeGroups[contract.name].push(contract);
+  });
   
-  // 최신순 정렬
-  allContracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // 각 그룹 내에서 최신순 정렬
+  Object.keys(employeeGroups).forEach(name => {
+    employeeGroups[name].sort((a, b) => new Date(b.createdAtRaw) - new Date(a.createdAtRaw));
+  });
   
   if (allContracts.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">생성된 계약서가 없습니다.</td></tr>';
     return;
   }
   
-  tbody.innerHTML = allContracts.map((con, index) => {
-    const statusClass = getContractStatusClass(con.status);
+  // 직원별로 표시 (최신 계약서 1개만 표시, 나머지는 관리 버튼으로 확인)
+  tbody.innerHTML = Object.keys(employeeGroups).map(employeeName => {
+    const contracts = employeeGroups[employeeName];
+    const latestContract = contracts[0];
+    const contractCount = contracts.length;
+    const statusClass = getContractStatusClass(latestContract.status);
+    
     return `
       <tr>
-        <td>${con.name}</td>
-        <td>${con.type}</td>
-        <td>${con.period}</td>
-        <td>${con.createdAt}</td>
-        <td><span class="badge badge-${statusClass}">${con.status}</span></td>
         <td>
-          <button class="btn btn-sm btn-secondary" onclick="viewContract('${con.id}')">📄 보기</button>
-          ${con.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${con.id}')">📧 링크전송</button>` : ''}
+          <strong>${employeeName}</strong>
+          ${contractCount > 1 ? `<span class="badge badge-info" style="margin-left: 8px;">${contractCount}건</span>` : ''}
+        </td>
+        <td>${latestContract.type}</td>
+        <td>${latestContract.period}</td>
+        <td>${latestContract.createdAt}</td>
+        <td><span class="badge badge-${statusClass}">${latestContract.status}</span></td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="showEmployeeContractList('${employeeName}')">📋 관리 (${contractCount}건)</button>
         </td>
       </tr>
     `;
