@@ -1071,20 +1071,36 @@
         `;
       }
       
+      // 🔍 디버깅: 서명 데이터 확인
+      console.log('🔍 계약서 ID:', contract.id);
+      console.log('🔍 isSigned:', isSigned);
+      console.log('🔍 signedContract:', signedContract);
+      if (signedContract) {
+        console.log('🔍 서명 데이터 길이:', signedContract.signature?.length || 0);
+        console.log('🔍 서명 데이터 시작 부분:', signedContract.signature?.substring(0, 100) || 'N/A');
+      }
+      
       // 서명 정보 HTML
       let signatureHtml = '';
       if (isSigned && signedContract.signature) {
         const signDate = new Date(signedContract.signedAt);
+        
+        // 🔍 실제 서명 이미지가 유효한지 테스트
+        console.log('✅ 서명 HTML 생성 시작');
+        console.log('  - 서명일:', signDate.toLocaleDateString('ko-KR'));
+        console.log('  - 근로자:', contract.employeeName);
+        
         signatureHtml = `
           <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
             <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
             <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
-              <img src="${signedContract.signature}" alt="서명" crossorigin="anonymous" style="width: 200px; height: 80px; display: block;">
+              <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; object-fit: contain;" onerror="console.error('❌ 서명 이미지 로드 실패!', this.src.substring(0,50))">
               <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
             </div>
           </div>
         `;
       } else {
+        console.log('⚠️ 서명 없음');
         signatureHtml = `
           <div class="avoid-page-break" style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
             <p style="color: #856404; font-weight: 600;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
@@ -1240,14 +1256,37 @@
       // 🔍 디버깅: element 내용 확인
       console.log('🔍 PDF 생성 영역:', element);
       console.log('🔍 element HTML 길이:', element.innerHTML.length);
-      console.log('🔍 element 내 서명 이미지 검색:', element.querySelectorAll('img[alt="서명"]').length + '개');
       
-      // 서명 데이터 확인
+      // 🔥 서명 데이터를 localStorage에서 직접 가져와서 다시 주입
       const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
       const signedContract = signedContracts.find(sc => sc.id === contract.id);
+      
       console.log('🔍 서명 데이터 존재:', !!signedContract);
       if (signedContract) {
         console.log('🔍 서명 이미지 길이:', signedContract.signature?.length || 0);
+        console.log('🔍 서명 이미지 시작:', signedContract.signature?.substring(0, 50) || 'N/A');
+      }
+      
+      // 서명 이미지가 없으면 다시 주입
+      const existingSignatureImgs = element.querySelectorAll('img[alt="서명"]');
+      console.log('🔍 기존 서명 이미지:', existingSignatureImgs.length + '개');
+      
+      if (signedContract && signedContract.signature && existingSignatureImgs.length === 0) {
+        console.log('⚠️ 서명 이미지 없음! 다시 주입합니다...');
+        
+        // 서명란을 찾아서 추가
+        const signDate = new Date(signedContract.signedAt);
+        const signatureHtml = `
+          <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
+              <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; object-fit: contain;">
+              <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+            </div>
+          </div>
+        `;
+        element.insertAdjacentHTML('beforeend', signatureHtml);
+        console.log('✅ 서명 HTML 주입 완료');
       }
       
       // PDF 생성 시작 알림

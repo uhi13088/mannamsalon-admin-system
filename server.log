@@ -490,3 +490,32 @@
 10.64.38.82 - - [30/Oct/2025 08:51:49] "GET /d58f100d-b406-4078-8e34-5535d3c2eda1 HTTP/1.1" 404 -
 10.64.38.82 - - [30/Oct/2025 08:53:12] code 404, message File not found
 10.64.38.82 - - [30/Oct/2025 08:53:12] "GET /d58f100d-b406-4078-8e34-5535d3c2eda1 HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:54:15] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:54:16] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:54:16] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:54:16] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:54:25] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 08:54:25] "GET /d58f100d-b406-4078-8e34-5535d3c2eda1 HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:54:32] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:54:33] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 08:54:33] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:55:07] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:55:09] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:55:10] "GET /admin-login.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:55:10] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 08:55:10] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:56:23] "GET /contract-sign.html?id=C1761814569402 HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:56:23] "GET /css/common.css HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:56:23] "GET /js/contract-sign.js HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:56:33] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:56:34] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 08:56:34] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:57:02] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:02] "GET / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:03] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:03] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:03] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:03] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:03] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:04] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:57:04] "HEAD /employee-register.html HTTP/1.1" 200 -
