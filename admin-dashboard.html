@@ -468,19 +468,6 @@
     let isAuthenticated = false;
     let currentTab = 'dashboard';
 
-    const DUMMY_EMPLOYEES = [
-      { id: 1, name: '김민수', store: '부천시청점', position: '매니저', hourlyWage: '15,000원', startDate: '2023-01-15', status: '재직' },
-    ];
-
-    const DUMMY_ATTENDANCE = [
-      { id: 1, date: '2025-01-28', name: '김민수', store: '부천시청점', clockIn: '09:00', clockOut: '18:00', workTime: '8시간', status: '정상' },
-    ];
-
-    const DUMMY_SALARIES = [
-      { id: 1, name: '김민수', store: '부천시청점', basicPay: 3000000, overtimePay: 200000, deductions: 300000, totalPay: 2900000 },
-      { id: 2, name: '이지은', store: '상동점', basicPay: 1800000, overtimePay: 150000, deductions: 195000, totalPay: 1755000 },
-    ];
-
     document.addEventListener('DOMContentLoaded', function() {
       const today = new Date();
       const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -626,55 +613,56 @@
       
       try {
         console.log('📋 직원 목록 로드 시작...');
+        console.log('📍 컬렉션: users, 조건: userType == employee');
         
-        let employees = [];
+        // Firestore users 컬렉션에서 직원 데이터 가져오기
+        const usersSnapshot = await db.collection('users')
+          .where('userType', '==', 'employee')
+          .get();
         
-        // Firestore에서 employees 컬렉션 가져오기 시도
-        try {
-          const snapshot = await db.collection('employees')
-            .where('userType', '==', 'employee')
-            .where('status', '==', 'active')
-            .orderBy('createdAt', 'desc')
-            .get();
-          
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            employees.push({
-              uid: doc.id,
-              name: data.name,
-              email: data.email,
-              birth: data.birth,
-              phone: data.phone,
-              address: data.address,
-              store: data.store,
-              position: data.position,
-              status: data.status,
-              createdAt: data.createdAt
-            });
+        console.log(`📊 조회 결과: ${usersSnapshot.size}명의 직원`);
+        
+        // 디버깅: 모든 users 컬렉션 데이터 확인
+        const allUsersSnapshot = await db.collection('users').get();
+        console.log(`📊 전체 users 컬렉션: ${allUsersSnapshot.size}개 문서`);
+        allUsersSnapshot.forEach(doc => {
+          const data = doc.data();
+          console.log(`  - ${doc.id}: ${data.name} (userType: ${data.userType || 'undefined'})`);
+        });
+        
+        if (usersSnapshot.empty) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p style="margin-bottom: 16px;">등록된 직원이 없습니다.</p>
+                <p style="font-size: 14px; color: var(--text-secondary);">직원 가입 페이지에서 먼저 직원을 등록해주세요.</p>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+                  💡 전체 users: ${allUsersSnapshot.size}명 (콘솔에서 상세 확인)
+                </p>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        const employees = [];
+        usersSnapshot.forEach(doc => {
+          const data = doc.data();
+          console.log(`✅ 직원 로드: ${data.name} (${doc.id})`);
+          employees.push({
+            uid: doc.id,
+            name: data.name || '-',
+            store: data.store || '-',
+            position: data.position || '-',
+            phone: data.phone || '-',
+            birth: data.birth || '-',
+            status: data.status || 'active',
+            email: data.email || '-',
+            address: data.address || '-'
           });
-          
-          console.log(`✅ Firestore에서 ${employees.length}명 로드`);
-        } catch (firestoreError) {
-          console.warn('⚠️ Firestore 로드 실패, 더미 데이터 사용:', firestoreError.message);
-        }
+        });
         
-        // 데이터가 없으면 더미 데이터 사용
-        if (employees.length === 0) {
-          console.log('📝 더미 데이터 사용');
-          employees = [
-            {
-              uid: 'dummy_1',
-              name: '김민수',
-              email: 'minsu@example.com',
-              birth: '900315-1234567',
-              phone: '010-1234-5678',
-              address: '경기도 부천시 원미구',
-              store: '부천시청점',
-              position: '바리스타',
-              status: 'active'
-            }
-          ];
-        }
+        console.log(`✅ ${employees.length}명의 직원 목록 표시`);
         
         tbody.innerHTML = employees.map(emp => {
           return `
@@ -684,7 +672,7 @@
               <td>${emp.position}</td>
               <td>${emp.phone}</td>
               <td>${emp.birth || '-'}</td>
-              <td><span class="badge badge-success">${emp.status === 'active' ? '활성' : '비활성'}</span></td>
+              <td><span class="badge ${emp.status === 'active' ? 'badge-success' : 'badge-danger'}">${emp.status === 'active' ? '재직' : '퇴사'}</span></td>
               <td>
                 <button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>
               </td>
