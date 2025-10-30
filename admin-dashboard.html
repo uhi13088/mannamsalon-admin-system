@@ -1237,6 +1237,19 @@
       const contract = JSON.parse(contractData);
       const fileName = `근로계약서_${contract.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
       
+      // 🔍 디버깅: element 내용 확인
+      console.log('🔍 PDF 생성 영역:', element);
+      console.log('🔍 element HTML 길이:', element.innerHTML.length);
+      console.log('🔍 element 내 서명 이미지 검색:', element.querySelectorAll('img[alt="서명"]').length + '개');
+      
+      // 서명 데이터 확인
+      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const signedContract = signedContracts.find(sc => sc.id === contract.id);
+      console.log('🔍 서명 데이터 존재:', !!signedContract);
+      if (signedContract) {
+        console.log('🔍 서명 이미지 길이:', signedContract.signature?.length || 0);
+      }
+      
       // PDF 생성 시작 알림
       const loadingDiv = document.createElement('div');
       loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; text-align: center;';
@@ -1245,10 +1258,13 @@
       
       // 🔥 핵심 해결책: base64 → Blob URL 변환
       const signatureImages = element.querySelectorAll('img[alt="서명"]');
+      console.log('🔍 찾은 서명 이미지:', signatureImages.length + '개');
       const blobUrls = []; // 나중에 정리용
       
       for (const img of signatureImages) {
         const base64Src = img.src;
+        console.log('🔍 이미지 src 타입:', base64Src.substring(0, 30) + '...');
+        
         if (base64Src.startsWith('data:image')) {
           try {
             // base64를 Blob으로 변환
@@ -1263,10 +1279,12 @@
             img.src = blobUrl;
             img.removeAttribute('crossorigin'); // Blob URL에는 CORS 불필요
             
-            console.log('✅ 서명 이미지 Blob URL 변환 완료');
+            console.log('✅ 서명 이미지 Blob URL 변환 완료:', blobUrl);
           } catch (err) {
             console.error('❌ 서명 이미지 변환 실패:', err);
           }
+        } else {
+          console.log('⚠️ base64 아님 - 건너뜀');
         }
       }
       
