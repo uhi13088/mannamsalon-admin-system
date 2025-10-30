@@ -400,12 +400,14 @@
                   <th>매장명</th>
                   <th>주소</th>
                   <th>연락처</th>
+                  <th>대표자</th>
+                  <th>사업자번호</th>
                   <th>관리</th>
                 </tr>
               </thead>
               <tbody id="storesTableBody">
                 <tr>
-                  <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                     <p style="margin-bottom: 16px;">로딩 중...</p>
                   </td>
                 </tr>
@@ -437,6 +439,14 @@
         <div class="form-group">
           <label for="storePhone">연락처</label>
           <input type="tel" id="storePhone" placeholder="032-123-4567">
+        </div>
+        <div class="form-group">
+          <label for="storeCEO">대표자명</label>
+          <input type="text" id="storeCEO" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+          <label for="storeBusinessNumber">사업자등록번호</label>
+          <input type="text" id="storeBusinessNumber" placeholder="123-45-67890">
         </div>
       </div>
       <div class="modal-footer">
@@ -1226,7 +1236,7 @@
       if (stores.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
               <p style="margin-bottom: 16px;">등록된 매장이 없습니다.</p>
               <button class="btn btn-primary" onclick="showAddStoreModal()">+ 첫 매장 추가하기</button>
             </td>
@@ -1240,6 +1250,8 @@
           <td>${store.name}</td>
           <td>${store.address || '-'}</td>
           <td>${store.phone || '-'}</td>
+          <td>${store.ceo || '-'}</td>
+          <td>${store.businessNumber || '-'}</td>
           <td>
             <button class="btn btn-sm btn-secondary" onclick="showEditStoreModal('${store.id}')">✏️ 수정</button>
           </td>
@@ -1253,6 +1265,8 @@
       document.getElementById('storeName').value = '';
       document.getElementById('storeAddress').value = '';
       document.getElementById('storePhone').value = '';
+      document.getElementById('storeCEO').value = '';
+      document.getElementById('storeBusinessNumber').value = '';
       document.getElementById('deleteStoreBtn').style.display = 'none';
       document.getElementById('storeModal').style.display = 'flex';
     }
@@ -1271,6 +1285,8 @@
       document.getElementById('storeName').value = store.name;
       document.getElementById('storeAddress').value = store.address || '';
       document.getElementById('storePhone').value = store.phone || '';
+      document.getElementById('storeCEO').value = store.ceo || '';
+      document.getElementById('storeBusinessNumber').value = store.businessNumber || '';
       document.getElementById('deleteStoreBtn').style.display = 'block';
       document.getElementById('storeModal').style.display = 'flex';
     }
@@ -1284,6 +1300,8 @@
       const name = document.getElementById('storeName').value.trim();
       const address = document.getElementById('storeAddress').value.trim();
       const phone = document.getElementById('storePhone').value.trim();
+      const ceo = document.getElementById('storeCEO').value.trim();
+      const businessNumber = document.getElementById('storeBusinessNumber').value.trim();
       
       if (!name) {
         alert('⚠️ 매장명을 입력해주세요.');
@@ -1296,12 +1314,12 @@
         // 수정
         const index = stores.findIndex(s => s.id === storeId);
         if (index >= 0) {
-          stores[index] = { ...stores[index], name, address, phone };
+          stores[index] = { ...stores[index], name, address, phone, ceo, businessNumber };
         }
       } else {
         // 추가
         const newId = String(Date.now());
-        stores.push({ id: newId, name, address, phone });
+        stores.push({ id: newId, name, address, phone, ceo, businessNumber });
       }
       
       localStorage.setItem('stores', JSON.stringify(stores));
