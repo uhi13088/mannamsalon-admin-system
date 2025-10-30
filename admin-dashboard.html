@@ -1092,11 +1092,9 @@
         
         signatureHtml = `
           <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
-            <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
-            <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
-              <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; object-fit: contain;" onerror="console.error('❌ 서명 이미지 로드 실패!', this.src.substring(0,50))">
-              <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
-            </div>
+            <p style="margin-bottom: 10px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; margin-left: auto; object-fit: contain;" onerror="console.error('❌ 서명 이미지 로드 실패!', this.src.substring(0,50))">
+            <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
           </div>
         `;
       } else {
@@ -1267,24 +1265,22 @@
         console.log('🔍 서명 이미지 시작:', signedContract.signature?.substring(0, 50) || 'N/A');
       }
       
-      // 🔥 서명이 있으면 무조건 다시 그려넣기
+      // 🔥 서명이 있으면 무조건 다시 그려넣기 (네모 박스 제거)
       if (signedContract && signedContract.signature) {
         // 기존 서명 제거
         element.querySelectorAll('img[alt="서명"]').forEach(img => img.closest('.avoid-page-break')?.remove());
         
-        // 새로 추가
+        // 새로 추가 - 네모 박스 없이 깔끔하게
         const signDate = new Date(signedContract.signedAt);
         const signatureHtml = `
           <div class="avoid-page-break" style="margin-top: 60px; text-align: right; page-break-inside: avoid;">
-            <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
-            <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
-              <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block;">
-              <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
-            </div>
+            <p style="margin-bottom: 10px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; margin-left: auto;">
+            <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
           </div>
         `;
         element.insertAdjacentHTML('beforeend', signatureHtml);
-        console.log('✅ 서명 재주입 완료');
+        console.log('✅ 서명 재주입 완료 (네모 박스 제거)');
       }
       
       // PDF 생성 시작 알림
