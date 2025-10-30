@@ -467,8 +467,29 @@
     </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
   <!-- JavaScript -->
   <script>
+    // Firebase 초기화
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr3Tq2T7oy5rVlK1c33m_G0TlUWv0-g3k",
+      authDomain: "abcdc-staff-system.firebaseapp.com",
+      projectId: "abcdc-staff-system",
+      storageBucket: "abcdc-staff-system.firebasestorage.app",
+      messagingSenderId: "442207878284",
+      appId: "1:442207878284:web:49b157573851b124d28fa9"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
     // 인증 체크
     window.addEventListener('load', function() {
       const authenticated = sessionStorage.getItem('employee_authenticated');
@@ -489,11 +510,25 @@
     });
 
     // 로그아웃 함수
-    function handleLogout() {
+    async function handleLogout() {
       if (confirm('로그아웃 하시겠습니까?')) {
-        sessionStorage.removeItem('employee_authenticated');
-        sessionStorage.removeItem('employee_name');
-        window.location.href = 'employee-login.html';
+        try {
+          // Firebase 로그아웃
+          await auth.signOut();
+          console.log('✅ Firebase 로그아웃 성공');
+          
+          // 세션 스토리지 정리
+          sessionStorage.removeItem('employee_authenticated');
+          sessionStorage.removeItem('employee_name');
+          sessionStorage.removeItem('employee_email');
+          sessionStorage.removeItem('employee_uid');
+          
+          // 로그인 페이지로 이동
+          window.location.href = 'employee-login.html';
+        } catch (error) {
+          console.error('❌ 로그아웃 오류:', error);
+          alert('로그아웃 중 오류가 발생했습니다.');
+        }
       }
     }
   </script>
