@@ -970,7 +970,10 @@
       modal.style.display = 'flex';
       modal.id = 'contractViewModal';
       
-      const signLink = `${window.location.href.split('?')[0].replace('index.html', '')}contract-sign.html?id=${contract.id}`;
+      // 서명 링크 생성 - 현재 디렉토리 기준
+      const currentPath = window.location.pathname;
+      const directory = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+      const signLink = `${window.location.origin}${directory}contract-sign.html?id=${contract.id}`;
       const docKey = `employee_docs_${contract.employeeName}_${getEmployeeIdFromContract(contract)}`;
       const employeeDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
       
@@ -1074,7 +1077,10 @@
       
       try {
         const contract = JSON.parse(contractData);
-        const signLink = `${window.location.href.split('?')[0].replace('index.html', '')}contract-sign.html?id=${id}`;
+        // 서명 링크 생성 - 현재 디렉토리 기준
+        const currentPath = window.location.pathname;
+        const directory = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+        const signLink = `${window.location.origin}${directory}contract-sign.html?id=${id}`;
         
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -2819,8 +2825,12 @@
       }
       
       const contractId = 'C' + Date.now();
-      const baseUrl = window.location.origin + window.location.pathname.replace('admin-dashboard.html', '');
+      // 현재 페이지의 디렉토리 경로 추출
+      const currentPath = window.location.pathname;
+      const directory = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+      const baseUrl = window.location.origin + directory;
       const signLink = `${baseUrl}contract-sign.html?id=${contractId}`;
+      console.log('🔗 서명 링크 생성:', signLink);
       
       const company = companies.find(c => c.id === document.getElementById('companySelect').value);
       
