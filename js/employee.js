@@ -98,13 +98,29 @@ function handleLogin() {
 
 /**
  * 로그아웃 처리
- * sessionStorage 초기화 및 로그인 화면으로 이동
+ * Firebase 로그아웃 및 로그인 페이지로 이동
  */
-function handleLogout() {
+async function handleLogout() {
   if (confirm('로그아웃 하시겠습니까?')) {
-    sessionStorage.clear();
-    currentUser = null;
-    showLoginScreen();
+    try {
+      // Firebase 로그아웃
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        await firebase.auth().signOut();
+        console.log('✅ Firebase 로그아웃 성공');
+      }
+      
+      // 세션 스토리지 정리
+      sessionStorage.clear();
+      currentUser = null;
+      
+      // 로그인 페이지로 이동
+      window.location.href = 'employee-login.html';
+    } catch (error) {
+      console.error('❌ 로그아웃 오류:', error);
+      // 에러가 나도 강제로 로그아웃 처리
+      sessionStorage.clear();
+      window.location.href = 'employee-login.html';
+    }
   }
 }
 

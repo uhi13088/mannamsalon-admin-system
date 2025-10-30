@@ -160,12 +160,27 @@ function handleAdminKeyPress(event) {
 /**
  * 로그아웃 처리
  */
-function logout() {
+async function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
-    isAuthenticated = false;
-    sessionStorage.removeItem('admin_authenticated');
-    sessionStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_ROLE);
-    showLoginScreen();
+    try {
+      // Firebase 로그아웃
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        await firebase.auth().signOut();
+        console.log('✅ Firebase 로그아웃 성공');
+      }
+      
+      // 세션 정리
+      isAuthenticated = false;
+      sessionStorage.clear();
+      
+      // 로그인 페이지로 이동
+      window.location.href = 'admin-login.html';
+    } catch (error) {
+      console.error('❌ 로그아웃 오류:', error);
+      // 에러가 나도 강제로 로그아웃 처리
+      sessionStorage.clear();
+      window.location.href = 'admin-login.html';
+    }
   }
 }
 
