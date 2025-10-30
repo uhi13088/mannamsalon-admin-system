@@ -101,6 +101,11 @@
     #contractModal .preview-table th, #contractModal .preview-table td { border: 1px solid var(--border-color); padding: var(--spacing-md); text-align: left; }
     #contractModal .preview-table th { background: var(--bg-light); font-weight: 600; width: 30%; }
     
+    /* 페이지 브레이크 스타일 */
+    .page-break-before { page-break-before: always; break-before: page; }
+    .page-break-after { page-break-after: always; break-after: page; }
+    .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
+    
     /* 인쇄 스타일 */
     @media print {
       body * { visibility: hidden; }
@@ -108,6 +113,9 @@
       #contractViewModal { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
       #contractControls, #contractSelector { display: none !important; }
       #contractPrintArea { box-shadow: none !important; margin: 0 !important; padding: 15mm !important; }
+      #contractPrintArea table { page-break-inside: avoid; }
+      #contractPrintArea table tr { page-break-inside: avoid; page-break-after: auto; }
+      #contractPrintArea h1 { page-break-after: avoid; }
       .modal-overlay { position: static; background: white; }
       .modal-content { max-width: 100% !important; box-shadow: none !important; }
     }
@@ -1068,17 +1076,17 @@
       if (isSigned && signedContract.signature) {
         const signDate = new Date(signedContract.signedAt);
         signatureHtml = `
-          <div style="margin-top: 60px; text-align: right;">
+          <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
             <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
             <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
-              <img src="${signedContract.signature}" style="width: 200px; height: 80px; display: block;">
+              <img src="${signedContract.signature}" alt="서명" crossorigin="anonymous" style="width: 200px; height: 80px; display: block; max-width: 200px; max-height: 80px;">
               <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
             </div>
           </div>
         `;
       } else {
         signatureHtml = `
-          <div style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
+          <div class="avoid-page-break" style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
             <p style="color: #856404; font-weight: 600;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
           </div>
         `;
@@ -1113,7 +1121,7 @@
             </p>
             
             <!-- 계약 내용 테이블 -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px;">
+            <table class="avoid-page-break" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; page-break-inside: avoid;">
               <tr>
                 <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left;">근로자 정보</th>
                 <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
@@ -1163,15 +1171,15 @@
               </tr>
             </table>
             
-            <!-- 계약서 본문 (있을 경우) -->
-            ${contract.contractBody ? `
-              <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 30px; font-size: 13px; border: 1px solid #ddd; padding: 20px; background: #fafafa;">
-                ${contract.contractBody}
+            <!-- 계약서 본문 (contractContent 또는 contractBody) -->
+            ${(contract.contractContent || contract.contractBody) ? `
+              <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 30px; font-size: 13px; border: 1px solid #ddd; padding: 20px; background: #fafafa; page-break-inside: avoid;">
+                ${contract.contractContent || contract.contractBody}
               </div>
             ` : ''}
             
             <!-- 계약 일자 -->
-            <p style="text-align: center; margin-top: 50px; margin-bottom: 60px; font-size: 16px; font-weight: 600;">
+            <p class="avoid-page-break" style="text-align: center; margin-top: 50px; margin-bottom: 60px; font-size: 16px; font-weight: 600; page-break-inside: avoid;">
               ${contract.contractDate || new Date(contract.createdAt).toLocaleDateString('ko-KR')}
             </p>
             
@@ -1229,15 +1237,49 @@
       const contract = JSON.parse(contractData);
       const fileName = `근로계약서_${contract.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
       
+      // PDF 생성 시작 알림
+      const loadingDiv = document.createElement('div');
+      loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; text-align: center;';
+      loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">잠시만 기다려주세요</p>';
+      document.body.appendChild(loadingDiv);
+      
       const opt = {
-        margin: 0,
+        margin: [15, 15, 15, 15], // 상단, 우측, 하단, 좌측 여백 (mm)
         filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        image: { 
+          type: 'jpeg', 
+          quality: 0.98 
+        },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          letterRendering: true,
+          imageTimeout: 0
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.page-break-before',
+          after: '.page-break-after',
+          avoid: ['table', 'tr', 'img']
+        }
       };
       
-      html2pdf().set(opt).from(element).save();
+      html2pdf().set(opt).from(element).save().then(() => {
+        document.body.removeChild(loadingDiv);
+        console.log('✅ PDF 생성 완료:', fileName);
+      }).catch(err => {
+        document.body.removeChild(loadingDiv);
+        console.error('❌ PDF 생성 실패:', err);
+        alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
+      });
     }
 
     function copySignLink(link) {
