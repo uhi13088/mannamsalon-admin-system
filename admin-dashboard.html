@@ -2430,26 +2430,54 @@
     function updatePreview() {
       console.log('🔍 미리보기 업데이트');
       
+      // 직원(근로자) 정보
       const employeeName = document.getElementById('employeeName').value;
+      const employeeBirth = document.getElementById('employeeBirth').value;
+      const employeeAddress = document.getElementById('employeeAddress').value;
+      const employeePhone = document.getElementById('employeePhone').value;
+      
       document.getElementById('previewName').textContent = employeeName || '_______';
       document.getElementById('previewEmployeeName').textContent = employeeName || '_______';
       document.getElementById('previewEmployeeName2').textContent = employeeName || '_______';
-      document.getElementById('previewBirth').textContent = document.getElementById('employeeBirth').value || '_______';
-      document.getElementById('previewAddress').textContent = document.getElementById('employeeAddress').value || '_______';
-      document.getElementById('previewPhone').textContent = document.getElementById('employeePhone').value || '_______';
+      document.getElementById('previewBirth').textContent = employeeBirth || '_______';
+      document.getElementById('previewAddress').textContent = employeeAddress || '_______';
+      document.getElementById('previewPhone').textContent = employeePhone || '_______';
       
-      // 회사 정보: 선택된 회사 또는 직접 입력된 정보 사용
+      // 주민번호도 표시 (생년월일 input에서 가져온 값 또는 원본 주민번호)
+      // employeeBirth가 YYYY-MM-DD 형식이면 변환, 아니면 그대로 표시
+      const birthFormatted = employeeBirth ? employeeBirth.replace(/-/g, '.') : '_______';
+      const previewSSN = document.getElementById('previewSSN');
+      if (previewSSN) previewSSN.textContent = birthFormatted;
+      
+      // 회사(사용자) 정보
       const companyId = document.getElementById('companySelect').value;
       const company = companies.find(c => c.id === companyId);
       
-      // 회사명: 선택된 회사가 있으면 그 이름, 없으면 입력된 이름 사용
-      const companyNameInput = company ? company.name : '(주)ABC디저트센터';
-      document.getElementById('previewCompanyName').textContent = companyNameInput;
-      document.getElementById('previewCompanyName2').textContent = companyNameInput;
+      const companyName = document.getElementById('companyName')?.value || (company ? company.name : '(주)ABC디저트센터');
+      const companyCEO = document.getElementById('companyCEO').value || (company ? company.ceo : '_______');
+      const companyBusinessNumber = document.getElementById('companyBusinessNumber').value || (company ? company.businessNumber : '_______');
+      const companyPhone = document.getElementById('companyPhone').value || (company ? company.phone : '_______');
+      const companyAddress = document.getElementById('companyAddress').value || (company ? company.address : '_______');
       
-      // CEO: 입력 필드 값 우선, 없으면 선택된 회사 정보
-      const ceoInput = document.getElementById('companyCEO').value;
-      document.getElementById('previewCEO').textContent = ceoInput || (company ? company.ceo : '_______');
+      document.getElementById('previewCompanyName').textContent = companyName;
+      document.getElementById('previewCompanyName2').textContent = companyName;
+      document.getElementById('previewCEO').textContent = companyCEO;
+      
+      // 사용자(회사) 상세정보 표시
+      const previewCompanyNameDetail = document.getElementById('previewCompanyNameDetail');
+      if (previewCompanyNameDetail) previewCompanyNameDetail.textContent = companyName;
+      
+      const previewCEODetail = document.getElementById('previewCEODetail');
+      if (previewCEODetail) previewCEODetail.textContent = companyCEO;
+      
+      const previewBusinessNumber = document.getElementById('previewBusinessNumber');
+      if (previewBusinessNumber) previewBusinessNumber.textContent = companyBusinessNumber;
+      
+      const previewCompanyPhone = document.getElementById('previewCompanyPhone');
+      if (previewCompanyPhone) previewCompanyPhone.textContent = companyPhone;
+      
+      const previewCompanyAddress = document.getElementById('previewCompanyAddress');
+      if (previewCompanyAddress) previewCompanyAddress.textContent = companyAddress;
       
       document.getElementById('previewStartDate').textContent = document.getElementById('startDate').value || '_______';
       const endDate = document.getElementById('endDate').value;
@@ -3154,12 +3182,22 @@
 
               <table class="preview-table">
                 <tr>
-                  <th>근로자 정보</th>
+                  <th>근로자 (직원) 정보</th>
                   <td>
                     <div>성명: <span id="previewEmployeeName">_______</span></div>
                     <div>생년월일: <span id="previewBirth">_______</span></div>
                     <div>주소: <span id="previewAddress">_______</span></div>
                     <div>연락처: <span id="previewPhone">_______</span></div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>사용자 (회사) 정보</th>
+                  <td>
+                    <div>상호: <span id="previewCompanyNameDetail">_______</span></div>
+                    <div>대표자: <span id="previewCEODetail">_______</span></div>
+                    <div>사업자등록번호: <span id="previewBusinessNumber">_______</span></div>
+                    <div>회사 전화번호: <span id="previewCompanyPhone">_______</span></div>
+                    <div>사업장 주소: <span id="previewCompanyAddress">_______</span></div>
                   </td>
                 </tr>
                 <tr>
