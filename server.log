@@ -424,3 +424,14 @@
 10.64.38.82 - - [30/Oct/2025 08:14:16] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
 10.64.38.82 - - [30/Oct/2025 08:14:17] "HEAD /employee.html HTTP/1.1" 200 -
 10.64.38.82 - - [30/Oct/2025 08:14:17] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:10] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:11] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:11] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:11] "HEAD /employee-register.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:35] "GET /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:19:36] code 404, message File not found
+10.64.38.82 - - [30/Oct/2025 08:19:36] "GET /favicon.ico HTTP/1.1" 404 -
+10.64.38.82 - - [30/Oct/2025 08:21:19] "HEAD / HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:21:19] "HEAD /admin-dashboard.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:21:19] "HEAD /employee.html HTTP/1.1" 200 -
+10.64.38.82 - - [30/Oct/2025 08:21:20] "HEAD /employee-register.html HTTP/1.1" 200 -
