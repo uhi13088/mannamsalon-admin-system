@@ -1479,39 +1479,31 @@
         console.log('✅ 휴게시간 드롭다운 초기화 완료');
       }
       
-      // 직원 목록 - Firestore에서 로드
+      // 직원 목록 - Firestore users 컬렉션에서 로드
       const employeeSelect = document.getElementById('employeeSelect');
       if (employeeSelect) {
-        employeeSelect.innerHTML = '<option value="">새 직원 (직접 입력)</option>';
+        employeeSelect.innerHTML = '<option value="">직원을 선택하세요</option>';
         
-        // 더미 직원 먼저 추가
-        const dummyEmployee = {
-          id: 'dummy_1',
-          name: '김민수',
-          birth: '900315-1234567',
-          phone: '010-1234-5678',
-          address: '경기도 부천시 원미구'
-        };
-        employeeSelect.innerHTML += `<option value="${dummyEmployee.id}" data-name="${dummyEmployee.name}" data-birth="${dummyEmployee.birth}" data-phone="${dummyEmployee.phone}" data-address="${dummyEmployee.address}">${dummyEmployee.name} (${dummyEmployee.phone}) [더미]</option>`;
-        
-        // Firestore에서 직원 목록 가져오기
-        db.collection('employees')
+        // Firestore에서 직원 목록 가져오기 (users 컬렉션, userType === 'employee')
+        firebase.firestore().collection('users')
           .where('userType', '==', 'employee')
-          .where('status', '==', 'active')
           .get()
           .then(snapshot => {
             if (!snapshot.empty) {
               snapshot.forEach(doc => {
                 const emp = doc.data();
-                employeeSelect.innerHTML += `<option value="${doc.id}" data-name="${emp.name}" data-birth="${emp.birth}" data-phone="${emp.phone}" data-address="${emp.address}">${emp.name} (${emp.phone})</option>`;
+                const displayName = `${emp.name} (${emp.store || '매장미지정'}) - ${emp.phone}`;
+                employeeSelect.innerHTML += `<option value="${doc.id}">${displayName}</option>`;
               });
               console.log(`✅ ${snapshot.size}명의 직원 목록 로드 완료`);
             } else {
-              console.log('📋 등록된 직원이 없습니다 (더미 데이터 사용 중)');
+              console.log('📋 등록된 직원이 없습니다');
+              employeeSelect.innerHTML += '<option value="" disabled>등록된 직원이 없습니다</option>';
             }
           })
           .catch(error => {
-            console.error('❌ 직원 목록 로드 실패, 더미 데이터 사용:', error);
+            console.error('❌ 직원 목록 로드 실패:', error);
+            employeeSelect.innerHTML += '<option value="" disabled>직원 목록 로드 실패</option>';
           });
       }
       
@@ -1923,6 +1915,36 @@
       }
     }
 
+    /**
+     * 주민번호를 생년월일(YYYY-MM-DD)로 변환
+     * @param {string} ssn - 주민등록번호 (YYMMDD-******* 형식)
+     * @returns {string} YYYY-MM-DD 형식의 생년월일
+     */
+    function convertSSNtoBirthDate(ssn) {
+      if (!ssn || ssn.length < 6) return '';
+      
+      // 주민번호 앞 6자리 추출 (YYMMDD)
+      const ssnFront = ssn.replace(/-/g, '').substring(0, 6);
+      const yy = parseInt(ssnFront.substring(0, 2));
+      const mm = ssnFront.substring(2, 4);
+      const dd = ssnFront.substring(4, 6);
+      
+      // 뒷자리 첫번째 숫자로 세기 판단 (1,2: 1900년대, 3,4: 2000년대)
+      const genderDigit = ssn.replace(/-/g, '').charAt(6);
+      let yyyy;
+      
+      if (genderDigit === '1' || genderDigit === '2') {
+        yyyy = 1900 + yy;
+      } else if (genderDigit === '3' || genderDigit === '4') {
+        yyyy = 2000 + yy;
+      } else {
+        // 기본값: 1900년대로 가정
+        yyyy = 1900 + yy;
+      }
+      
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     async function loadEmployeeInfo() {
       const employeeSelect = document.getElementById('employeeSelect');
       const employeeId = employeeSelect.value;
@@ -1939,36 +1961,23 @@
       try {
         console.log('📋 직원 정보 로드:', employeeId);
         
-        // 더미 데이터 처리
-        if (employeeId === 'dummy_1') {
-          const dummyEmployee = {
-            name: '김민수',
-            birth: '900315-1234567',
-            phone: '010-1234-5678',
-            address: '경기도 부천시 원미구'
-          };
-          
-          document.getElementById('employeeName').value = dummyEmployee.name;
-          document.getElementById('employeeBirth').value = dummyEmployee.birth;
-          document.getElementById('employeeAddress').value = dummyEmployee.address;
-          document.getElementById('employeePhone').value = dummyEmployee.phone;
-          document.getElementById('employeeName').readOnly = true;
-          
-          console.log('✅ 더미 직원 정보 로드 완료:', dummyEmployee.name);
-          return;
-        }
-        
-        // Firestore에서 직원 정보 가져오기
-        const doc = await db.collection('employees').doc(employeeId).get();
+        // Firestore users 컬렉션에서 직원 정보 가져오기
+        const doc = await firebase.firestore().collection('users').doc(employeeId).get();
         
         if (doc.exists) {
           const employee = doc.data();
           
-          document.getElementById('employeeName').value = employee.name;
-          document.getElementById('employeeBirth').value = employee.birth;
-          document.getElementById('employeeAddress').value = employee.address;
-          document.getElementById('employeePhone').value = employee.phone;
+          document.getElementById('employeeName').value = employee.name || '';
+          document.getElementById('employeeAddress').value = employee.address || '';
+          document.getElementById('employeePhone').value = employee.phone || '';
           document.getElementById('employeeName').readOnly = true;
+          
+          // 주민번호를 생년월일로 변환하여 자동 입력
+          if (employee.birth) {
+            const birthDate = convertSSNtoBirthDate(employee.birth);
+            document.getElementById('employeeBirth').value = birthDate;
+            console.log('✅ 주민번호 → 생년월일 변환:', employee.birth, '→', birthDate);
+          }
           
           console.log('✅ 직원 정보 로드 완료:', employee.name);
         } else {
