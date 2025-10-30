@@ -100,6 +100,17 @@
     #contractModal .preview-table { width: 100%; border-collapse: collapse; margin: var(--spacing-lg) 0; }
     #contractModal .preview-table th, #contractModal .preview-table td { border: 1px solid var(--border-color); padding: var(--spacing-md); text-align: left; }
     #contractModal .preview-table th { background: var(--bg-light); font-weight: 600; width: 30%; }
+    
+    /* 인쇄 스타일 */
+    @media print {
+      body * { visibility: hidden; }
+      #contractViewModal, #contractViewModal * { visibility: visible; }
+      #contractViewModal { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
+      #contractControls, #contractSelector { display: none !important; }
+      #contractPrintArea { box-shadow: none !important; margin: 0 !important; padding: 15mm !important; }
+      .modal-overlay { position: static; background: white; }
+      .modal-content { max-width: 100% !important; box-shadow: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1022,12 +1033,10 @@
       modal.style.display = 'flex';
       modal.id = 'contractViewModal';
       
-      // 서명 링크 생성 - 현재 디렉토리 기준
-      const currentPath = window.location.pathname;
-      const directory = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-      const signLink = `${window.location.origin}${directory}contract-sign.html?id=${contract.id}`;
-      const docKey = `employee_docs_${contract.employeeName}_${getEmployeeIdFromContract(contract)}`;
-      const employeeDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
+      // 서명 정보 확인
+      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const signedContract = signedContracts.find(sc => sc.id === contract.id);
+      const isSigned = !!signedContract;
       
       // 계약서 선택 드롭다운 생성 (여러 계약서가 있을 경우)
       let contractSelectorHtml = '';
@@ -1042,89 +1051,132 @@
         }).join('');
         
         contractSelectorHtml = `
-          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: #e3f2fd; border-radius: var(--border-radius); border-left: 4px solid #2196f3;">
+          <div style="margin-bottom: 16px; padding: 12px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <label style="font-weight: 600; color: var(--text-primary); margin: 0; white-space: nowrap;">📋 계약서 선택:</label>
-              <select id="contractVersionSelector" class="form-control" style="flex: 1; font-size: 14px; padding: 8px;" onchange="switchContractVersion(this.value)">
+              <label style="font-weight: 600; margin: 0; white-space: nowrap;">📋 계약서 선택:</label>
+              <select id="contractVersionSelector" style="flex: 1; font-size: 14px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" onchange="switchContractVersion(this.value)">
                 ${options}
               </select>
-              <span class="badge" style="background: var(--primary-color); color: white;">총 ${allContracts.length}건</span>
+              <span style="background: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">총 ${allContracts.length}건</span>
             </div>
-            <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--text-secondary);">💡 드롭다운에서 이전 계약서를 선택하여 확인할 수 있습니다.</p>
           </div>
         `;
       }
       
-      let bankAccountHtml = '';
-      if (employeeDocs.bankAccount) {
-        const ba = employeeDocs.bankAccount;
-        bankAccountHtml = `
-          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-            <h4 style="margin-bottom: var(--spacing-sm);">🏦 통장사본</h4>
-            <p><strong>은행명:</strong> ${ba.bankName || '-'}</p>
-            <p><strong>계좌번호:</strong> ${ba.accountNumber || '-'}</p>
-            <p><strong>예금주:</strong> ${ba.accountHolder || '-'}</p>
+      // 서명 정보 HTML
+      let signatureHtml = '';
+      if (isSigned && signedContract.signature) {
+        const signDate = new Date(signedContract.signedAt);
+        signatureHtml = `
+          <div style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 20px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <div style="display: inline-block; border: 2px solid #333; padding: 10px; border-radius: 4px; background: #fafafa;">
+              <img src="${signedContract.signature}" style="width: 200px; height: 80px; display: block;">
+              <p style="margin-top: 8px; text-align: center; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+            </div>
           </div>
         `;
-      }
-      
-      let healthCertHtml = '';
-      if (employeeDocs.healthCert) {
-        const hc = employeeDocs.healthCert;
-        healthCertHtml = `
-          <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-            <h4 style="margin-bottom: var(--spacing-sm);">🩺 보건증</h4>
-            ${hc.imageData ? `
-              <div style="margin-bottom: var(--spacing-md);">
-                <img src="${hc.imageData}" style="max-width: 100%; max-height: 300px; border: 1px solid var(--border-color); border-radius: var(--border-radius); cursor: pointer;" onclick="window.open('${hc.imageData}', '_blank')">
-              </div>
-            ` : ''}
-            <p><strong>유효기간:</strong> ${hc.expiryDate || '-'}</p>
+      } else {
+        signatureHtml = `
+          <div style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
+            <p style="color: #856404; font-weight: 600;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
           </div>
         `;
       }
       
       modal.innerHTML = `
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-          <div class="modal-header">
-            <h3>📄 계약서 상세보기</h3>
-            <button class="modal-close" onclick="closeContractViewModal()">✕</button>
+        <div class="modal-content" style="max-width: 1000px; max-height: 95vh; overflow-y: auto; padding: 0;">
+          <!-- 상단 컨트롤 바 (인쇄 시 숨김) -->
+          <div id="contractControls" style="position: sticky; top: 0; background: white; z-index: 100; padding: 16px; border-bottom: 2px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 20px;">📄 계약서 상세보기</h3>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="downloadContractPDF('${contract.id}')">📥 PDF 저장</button>
+              <button class="btn btn-secondary" onclick="printContract()">🖨️ 인쇄</button>
+              <button class="btn" style="background: #6c757d; color: white;" onclick="closeContractViewModal()">✕ 닫기</button>
+            </div>
           </div>
-          <div class="modal-body">
+          
+          <!-- 드롭다운 (인쇄 시 숨김) -->
+          <div id="contractSelector" style="padding: 0 40px; padding-top: 20px;">
             ${contractSelectorHtml}
-            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-              <h4>👤 근로자 정보</h4>
-              <p><strong>이름:</strong> ${contract.employeeName}</p>
-              <p><strong>주민등록번호:</strong> ${contract.employeeBirth}</p>
-              <p><strong>주소:</strong> ${contract.employeeAddress}</p>
-              <p><strong>연락처:</strong> ${contract.employeePhone}</p>
-            </div>
-            ${bankAccountHtml}
-            ${healthCertHtml}
-            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-              <h4>🏢 회사 정보</h4>
-              <p><strong>회사명:</strong> ${contract.companyName}</p>
-              <p><strong>근무매장:</strong> ${contract.workStore}</p>
-              <p><strong>직책:</strong> ${contract.position}</p>
-            </div>
-            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-              <h4>📋 계약 정보</h4>
-              <p><strong>계약기간:</strong> ${contract.startDate} ~ ${contract.endDate}</p>
-              <p><strong>근무일:</strong> ${contract.workDays}</p>
-              <p><strong>근무시간:</strong> ${contract.workTime}</p>
-              <p><strong>${contract.wageType}:</strong> ${contract.wageAmount}원</p>
-            </div>
-            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
-              <h4>🔗 서명 링크</h4>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="text" value="${signLink}" readonly style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px;">
-                <button class="btn btn-primary btn-sm" onclick="copySignLink('${signLink}')">📋 복사</button>
-              </div>
-            </div>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeContractViewModal()">닫기</button>
-            <button class="btn btn-primary" onclick="sendContractLink('${contract.id}')">📧 링크 전송</button>
+          
+          <!-- A4 계약서 본문 -->
+          <div id="contractPrintArea" style="width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            
+            <!-- 계약서 제목 -->
+            <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 40px 0;">근 로 계 약 서</h1>
+            
+            <!-- 서문 -->
+            <p style="line-height: 1.8; margin-bottom: 30px; font-size: 14px;">
+              <strong>${contract.companyName}</strong> (이하 "사용자"라 함)와 <strong>${contract.employeeName}</strong> (이하 "근로자"라 함)는 다음과 같이 근로계약을 체결한다.
+            </p>
+            
+            <!-- 계약 내용 테이블 -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px;">
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left;">근로자 정보</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+                  <div>성명: ${contract.employeeName}</div>
+                  <div>주민등록번호: ${contract.employeeBirth}</div>
+                  <div>주소: ${contract.employeeAddress}</div>
+                  <div>연락처: ${contract.employeePhone}</div>
+                </td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">사용자 정보</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+                  <div>회사명: ${contract.companyName}</div>
+                  <div>대표자: ${contract.companyCEO || '-'}</div>
+                  <div>사업자등록번호: ${contract.companyBusinessNumber || '-'}</div>
+                  <div>연락처: ${contract.companyPhone || '-'}</div>
+                  <div>주소: ${contract.companyAddress || '-'}</div>
+                </td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">계약 기간</th>
+                <td style="border: 1px solid #333; padding: 12px;">${contract.startDate} ~ ${contract.endDate}</td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 장소</th>
+                <td style="border: 1px solid #333; padding: 12px;">맛남살롱 ${contract.workStore}</td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">업무 내용</th>
+                <td style="border: 1px solid #333; padding: 12px;">${contract.position}</td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 일시</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+                  <div>근무일: ${contract.workDays}</div>
+                  <div>근무시간: ${contract.workTime}</div>
+                  <div>휴게시간: ${contract.breakTime || '근로기준법 준수'}</div>
+                </td>
+              </tr>
+              <tr>
+                <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">급여 조건</th>
+                <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+                  <div>${contract.wageType}: ${contract.wageAmount}원</div>
+                  <div>지급일: ${contract.paymentDay || '매월 말일'}</div>
+                  <div>지급방법: ${contract.paymentMethod || '계좌이체'}</div>
+                </td>
+              </tr>
+            </table>
+            
+            <!-- 계약서 본문 (있을 경우) -->
+            ${contract.contractBody ? `
+              <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 30px; font-size: 13px; border: 1px solid #ddd; padding: 20px; background: #fafafa;">
+                ${contract.contractBody}
+              </div>
+            ` : ''}
+            
+            <!-- 계약 일자 -->
+            <p style="text-align: center; margin-top: 50px; margin-bottom: 60px; font-size: 16px; font-weight: 600;">
+              ${contract.contractDate || new Date(contract.createdAt).toLocaleDateString('ko-KR')}
+            </p>
+            
+            <!-- 서명란 -->
+            ${signatureHtml}
           </div>
         </div>
       `;
@@ -1142,6 +1194,51 @@
       closeContractViewModal();
       viewContract(contractId);
     };
+    
+    // 인쇄 기능
+    window.printContract = function() {
+      window.print();
+    };
+    
+    // PDF 저장 기능 (html2pdf 라이브러리 사용)
+    window.downloadContractPDF = function(contractId) {
+      const contractArea = document.getElementById('contractPrintArea');
+      if (!contractArea) {
+        alert('❌ 계약서를 찾을 수 없습니다.');
+        return;
+      }
+      
+      // html2pdf 라이브러리 로드 확인
+      if (typeof html2pdf === 'undefined') {
+        // 라이브러리 동적 로드
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = function() {
+          generatePDF(contractArea, contractId);
+        };
+        document.head.appendChild(script);
+      } else {
+        generatePDF(contractArea, contractId);
+      }
+    };
+    
+    function generatePDF(element, contractId) {
+      const contractData = localStorage.getItem(`contract_${contractId}`);
+      if (!contractData) return;
+      
+      const contract = JSON.parse(contractData);
+      const fileName = `근로계약서_${contract.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      const opt = {
+        margin: 0,
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf().set(opt).from(element).save();
+    }
 
     function copySignLink(link) {
       const tempInput = document.createElement('input');
