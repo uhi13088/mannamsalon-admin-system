@@ -1256,84 +1256,67 @@
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">서명 이미지 처리 중...</p>';
       document.body.appendChild(loadingDiv);
       
-      // 🔥 핵심 해결책: base64 → Blob URL 변환
+      // 🔥 완전히 새로운 접근: Canvas로 서명 이미지 직접 그리기
       const signatureImages = element.querySelectorAll('img[alt="서명"]');
       console.log('🔍 찾은 서명 이미지:', signatureImages.length + '개');
-      const blobUrls = []; // 나중에 정리용
       
-      // 🔥 Blob URL 변환과 로드를 동시에 처리
-      const imageLoadPromises = [];
+      loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">서명 이미지를 Canvas로 변환 중...</p>';
       
       for (const img of signatureImages) {
         const base64Src = img.src;
-        console.log('🔍 이미지 src 타입:', base64Src.substring(0, 30) + '...');
+        console.log('🔍 원본 이미지 src:', base64Src.substring(0, 50) + '...');
         
         if (base64Src.startsWith('data:image')) {
-          // 이미지별로 변환 + 로드를 하나의 Promise로 처리
-          const loadPromise = (async () => {
-            try {
-              // base64를 Blob으로 변환
-              const response = await fetch(base64Src);
-              const blob = await response.blob();
-              
-              // Blob URL 생성
-              const blobUrl = URL.createObjectURL(blob);
-              blobUrls.push(blobUrl);
-              
-              console.log('✅ Blob URL 생성:', blobUrl);
-              
-              // img src 교체하고 로드 대기를 Promise로 래핑
-              return new Promise((resolve, reject) => {
-                img.onload = () => {
-                  console.log('✅ 이미지 로드 완료:', blobUrl);
-                  resolve();
-                };
-                img.onerror = (err) => {
-                  console.error('❌ 이미지 로드 실패:', blobUrl, err);
-                  reject(err);
-                };
-                
-                // src 변경 (이벤트 핸들러 등록 후 변경해야 함)
-                img.removeAttribute('crossorigin');
-                img.src = blobUrl;
-                
-                // 혹시 이미 로드된 경우 즉시 resolve
-                if (img.complete && img.naturalWidth > 0) {
-                  console.log('✅ 이미지 이미 로드됨');
-                  resolve();
-                }
-              });
-            } catch (err) {
-              console.error('❌ Blob 변환 실패:', err);
-              throw err;
-            }
-          })();
-          
-          imageLoadPromises.push(loadPromise);
-        } else {
-          console.log('⚠️ base64 아님 - 건너뜀');
+          try {
+            // 새로운 Image 객체 생성
+            const tempImg = new Image();
+            tempImg.crossOrigin = 'anonymous';
+            
+            // 이미지 로드 대기
+            await new Promise((resolve, reject) => {
+              tempImg.onload = () => {
+                console.log('✅ 임시 이미지 로드 완료:', tempImg.width, 'x', tempImg.height);
+                resolve();
+              };
+              tempImg.onerror = reject;
+              tempImg.src = base64Src;
+            });
+            
+            // Canvas에 그리기
+            const canvas = document.createElement('canvas');
+            canvas.width = tempImg.width;
+            canvas.height = tempImg.height;
+            const ctx = canvas.getContext('2d');
+            
+            // 배경 흰색으로 채우기
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 이미지 그리기
+            ctx.drawImage(tempImg, 0, 0);
+            
+            // Canvas를 PNG로 변환 (quality 1.0 = 최고 품질)
+            const canvasPng = canvas.toDataURL('image/png', 1.0);
+            
+            // 원래 img 태그를 canvas로 교체
+            img.src = canvasPng;
+            img.style.imageRendering = 'high-quality';
+            img.removeAttribute('crossorigin');
+            
+            console.log('✅ Canvas 변환 완료:', canvasPng.length, 'bytes');
+            
+          } catch (err) {
+            console.error('❌ Canvas 변환 실패:', err);
+          }
         }
       }
       
-      // 모든 이미지 변환+로드 완료 대기
-      try {
-        await Promise.all(imageLoadPromises);
-        console.log('✅ 모든 서명 이미지 준비 완료');
-      } catch (err) {
-        console.error('❌ 일부 이미지 로드 실패했지만 계속 진행:', err);
-      }
+      loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">렌더링 대기 중... (2초)</p>';
       
-      loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">이미지 렌더링 대기 중... (1초)</p>';
+      // 🔥 충분한 대기 시간: 2초
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // 🔥 넉넉한 대기 시간: 1초
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // DOM 완전 렌더링 대기 (requestAnimationFrame 2번)
-      await new Promise(resolve => requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      }));
-      
-      // 🔍 최종 확인: 이미지가 실제로 렌더링됐는지 체크
+      // 🔍 최종 확인
       const finalCheck = element.querySelectorAll('img[alt="서명"]');
       console.log('🔍 최종 이미지 확인:', finalCheck.length + '개');
       finalCheck.forEach((img, idx) => {
@@ -1342,8 +1325,8 @@
           complete: img.complete,
           naturalWidth: img.naturalWidth,
           naturalHeight: img.naturalHeight,
-          width: img.width,
-          height: img.height
+          displayWidth: img.width,
+          displayHeight: img.height
         });
       });
       
@@ -1379,27 +1362,13 @@
       };
       
       html2pdf().set(opt).from(element).save().then(() => {
-        // Blob URL 정리
-        blobUrls.forEach(url => URL.revokeObjectURL(url));
-        
         document.body.removeChild(loadingDiv);
         console.log('✅ PDF 생성 완료:', fileName);
-        
-        // 원래 base64로 복원 (모달에서 계속 표시하기 위해)
-        const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
-        const signedContract = signedContracts.find(sc => sc.id === contract.id);
-        if (signedContract && signedContract.signature) {
-          signatureImages.forEach(img => {
-            img.src = signedContract.signature;
-          });
-        }
+        alert('✅ PDF 다운로드 완료!');
       }).catch(err => {
-        // Blob URL 정리
-        blobUrls.forEach(url => URL.revokeObjectURL(url));
-        
         document.body.removeChild(loadingDiv);
         console.error('❌ PDF 생성 실패:', err);
-        alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
+        alert('❌ PDF 생성에 실패했습니다:\n' + err.message);
       });
     }
 
