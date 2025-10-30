@@ -834,7 +834,15 @@
       }
       
       const contractRows = contracts.map((contract, index) => {
-        const createdDate = contract.createdAt ? new Date(contract.createdAt).toLocaleDateString('ko-KR') : '-';
+        // 날짜와 시간 함께 표시
+        let createdDateTime = '-';
+        if (contract.createdAt) {
+          const date = new Date(contract.createdAt);
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          createdDateTime = `${dateStr} ${timeStr}`;
+        }
+        
         const statusBadge = contract.isSigned ? 
           '<span class="badge badge-success">✅ 서명완료</span>' : 
           '<span class="badge badge-warning">⏰ 서명대기</span>';
@@ -845,7 +853,7 @@
             <td>${contracts.length - index}</td>
             <td>${contract.data.contractType || '근로계약서'}${isLatest}</td>
             <td>${contract.data.startDate} ~ ${contract.data.endDate}</td>
-            <td>${createdDate}</td>
+            <td>${createdDateTime}</td>
             <td>${statusBadge}</td>
             <td>
               <button class="btn btn-sm btn-secondary" onclick="viewContract('${contract.id}')">📄 보기</button>
