@@ -551,22 +551,21 @@
     }
 
     async function loadDashboard() {
-      let totalEmployees = 1; // 기본 더미 1명
+      let totalEmployees = 0; // 기본값 0 (Firebase에서 실제 수를 가져옴)
       let totalContracts = 0;
       let unsignedContracts = 0;
       
-      // Firestore에서 직원 수 가져오기 시도
+      // Firestore users 컬렉션에서 직원 수 가져오기
       try {
-        const snapshot = await db.collection('employees')
+        const snapshot = await db.collection('users')
           .where('userType', '==', 'employee')
-          .where('status', '==', 'active')
           .get();
         
-        if (!snapshot.empty) {
-          totalEmployees = snapshot.size;
-        }
+        totalEmployees = snapshot.size;
+        console.log(`📊 대시보드: 총 ${totalEmployees}명의 직원 확인`);
       } catch (error) {
-        console.warn('⚠️ Firestore 직원 수 조회 실패, 더미 사용');
+        console.warn('⚠️ Firestore 직원 수 조회 실패:', error);
+        totalEmployees = 0;
       }
       
       // localStorage에서 계약서 수 카운트
@@ -674,7 +673,31 @@
         
         console.log(`✅ ${employees.length}명의 직원 목록 표시`);
         
+        // 각 직원의 계약서 존재 여부 확인
         tbody.innerHTML = employees.map(emp => {
+          // localStorage에서 해당 직원의 계약서 찾기
+          let hasContract = false;
+          let contractCount = 0;
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('contract_C')) {
+              try {
+                const contractData = JSON.parse(localStorage.getItem(key));
+                // 주민번호로 매칭 (가장 정확)
+                if (contractData.employeeBirth === emp.birth && contractData.employeeName === emp.name) {
+                  hasContract = true;
+                  contractCount++;
+                }
+              } catch(e) {}
+            }
+          }
+          
+          // 계약서 작성 완료 여부에 따라 버튼 텍스트와 스타일 변경
+          const contractButton = hasContract 
+            ? `<button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="switchTab('contracts')">✅ 계약서 ${contractCount}건</button>`
+            : `<button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>`;
+          
           return `
             <tr>
               <td>${emp.name}</td>
@@ -684,7 +707,7 @@
               <td>${emp.birth || '-'}</td>
               <td><span class="badge ${emp.status === 'active' ? 'badge-success' : 'badge-danger'}">${emp.status === 'active' ? '재직' : '퇴사'}</span></td>
               <td>
-                <button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>
+                ${contractButton}
               </td>
             </tr>
           `;
@@ -1022,7 +1045,7 @@
             <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-light); border-radius: var(--border-radius);">
               <h4>👤 근로자 정보</h4>
               <p><strong>이름:</strong> ${contract.employeeName}</p>
-              <p><strong>생년월일:</strong> ${contract.employeeBirth}</p>
+              <p><strong>주민등록번호:</strong> ${contract.employeeBirth}</p>
               <p><strong>주소:</strong> ${contract.employeeAddress}</p>
               <p><strong>연락처:</strong> ${contract.employeePhone}</p>
             </div>
@@ -1168,6 +1191,7 @@
       const tbody = document.getElementById('contractsTableBody');
       if (!tbody) return;
       
+      // 모든 계약서 로드
       const allContracts = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -1181,9 +1205,10 @@
             allContracts.push({
               id: contractId,
               name: contractData.employeeName,
+              birth: contractData.employeeBirth,
               type: contractData.contractType,
               period: `${contractData.startDate} ~ ${contractData.endDate}`,
-              createdAt: new Date(contractData.createdAt).toLocaleDateString('ko-KR'),
+              createdAt: contractData.createdAt || Date.now(),
               status: isSigned ? '서명완료' : '서명대기',
               data: contractData
             });
@@ -1196,23 +1221,95 @@
         return;
       }
       
-      tbody.innerHTML = allContracts.map(con => {
-        const statusClass = con.status === '서명완료' ? 'badge-success' : 'badge-warning';
-        return `
+      // 직원별로 계약서 그룹화 (주민번호 기준)
+      const employeeGroups = new Map();
+      allContracts.forEach(contract => {
+        const key = `${contract.name}_${contract.birth}`;
+        if (!employeeGroups.has(key)) {
+          employeeGroups.set(key, []);
+        }
+        employeeGroups.get(key).push(contract);
+      });
+      
+      // 각 그룹의 계약서를 날짜순 정렬 (최신순)
+      employeeGroups.forEach((contracts, key) => {
+        contracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      });
+      
+      // 테이블 행 생성
+      const rows = [];
+      employeeGroups.forEach((contracts, key) => {
+        const latestContract = contracts[0]; // 최신 계약서
+        const contractCount = contracts.length;
+        
+        // 계약서 선택 드롭다운 생성
+        const contractOptions = contracts.map((contract, index) => {
+          const date = new Date(contract.createdAt);
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          const label = `${dateStr} ${timeStr}${index === 0 ? ' (최신)' : ''}`;
+          return `<option value="${contract.id}">${label}</option>`;
+        }).join('');
+        
+        const selectId = `contract-select-${latestContract.id}`;
+        const statusClass = latestContract.status === '서명완료' ? 'badge-success' : 'badge-warning';
+        
+        rows.push(`
           <tr>
-            <td>${con.name}</td>
-            <td>${con.type}</td>
-            <td>${con.period}</td>
-            <td>${con.createdAt}</td>
-            <td><span class="badge ${statusClass}">${con.status}</span></td>
             <td>
-              <button class="btn btn-sm btn-secondary" onclick="viewContract('${con.id}')">📄 보기</button>
-              ${con.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${con.id}')">📧 링크전송</button>` : ''}
+              <strong>${latestContract.name}</strong>
+              ${contractCount > 1 ? `<br><span class="badge" style="background: var(--primary-color); color: white; font-size: 11px;">📝 ${contractCount}건</span>` : ''}
+            </td>
+            <td>${latestContract.type}</td>
+            <td>${latestContract.period}</td>
+            <td>
+              ${contractCount > 1 ? `
+                <select id="${selectId}" class="form-control" style="font-size: 13px; padding: 4px 8px;" onchange="updateContractButtons('${selectId}', this.value)">
+                  ${contractOptions}
+                </select>
+              ` : `
+                ${new Date(latestContract.createdAt).toLocaleDateString('ko-KR')} ${new Date(latestContract.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+              `}
+            </td>
+            <td><span class="badge ${statusClass}" id="status-${latestContract.id}">${latestContract.status}</span></td>
+            <td>
+              <div id="buttons-${latestContract.id}">
+                <button class="btn btn-sm btn-secondary" onclick="viewContract('${latestContract.id}')">📄 보기</button>
+                ${latestContract.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${latestContract.id}')">📧 링크전송</button>` : ''}
+              </div>
             </td>
           </tr>
-        `;
-      }).join('');
+        `);
+      });
+      
+      tbody.innerHTML = rows.join('');
     }
+    
+    // 드롭다운 변경 시 버튼 업데이트
+    window.updateContractButtons = function(selectId, contractId) {
+      // 선택된 계약서 정보 가져오기
+      const contractData = JSON.parse(localStorage.getItem(`contract_${contractId}`) || '{}');
+      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const isSigned = signedContracts.some(sc => sc.id === contractId);
+      const status = isSigned ? '서명완료' : '서명대기';
+      const statusClass = status === '서명완료' ? 'badge-success' : 'badge-warning';
+      
+      // 상태 배지 업데이트
+      const statusBadge = document.getElementById(`status-${selectId.replace('contract-select-', '')}`);
+      if (statusBadge) {
+        statusBadge.className = `badge ${statusClass}`;
+        statusBadge.textContent = status;
+      }
+      
+      // 버튼 업데이트
+      const buttonsDiv = document.getElementById(`buttons-${selectId.replace('contract-select-', '')}`);
+      if (buttonsDiv) {
+        buttonsDiv.innerHTML = `
+          <button class="btn btn-sm btn-secondary" onclick="viewContract('${contractId}')">📄 보기</button>
+          ${status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${contractId}')">📧 링크전송</button>` : ''}
+        `;
+      }
+    };
 
     function loadNotice() {
       // 공지사항 기능 추후 구현
@@ -2001,11 +2098,10 @@
           document.getElementById('employeePhone').value = employee.phone || '';
           document.getElementById('employeeName').readOnly = true;
           
-          // 주민번호를 생년월일로 변환하여 자동 입력
+          // 주민번호 자동 입력
           if (employee.birth) {
-            const birthDate = convertSSNtoBirthDate(employee.birth);
-            document.getElementById('employeeBirth').value = birthDate;
-            console.log('✅ 주민번호 → 생년월일 변환:', employee.birth, '→', birthDate);
+            document.getElementById('employeeBirth').value = employee.birth;
+            console.log('✅ 주민번호 자동 입력:', employee.birth);
           }
           
           console.log('✅ 직원 정보 로드 완료:', employee.name);
@@ -2949,8 +3045,8 @@
                 <input type="text" id="employeeName" placeholder="자동 입력" readonly required>
               </div>
               <div class="form-group">
-                <label for="employeeBirth">생년월일 *</label>
-                <input type="date" id="employeeBirth" required>
+                <label for="employeeBirth">주민등록번호 *</label>
+                <input type="text" id="employeeBirth" placeholder="123456-1234567" pattern="\d{6}-\d{7}" readonly required>
               </div>
             </div>
             <div class="form-row">
@@ -3213,7 +3309,7 @@
                   <th>근로자 (직원) 정보</th>
                   <td>
                     <div>성명: <span id="previewEmployeeName">_______</span></div>
-                    <div>생년월일: <span id="previewBirth">_______</span></div>
+                    <div>주민등록번호: <span id="previewBirth">_______</span></div>
                     <div>주소: <span id="previewAddress">_______</span></div>
                     <div>연락처: <span id="previewPhone">_______</span></div>
                   </td>
