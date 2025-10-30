@@ -1230,7 +1230,7 @@
       }
     };
     
-    function generatePDF(element, contractId) {
+    async function generatePDF(element, contractId) {
       const contractData = localStorage.getItem(`contract_${contractId}`);
       if (!contractData) return;
       
@@ -1243,6 +1243,22 @@
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">잠시만 기다려주세요</p>';
       document.body.appendChild(loadingDiv);
       
+      // 서명 이미지 처리: base64를 img로 변환하여 제대로 로드되도록 보장
+      const signatureImages = element.querySelectorAll('img[alt="서명"]');
+      const imagePromises = Array.from(signatureImages).map(img => {
+        return new Promise((resolve) => {
+          if (img.complete) {
+            resolve();
+          } else {
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // 에러나도 계속 진행
+          }
+        });
+      });
+      
+      // 모든 이미지 로드 대기
+      await Promise.all(imagePromises);
+      
       const opt = {
         margin: 0,
         filename: fileName,
@@ -1254,9 +1270,17 @@
           scale: 2, 
           useCORS: true,
           allowTaint: true,
-          logging: false,
+          logging: true,
           letterRendering: true,
-          imageTimeout: 0
+          imageTimeout: 15000,
+          onclone: function(clonedDoc) {
+            // 클론된 문서의 서명 이미지 강제 로드
+            const clonedSignatures = clonedDoc.querySelectorAll('img[alt="서명"]');
+            clonedSignatures.forEach(img => {
+              img.style.display = 'block';
+              img.style.visibility = 'visible';
+            });
+          }
         },
         jsPDF: { 
           unit: 'mm', 
