@@ -279,73 +279,68 @@ function updateDashboardCard(id, value, subtitle) {
 /**
  * 직원 목록 로드 및 표시
  */
-function loadEmployees() {
+async function loadEmployees() {
   debugLog('직원 목록 로드');
   
-  const tbody = document.getElementById('employeesTableBody');
-  if (!tbody) return;
-  
-  // localStorage에서 계약서 작성된 직원 불러오기
-  const employeeMap = new Map(); // 중복 제거용
-  
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('contract_C')) {
-      try {
-        const contractData = JSON.parse(localStorage.getItem(key));
-        const contractId = key.replace('contract_', '');
-        
-        // 서명 상태 확인
-        const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
-        const isSigned = signedContracts.some(sc => sc.id === contractId);
-        
-        // 직원 정보 (중복이면 최신 것으로)
-        const empKey = contractData.employeeName + '_' + contractData.employeeBirth;
-        if (!employeeMap.has(empKey)) {
-          employeeMap.set(empKey, {
-            name: contractData.employeeName,
-            store: contractData.workStore,
-            position: contractData.position,
-            wage: `${contractData.wageType} ${contractData.wageAmount}원`,
-            startDate: contractData.startDate,
-            status: isSigned ? '근무중' : '서명대기',
-            contractId: contractId,
-            phone: contractData.employeePhone
-          });
-        }
-      } catch (e) {
-        console.error('직원 데이터 로드 오류:', e);
-      }
-    }
-  }
-  
-  const employees = Array.from(employeeMap.values());
-  
-  if (employees.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-          <p style="margin-bottom: var(--spacing-md);">계약서가 작성된 직원이 없습니다.</p>
-          <button class="btn btn-primary" onclick="createContract()">+ 첫 계약서 작성하기</button>
-        </td>
-      </tr>
-    `;
+  const tbody = document.getElementById('employeeTableBody');
+  if (!tbody) {
+    console.error('employeeTableBody 요소를 찾을 수 없습니다');
     return;
   }
   
-  tbody.innerHTML = employees.map(emp => `
-    <tr>
-      <td>${emp.name}</td>
-      <td>${emp.store}</td>
-      <td>${emp.position}</td>
-      <td>${emp.wage}</td>
-      <td>${emp.startDate}</td>
-      <td><span class="badge ${emp.status === '근무중' ? 'badge-success' : 'badge-warning'}">${emp.status}</span></td>
-      <td>
-        <button class="btn btn-sm btn-secondary" onclick="showEmployeeContractList('${emp.name}')">📄 계약서</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">직원 목록을 불러오는 중...</td></tr>';
+  
+  try {
+    // Firebase users 컬렉션에서 직원 데이터 가져오기
+    const usersSnapshot = await firebase.firestore().collection('users')
+      .where('userType', '==', 'employee')
+      .get();
+    
+    if (usersSnapshot.empty) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+            <p style="margin-bottom: var(--spacing-md);">등록된 직원이 없습니다.</p>
+            <p style="font-size: 14px; color: var(--text-secondary);">직원 가입 페이지에서 먼저 직원을 등록해주세요.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    const employees = [];
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      employees.push({
+        uid: doc.id,
+        name: data.name || '-',
+        store: data.store || '-',
+        position: data.position || '-',
+        phone: data.phone || '-',
+        birth: data.birth || '-',
+        status: data.status || 'active',
+        email: data.email || '-'
+      });
+    });
+    
+    tbody.innerHTML = employees.map(emp => `
+      <tr>
+        <td>${emp.name}</td>
+        <td>${emp.store}</td>
+        <td>${emp.position}</td>
+        <td>${emp.phone}</td>
+        <td>${emp.birth}</td>
+        <td><span class="badge ${emp.status === 'active' ? 'badge-success' : 'badge-danger'}">${emp.status === 'active' ? '재직' : '퇴사'}</span></td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.store}')">📝 계약서작성</button>
+          <button class="btn btn-sm btn-secondary" onclick="showEmployeeContractList('${emp.name}')">📄 계약서목록</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('직원 목록 로드 실패:', error);
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">❌ 직원 목록을 불러오는데 실패했습니다.</td></tr>';
+  }
 }
 
 // 직원 추가/수정/삭제 기능은 계약서 작성으로 대체됨
