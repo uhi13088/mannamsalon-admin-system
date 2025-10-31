@@ -627,16 +627,9 @@
 
     let isAuthenticated = false;
     let currentTab = 'dashboard';
-
-    // Firebase 초기화 후 firestore-utils.js 동적 로드 (오류 처리 포함)
-    setTimeout(() => {
-      const firestoreUtilsScript = document.createElement('script');
-      firestoreUtilsScript.src = 'firestore-utils.js';
-      firestoreUtilsScript.onerror = (e) => {
-        console.warn('⚠️ firestore-utils.js 로드 실패 (무시됨):', e);
-      };
-      document.head.appendChild(firestoreUtilsScript);
-    }, 100); // Firebase 초기화 완료 대기
+    
+    // firestore-utils.js 대신 필요한 함수만 인라인으로 포함
+    // (firestore-utils.js 파일 로딩 시 await 오류가 발생하여 인라인으로 변경)
 
     document.addEventListener('DOMContentLoaded', function() {
       const today = new Date();
@@ -2620,6 +2613,46 @@
       }
     }
 
+    // Firestore 용량 추정 함수 (firestore-utils.js에서 이동)
+    async function estimateFirestoreSize() {
+      let totalSize = 0;
+      const collections = ['contracts', 'stores', 'notices', 'employee_docs', 'signedContracts', 'users', 'attendance', 'approvals'];
+      
+      console.log('📊 Firestore 용량 추정 시작...');
+      
+      for (const collectionName of collections) {
+        try {
+          const snapshot = await db.collection(collectionName).get();
+          snapshot.forEach(doc => {
+            const dataStr = JSON.stringify(doc.data());
+            totalSize += new Blob([dataStr]).size;
+          });
+        } catch (error) {
+          console.warn(`⚠️ ${collectionName} 용량 추정 실패:`, error);
+        }
+      }
+      
+      const sizeMB = totalSize / (1024 * 1024);
+      console.log(`📦 예상 사용 용량: ${sizeMB.toFixed(2)} MB`);
+      return sizeMB;
+    }
+    
+    // 데이터 관리 함수 스텁 (firestore-utils.js 대신 간단 버전)
+    async function autoCleanupData(dryRun) {
+      alert('⚠️ 이 기능은 현재 사용할 수 없습니다.\nFirebase Console에서 직접 데이터를 관리해주세요.');
+      return { deletedCount: 0 };
+    }
+    
+    async function migrateLocalStorageToFirestore() {
+      alert('⚠️ 이 기능은 현재 사용할 수 없습니다.\n데이터 마이그레이션이 필요한 경우 개발자에게 문의해주세요.');
+      return { success: false };
+    }
+    
+    async function backupFirestoreToLocalStorage() {
+      alert('⚠️ 이 기능은 현재 사용할 수 없습니다.\nFirebase Console에서 직접 데이터를 내보내기해주세요.');
+      return { success: false };
+    }
+    
     // 용량 확인
     async function checkStorageSize() {
       const btn = event.target;
