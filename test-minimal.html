@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>맛남살롱 관리자 페이지</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary-color: #8b7355; --primary-dark: #6b5d4f; --bg-light: #f5f1e8; --bg-white: #fdfcfa;
+      --text-primary: #6b5d4f; --text-secondary: #9b8a76; --border-color: #e8dfd0; --border-radius: 8px;
+      --shadow-sm: 0 2px 8px rgba(107, 93, 79, 0.08); --shadow-lg: 0 8px 24px rgba(107, 93, 79, 0.15);
+      --spacing-xs: 6px; --spacing-sm: 12px; --spacing-md: 16px; --spacing-lg: 24px; --spacing-xl: 32px;
+      --success-color: #7a9b7a; --warning-color: #d4a574; --danger-color: #c67b7b;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: var(--bg-light); color: var(--text-primary); }
+    .hidden { display: none !important; }
+    #loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-box { background: var(--bg-white); border-radius: 12px; padding: 48px 40px; box-shadow: var(--shadow-lg); max-width: 420px; width: 100%; border: 1px solid var(--border-color); text-align: center; }
+    .login-logo { font-size: 64px; margin-bottom: 16px; }
+    .login-box h1 { font-size: 28px; color: var(--text-primary); margin-bottom: 8px; }
+    .login-subtitle { color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
+    .form-group { margin-bottom: 20px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary); font-size: 14px; }
+    .form-group input { width: 100%; padding: 14px 16px; border: 2px solid var(--border-color); border-radius: var(--border-radius); font-size: 15px; }
+    .btn { padding: 12px 24px; border-radius: var(--border-radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border: none; }
+    .btn-primary { background: var(--primary-color); color: var(--bg-white); }
+    .btn-primary:hover { background: var(--primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-secondary { background: var(--bg-light); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-sm { padding: 8px 16px; font-size: 12px; }
+    .btn-danger { background: var(--danger-color); color: var(--bg-white); }
+    .btn-success { background: var(--success-color); color: var(--bg-white); }
+    .container { max-width: 1200px; margin: 0 auto; padding: var(--spacing-lg); }
+    .top-bar { background: var(--bg-white); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl); }
+    .admin-badge { background: var(--primary-color); color: var(--bg-white); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+    .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl); }
+    .dashboard-card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-lg); box-shadow: var(--shadow-sm); }
+    .dashboard-card-icon { font-size: 36px; margin-bottom: var(--spacing-sm); }
+    .dashboard-card-label { color: var(--text-secondary); font-size: 13px; margin-bottom: var(--spacing-xs); }
+    .dashboard-card-value { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+    .dashboard-card-sub { font-size: 13px; color: var(--text-secondary); margin-top: var(--spacing-xs); }
+    .tabs { display: flex; gap: var(--spacing-xs); margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--border-color); overflow-x: auto; flex-wrap: wrap; }
+    .tab { padding: var(--spacing-md) var(--spacing-lg); background: none; border: none; color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg); box-shadow: var(--shadow-sm); }
+    .card-header { padding: var(--spacing-lg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .card-body { padding: var(--spacing-lg); }
+    table { width: 100%; border-collapse: collapse; }
+    table th { background: var(--bg-light); padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); border-bottom: 2px solid var(--border-color); font-size: 13px; }
+    table td { padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-primary); }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+    .badge-success { background: #e6f2e6; color: #4a6b4a; }
+    .badge-warning { background: #f5ead9; color: #8b6846; }
+    .badge-danger { background: #f5e3e3; color: #8b5555; }
+    .badge-info { background: #e3ebf2; color: #5a708a; }
+    .badge-primary { background: #e3ebf2; color: #5a708a; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+    .modal-content { background: var(--bg-white); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); }
+    .modal-header { padding: 25px 30px; border-bottom: 2px solid var(--bg-light); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 30px; }
+    .modal-footer { padding: 20px 30px; border-top: 2px solid var(--bg-light); text-align: right; display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-close { background: none; border: none; font-size: 28px; color: var(--text-secondary); cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
+    .modal-close:hover { background: var(--bg-light); color: var(--text-primary); }
+    .filters { display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 200px; }
+    .filter-group label { display: block; margin-bottom: var(--spacing-xs); font-weight: 600; color: var(--text-primary); font-size: 13px; }
+    .filter-group input, .filter-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: 14px; }
+    
+    /* 계약서 모달 전용 스타일 */
+    #contractModal { z-index: 10000; }
+    #contractModal .modal-content { max-width: 95%; width: 1400px; max-height: 95vh; }
+    #contractModal .tab-buttons { display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--border-color); }
+    #contractModal .tab-button { padding: var(--spacing-md) var(--spacing-lg); background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    #contractModal .tab-button:hover { color: var(--primary-color); }
+    #contractModal .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    #contractModal .tab-content { display: none; }
+    #contractModal .tab-content.active { display: block; }
+    #contractModal .form-section { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-xl); margin-bottom: var(--spacing-lg); }
+    #contractModal .form-section h3 { font-size: 18px; color: var(--text-primary); margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--border-color); }
+    #contractModal .form-section h4 { font-size: 15px; color: var(--primary-color); margin: var(--spacing-lg) 0 var(--spacing-md) 0; }
+    #contractModal .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-md); }
+    #contractModal .form-group { display: flex; flex-direction: column; }
+    #contractModal .form-group label { font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-xs); font-size: 14px; }
+    #contractModal .form-group input, #contractModal .form-group select, #contractModal .form-group textarea { padding: var(--spacing-sm); border: 2px solid var(--border-color); border-radius: var(--border-radius); font-size: 14px; transition: border-color 0.2s ease; }
+    #contractModal .form-group input:focus, #contractModal .form-group select:focus, #contractModal .form-group textarea:focus { outline: none; border-color: var(--primary-color); }
+    #contractModal .form-group textarea { min-height: 150px; resize: vertical; font-family: inherit; line-height: 1.6; }
+    #contractModal .help-text { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    #contractModal .day-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    #contractModal .day-btn { padding: 10px 18px; border: 2px solid var(--border-color); background: var(--bg-white); color: var(--text-secondary); border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; min-width: 50px; }
+    #contractModal .day-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+    #contractModal .day-btn.active { background: var(--primary-color); border-color: var(--primary-color); color: var(--bg-white); }
+    #contractModal .work-schedule-item { background: var(--bg-light); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-md); margin-bottom: var(--spacing-md); }
+    #contractModal .action-buttons { display: flex; gap: var(--spacing-md); justify-content: flex-end; margin-top: var(--spacing-xl); }
+    #contractModal .preview-section { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-xl); }
+    #contractModal .preview-content { max-width: 800px; margin: 0 auto; padding: 40px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    #contractModal .preview-title { text-align: center; font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: var(--spacing-xl); letter-spacing: 8px; }
+    #contractModal .preview-table { width: 100%; border-collapse: collapse; margin: var(--spacing-lg) 0; }
+    #contractModal .preview-table th, #contractModal .preview-table td { border: 1px solid var(--border-color); padding: var(--spacing-md); text-align: left; }
+    #contractModal .preview-table th { background: var(--bg-light); font-weight: 600; width: 30%; }
+    
+    /* 페이지 브레이크 스타일 */
+    .page-break-before { page-break-before: always; break-before: page; }
+    .page-break-after { page-break-after: always; break-after: page; }
+    .avoid-page-break { page-break-inside: avoid; break-inside: avoid; }
+    
+    /* 인쇄 스타일 */
+    @media print {
+      body * { visibility: hidden; }
+      #contractViewModal, #contractViewModal * { visibility: visible; }
+      #contractViewModal { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
+      #contractControls, #contractSelector { display: none !important; }
+      #contractPrintArea { box-shadow: none !important; margin: 0 !important; padding: 15mm !important; }
+      #contractPrintArea table { page-break-inside: avoid; }
+      #contractPrintArea table tr { page-break-inside: avoid; page-break-after: auto; }
+      #contractPrintArea h1 { page-break-after: avoid; }
+      .modal-overlay { position: static; background: white; }
+      .modal-content { max-width: 100% !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="mainScreen">
+    <div class="top-bar">
+      <h1 style="font-size: 20px; font-weight: 700; margin: 0;">🏪 맛남살롱 근무관리</h1>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <span class="admin-badge">관리자</span>
+        <button class="btn btn-secondary" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="dashboard-cards">
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">👥</div>
+          <div class="dashboard-card-label">총 직원 수</div>
+          <div class="dashboard-card-value" id="totalEmployees">0</div>
+          <div class="dashboard-card-sub">명</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">✅</div>
+          <div class="dashboard-card-label">오늘 출근</div>
+          <div class="dashboard-card-value" id="todayAttendance">0</div>
+          <div class="dashboard-card-sub">명</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">⏰</div>
+          <div class="dashboard-card-label">승인 대기</div>
+          <div class="dashboard-card-value" id="pendingApprovals">0</div>
+          <div class="dashboard-card-sub">건</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon">📄</div>
+          <div class="dashboard-card-label">미서명 계약서</div>
+          <div class="dashboard-card-value" id="unsignedContracts">0</div>
+          <div class="dashboard-card-sub">건</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 대시보드</button>
+        <button class="tab" data-tab="employees" onclick="switchTab('employees')">👥 직원 관리</button>
+        <button class="tab" data-tab="attendance" onclick="switchTab('attendance')">📋 근무기록</button>
+        <button class="tab" data-tab="salary" onclick="switchTab('salary')">💰 급여 관리</button>
+        <button class="tab" data-tab="approvals" onclick="switchTab('approvals')">✔️ 승인 관리</button>
+        <button class="tab" data-tab="contracts" onclick="switchTab('contracts')">📝 계약서 관리</button>
+        <button class="tab" data-tab="notice" onclick="switchTab('notice')">📢 공지사항</button>
+        <button class="tab" data-tab="stores" onclick="switchTab('stores')">🏪 매장 관리</button>
+      </div>
+
+      <div id="tabDashboard" class="tab-content active">
+        <div class="card">
+          <div class="card-header"><h3>📊 현황 요약</h3></div>
+          <div class="card-body"><p style="color: var(--text-secondary);">관리자 페이지에 오신 것을 환영합니다.</p></div>
+        </div>
+
+        <!-- 데이터 관리 섹션 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🗄️ 데이터 관리</h3>
+          </div>
+          <div class="card-body">
+            <!-- 용량 정보 -->
+            <div style="background: var(--bg-light); padding: var(--spacing-lg); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
+              <h4 style="margin: 0 0 var(--spacing-sm) 0; font-size: 14px; color: var(--text-secondary);">📦 Firebase 저장소 사용량</h4>
+              <div style="display: flex; align-items: baseline; gap: var(--spacing-sm);">
+                <span id="storageSize" style="font-size: 32px; font-weight: 700; color: var(--primary-color);">-</span>
+                <span style="font-size: 16px; color: var(--text-secondary);">MB / 1,000 MB</span>
+              </div>
+              <div style="margin-top: var(--spacing-md); background: white; border-radius: 10px; height: 20px; overflow: hidden;">
+                <div id="storageBar" style="height: 100%; background: linear-gradient(90deg, var(--success-color), var(--warning-color)); width: 0%; transition: width 0.5s ease;"></div>
+              </div>
+              <p style="margin-top: var(--spacing-sm); font-size: 12px; color: var(--text-secondary);">
+                ⏰ 마지막 자동 정리: <span id="lastCleanupTime">-</span>
+              </p>
+            </div>
+
+            <!-- 마이그레이션 안내 -->
+            <div id="migrationAlert" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: var(--spacing-lg); border-radius: var(--border-radius); margin-bottom: var(--spacing-lg);">
+              <h4 style="margin: 0 0 var(--spacing-sm) 0; color: #856404;">⚠️ 데이터 마이그레이션 필요</h4>
+              <p style="margin: 0 0 var(--spacing-sm) 0; font-size: 14px; color: #856404;">
+                브라우저 localStorage에 저장된 데이터가 발견되었습니다. Firebase로 이동하여 영구 보존하세요.
+              </p>
+              <button class="btn" style="background: #ffc107; color: #000; font-weight: 600;" onclick="startMigration()">
+                🔄 지금 마이그레이션
+              </button>
+            </div>
+
+            <!-- 관리 버튼들 -->
+            <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="checkStorageSize()">
+                📊 용량 확인
+              </button>
+              <button class="btn" style="background: #6c757d; color: white;" onclick="previewCleanup()">
+                🔍 정리 미리보기
+              </button>
+              <button class="btn btn-danger" onclick="executeCleanup()">
+                🗑️ 자동 정리 실행
+              </button>
+              <button class="btn btn-secondary" onclick="backupData()">
+                💾 로컬 백업
+              </button>
+            </div>
+
+            <!-- 자동 정리 설정 -->
+            <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-color);">
+              <h4 style="margin: 0 0 var(--spacing-md) 0; font-size: 14px; font-weight: 600;">⚙️ 자동 정리 설정</h4>
+              <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                <label style="display: flex; align-items: center; font-size: 14px;">
+                  <input type="checkbox" id="autoCleanupEnabled" checked style="margin-right: var(--spacing-sm);">
+                  <span>24시간마다 자동으로 오래된 데이터 정리</span>
+                </label>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); margin-left: 24px;">
+                  ✓ 1년 이상 지난 계약서/공지사항 자동 삭제<br>
+                  ✓ 용량 950MB 초과 시 오래된 데이터부터 자동 삭제<br>
+                  ✓ 삭제 전 미리보기 기능 제공
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabEmployees" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>👥 직원 목록</h3>
+          </div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>매장</label>
+                <select id="employeeStoreFilter">
+                  <option value="">전체</option>
+                  <option value="부천시청점">부천시청점</option>
+                  <option value="상동점">상동점</option>
+                  <option value="부천역사점">부천역사점</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>상태</label>
+                <select id="employeeStatusFilter">
+                  <option value="">전체</option>
+                  <option value="재직">재직</option>
+                  <option value="퇴사">퇴사</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadEmployees()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>직급</th>
+                  <th>연락처</th>
+                  <th>주민등록번호</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">직원 정보를 불러오는 중...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabAttendance" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>📋 근무기록</h3></div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>조회 월</label>
+                <input type="month" id="attendanceMonth">
+              </div>
+              <div class="filter-group">
+                <label>매장</label>
+                <select id="attendanceStoreFilter">
+                  <option value="">전체</option>
+                  <option value="부천시청점">부천시청점</option>
+                  <option value="상동점">상동점</option>
+                  <option value="부천역사점">부천역사점</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadAttendanceList()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>출근</th>
+                  <th>퇴근</th>
+                  <th>근무시간</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabSalary" class="tab-content">
+        <div class="card">
+          <div class="card-header"><h3>💰 급여 내역</h3></div>
+          <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>조회 월</label>
+                <input type="month" id="salaryMonth">
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadSalaryList()">조회</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>매장</th>
+                  <th>기본급</th>
+                  <th>추가수당</th>
+                  <th>공제</th>
+                  <th>실지급액</th>
+                </tr>
+              </thead>
+              <tbody id="salaryTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabApprovals" class="tab-content">
+        <!-- 필터 -->
+        <div class="filters">
+          <div class="filter-group">
+            <label>승인 유형</label>
+            <select id="approvalTypeFilter">
+              <option value="">전체</option>
+              <option value="purchase">💳 구매</option>
+              <option value="disposal">🗑️ 폐기</option>
+              <option value="resignation">📄 퇴직서</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>상태</label>
+            <select id="approvalStatusFilter">
+              <option value="">전체</option>
+              <option value="pending">대기중</option>
+              <option value="approved">승인됨</option>
+              <option value="rejected">거부됨</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="loadApprovals()">조회</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>✔️ 승인 요청 목록</h3></div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 100px;">유형</th>
+                  <th style="width: 100px;">신청자</th>
+                  <th style="width: 140px;">신청일</th>
+                  <th>내용</th>
+                  <th style="width: 120px;">금액/수량</th>
+                  <th style="width: 100px;">상태</th>
+                  <th style="width: 200px;">처리</th>
+                </tr>
+              </thead>
+              <tbody id="approvalsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    승인 요청 목록을 불러오는 중...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabContracts" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>📝 계약서 목록</h3>
+            <button class="btn btn-primary" onclick="openContractPage()">+ 새 계약서 작성</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>직원명</th>
+                  <th>계약 유형</th>
+                  <th>계약 기간</th>
+                  <th>작성일</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="contractsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">계약서 정보를 불러오는 중...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabNotice" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>📢 공지사항 관리</h3>
+            <button class="btn btn-primary" onclick="showAddNoticeModal()">+ 공지사항 작성</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>제목</th>
+                  <th>작성일</th>
+                  <th>중요</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="noticeTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">등록된 공지사항이 없습니다.</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabStores" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>🏪 매장 관리</h3>
+            <button class="btn btn-primary" onclick="showAddStoreModal()">+ 매장 추가</button>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>매장명</th>
+                  <th>주소</th>
+                  <th>연락처</th>
+                  <th>대표자</th>
+                  <th>사업자번호</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="storesTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">로딩 중...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 매장 추가/수정 모달 -->
+  <div id="storeModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="storeModalTitle" style="margin: 0;">🏪 매장 추가</h2>
+        <button class="modal-close" onclick="closeStoreModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editStoreId">
+        <div class="form-group">
+          <label for="storeName">매장명 *</label>
+          <input type="text" id="storeName" placeholder="부천시청점" required>
+        </div>
+        <div class="form-group">
+          <label for="storeAddress">주소</label>
+          <input type="text" id="storeAddress" placeholder="경기도 부천시...">
+        </div>
+        <div class="form-group">
+          <label for="storePhone">연락처</label>
+          <input type="tel" id="storePhone" placeholder="032-123-4567">
+        </div>
+        <div class="form-group">
+          <label for="storeCEO">대표자명</label>
+          <input type="text" id="storeCEO" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+          <label for="storeBusinessNumber">사업자등록번호</label>
+          <input type="text" id="storeBusinessNumber" placeholder="123-45-67890">
+        </div>
+        <div class="form-group">
+          <label>대표 서명 이미지</label>
+          <div style="margin-bottom: 10px;">
+            <input type="file" id="storeCeoSignatureInput" accept="image/*" onchange="previewStoreSignature(event)" style="display: none;">
+            <button type="button" class="btn" style="background: #6c757d; color: white; width: 100%;" onclick="document.getElementById('storeCeoSignatureInput').click()">
+              📸 대표 서명 업로드
+            </button>
+          </div>
+          <div id="storeCeoSignaturePreview" style="border: 2px dashed #ddd; padding: 20px; text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+            <span style="color: #999;">서명 이미지 선택 (선택사항)</span>
+          </div>
+          <small style="color: #666; display: block; margin-top: 8px;">
+            💡 매장별 대표자가 다를 경우 각각 서명을 등록할 수 있습니다.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeStoreModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveStore()">저장</button>
+        <button id="deleteStoreBtn" class="btn btn-danger" onclick="deleteStore()" style="display: none; margin-right: auto;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공지사항 작성/수정 모달 -->
+  <div id="noticeModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2 id="noticeModalTitle" style="margin: 0;">📢 공지사항 작성</h2>
+        <button class="modal-close" onclick="closeNoticeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editNoticeId">
+        <div class="form-group">
+          <label for="noticeTitle">제목 *</label>
+          <input type="text" id="noticeTitle" placeholder="공지사항 제목을 입력하세요" required>
+        </div>
+        <div class="form-group">
+          <label for="noticeContent">내용 *</label>
+          <textarea id="noticeContent" placeholder="공지사항 내용을 입력하세요" required style="min-height: 300px; resize: vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; cursor: pointer;">
+            <input type="checkbox" id="noticeImportant" style="width: auto; margin-right: 8px; cursor: pointer;">
+            <span style="font-size: 14px;">⭐ 중요 공지사항으로 표시</span>
+          </label>
+          <small style="color: #666; display: block; margin-top: 8px;">
+            중요 공지사항은 직원 페이지 상단에 고정 표시됩니다.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeNoticeModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveNotice()">저장</button>
+        <button id="deleteNoticeBtn" class="btn btn-danger" onclick="deleteNotice()" style="display: none; margin-right: auto;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr3Tq2T7oy5rVlK1c33m_G0TlUWv0-g3k",
+      authDomain: "abcdc-staff-system.firebaseapp.com",
+      projectId: "abcdc-staff-system",
+      storageBucket: "abcdc-staff-system.firebasestorage.app",
+      messagingSenderId: "442207878284",
+      appId: "1:442207878284:web:49b157573851b124d28fa9",
+      measurementId: "G-WYPQ3YEJRT"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let isAuthenticated = false;
+    let currentTab = 'dashboard';
+    
+    // firestore-utils.js 대신 필요한 함수만 인라인으로 포함
+    // (firestore-utils.js 파일 로딩 시 await 오류가 발생하여 인라인으로 변경)
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date();
+      const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const monthFilters = ['attendanceMonth', 'salaryMonth'];
+      monthFilters.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.value = currentMonth;
+      });
+      checkAuthStatus();
+    });
+
+    function checkAuthStatus() {
+      // Firebase Auth 상태 확인
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          // Firebase Auth 로그인되지 않음
+          const savedAuth = sessionStorage.getItem('admin_authenticated');
+          const isLoggingOut = sessionStorage.getItem('admin_logging_out');
+          
+          if (savedAuth === 'true' && !isLoggingOut) {
+            // sessionStorage에는 있지만 Firebase Auth는 없음 - 다시 로그인 필요
+            alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          
+          sessionStorage.clear();
+          window.location.href = 'admin-login.html';
+          return;
+        }
+        
+        // Firestore에서 사용자 role 확인
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          
+          if (!userDoc.exists) {
+            alert('⚠️ 사용자 정보를 찾을 수 없습니다.');
+            await auth.signOut();
+            sessionStorage.clear();
+            window.location.href = 'admin-login.html';
+            return;
+          }
+          
+          const userData = userDoc.data();
+          
+          // 관리자 또는 매니저 권한 확인
+          if (userData.role !== 'admin' && userData.role !== 'manager') {
+            alert('⚠️ 관리자 권한이 없습니다.');
+            await auth.signOut();
+            sessionStorage.clear();
+            window.location.href = 'admin-login.html';
+            return;
+          }
+          
+          // 인증 성공
+          isAuthenticated = true;
+          sessionStorage.setItem('admin_authenticated', 'true');
+          sessionStorage.setItem('admin_email', user.email);
+          sessionStorage.setItem('admin_uid', user.uid);
+          sessionStorage.setItem('admin_role', userData.role);
+          showMainScreen();
+          
+        } catch (error) {
+          console.error('❌ 사용자 정보 확인 실패:', error);
+          alert('⚠️ 사용자 정보 확인에 실패했습니다.');
+          await auth.signOut();
+          sessionStorage.clear();
+          window.location.href = 'admin-login.html';
+        }
+</body></html>
