@@ -629,11 +629,14 @@
 
     let isAuthenticated = false;
     let currentTab = 'dashboard';
+    console.log('✅ Variables declared');
     
     // firestore-utils.js 대신 필요한 함수만 인라인으로 포함
     // (firestore-utils.js 파일 로딩 시 await 오류가 발생하여 인라인으로 변경)
+    console.log('✅ About to add DOMContentLoaded listener');
 
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ DOMContentLoaded fired');
       const today = new Date();
       const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
       const monthFilters = ['attendanceMonth', 'salaryMonth'];
