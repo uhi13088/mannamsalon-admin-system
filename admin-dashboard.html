@@ -377,13 +377,6 @@
       </div>
 
       <div id="tabApprovals" class="tab-content">
-        <!-- 승인 요청 버튼 -->
-        <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-          <button class="btn btn-primary" onclick="showNewApprovalModal('purchase')">💳 구매 승인 요청</button>
-          <button class="btn btn-primary" onclick="showNewApprovalModal('disposal')">🗑️ 폐기 승인 요청</button>
-          <button class="btn btn-primary" onclick="showNewApprovalModal('resignation')">📄 퇴직서 승인 요청</button>
-        </div>
-
         <!-- 필터 -->
         <div class="filters">
           <div class="filter-group">
@@ -411,23 +404,25 @@
         </div>
 
         <div class="card">
-          <div class="card-header"><h3>✔️ 승인 대기 목록</h3></div>
+          <div class="card-header"><h3>✔️ 승인 요청 목록</h3></div>
           <div class="card-body">
             <table>
               <thead>
                 <tr>
-                  <th>유형</th>
-                  <th>신청자</th>
-                  <th>신청일</th>
+                  <th style="width: 100px;">유형</th>
+                  <th style="width: 100px;">신청자</th>
+                  <th style="width: 140px;">신청일</th>
                   <th>내용</th>
-                  <th>금액/수량</th>
-                  <th>상태</th>
-                  <th>처리</th>
+                  <th style="width: 120px;">금액/수량</th>
+                  <th style="width: 100px;">상태</th>
+                  <th style="width: 200px;">처리</th>
                 </tr>
               </thead>
               <tbody id="approvalsTableBody">
                 <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 건을 불러오는 중...</td>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    승인 요청 목록을 불러오는 중...
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1611,10 +1606,203 @@
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
     }
 
-    function loadApprovals() {
+    async function loadApprovals() {
       const tbody = document.getElementById('approvalsTableBody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td></tr>';
+      
+      // 로딩 표시
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">⏳ 승인 요청 목록을 불러오는 중...</td></tr>';
+      
+      // 필터 값 가져오기
+      const typeFilter = document.getElementById('approvalTypeFilter')?.value || '';
+      const statusFilter = document.getElementById('approvalStatusFilter')?.value || '';
+      
+      let approvals = [];
+      
+      try {
+        // Firestore에서 로드
+        console.log('📥 Firestore에서 승인 요청 로드...');
+        let query = db.collection('approvals');
+        
+        // 필터 적용
+        if (typeFilter) {
+          query = query.where('type', '==', typeFilter);
+        }
+        if (statusFilter) {
+          query = query.where('status', '==', statusFilter);
+        }
+        
+        const approvalsSnapshot = await query.orderBy('createdAt', 'desc').get();
+        
+        approvalsSnapshot.forEach(doc => {
+          approvals.push(doc.data());
+        });
+        
+        console.log(`✅ ${approvals.length}개 승인 요청 로드 완료`);
+        
+      } catch (error) {
+        console.error('❌ Firestore 로드 실패, localStorage 사용:', error);
+        
+        // localStorage에서 로드
+        approvals = JSON.parse(localStorage.getItem('approvals') || '[]');
+        
+        // 필터 적용
+        if (typeFilter) {
+          approvals = approvals.filter(a => a.type === typeFilter);
+        }
+        if (statusFilter) {
+          approvals = approvals.filter(a => a.status === statusFilter);
+        }
+        
+        // 최신순 정렬
+        approvals.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+      
+      if (approvals.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              <p style="margin-bottom: 16px;">승인 요청이 없습니다.</p>
+              <p style="font-size: 13px; color: var(--text-secondary);">직원이 승인 요청을 제출하면 여기에 표시됩니다.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      // 테이블 렌더링
+      tbody.innerHTML = approvals.map(approval => {
+        const typeIcons = {
+          purchase: '💳',
+          disposal: '🗑️',
+          resignation: '📄'
+        };
+        const typeNames = {
+          purchase: '구매',
+          disposal: '폐기',
+          resignation: '퇴직서'
+        };
+        
+        const statusBadges = {
+          pending: '<span class="badge badge-warning">⏰ 대기중</span>',
+          approved: '<span class="badge badge-success">✅ 승인됨</span>',
+          rejected: '<span class="badge badge-danger">❌ 거부됨</span>'
+        };
+        
+        const createdDate = new Date(approval.createdAt);
+        const createdDateStr = createdDate.toLocaleDateString('ko-KR');
+        const createdTimeStr = createdDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        
+        let amountInfo = '-';
+        if (approval.type === 'purchase' || approval.type === 'disposal') {
+          amountInfo = `${approval.amount?.toLocaleString() || 0}원`;
+          if (approval.quantity) {
+            amountInfo += `<br><small style="color: var(--text-secondary);">${approval.quantity}개</small>`;
+          }
+        } else if (approval.type === 'resignation' && approval.desiredDate) {
+          amountInfo = `희망일:<br><small style="color: var(--text-secondary);">${approval.desiredDate}</small>`;
+        }
+        
+        // 처리 버튼 (대기중일 때만 표시)
+        let actionButtons = '';
+        if (approval.status === 'pending') {
+          actionButtons = `
+            <button class="btn btn-sm btn-success" onclick="approveRequest('${approval.id}')">✅ 승인</button>
+            <button class="btn btn-sm btn-danger" onclick="rejectRequest('${approval.id}')">❌ 거부</button>
+          `;
+        } else {
+          actionButtons = '<span style="color: var(--text-secondary); font-size: 13px;">처리 완료</span>';
+        }
+        
+        return `
+          <tr>
+            <td>${typeIcons[approval.type] || ''} ${typeNames[approval.type] || approval.type}</td>
+            <td><strong>${approval.employeeName}</strong></td>
+            <td>${createdDateStr}<br><small style="color: var(--text-secondary);">${createdTimeStr}</small></td>
+            <td>
+              <strong>${approval.title}</strong><br>
+              <small style="color: var(--text-secondary);">${approval.description}</small>
+              ${approval.type === 'resignation' && approval.reason ? `<br><small style="color: var(--warning-color);">사유: ${approval.reason}</small>` : ''}
+            </td>
+            <td>${amountInfo}</td>
+            <td>${statusBadges[approval.status] || approval.status}</td>
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                ${actionButtons}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 승인 처리
+    async function approveRequest(approvalId) {
+      if (!confirm('✅ 이 요청을 승인하시겠습니까?')) {
+        return;
+      }
+      
+      try {
+        // Firestore 업데이트
+        await db.collection('approvals').doc(approvalId).update({
+          status: 'approved',
+          processedAt: new Date().toISOString(),
+          processedBy: 'admin@mannamsalon.com'
+        });
+        
+        // localStorage 업데이트
+        const approvals = JSON.parse(localStorage.getItem('approvals') || '[]');
+        const index = approvals.findIndex(a => a.id === approvalId);
+        if (index >= 0) {
+          approvals[index].status = 'approved';
+          approvals[index].processedAt = new Date().toISOString();
+          approvals[index].processedBy = 'admin@mannamsalon.com';
+          localStorage.setItem('approvals', JSON.stringify(approvals));
+        }
+        
+        alert('✅ 승인 처리되었습니다!');
+        await loadApprovals();
+        
+      } catch (error) {
+        console.error('❌ 승인 처리 실패:', error);
+        alert('❌ 승인 처리에 실패했습니다: ' + error.message);
+      }
+    }
+
+    // 거부 처리
+    async function rejectRequest(approvalId) {
+      const reason = prompt('❌ 거부 사유를 입력하세요:');
+      if (!reason) {
+        return;
+      }
+      
+      try {
+        // Firestore 업데이트
+        await db.collection('approvals').doc(approvalId).update({
+          status: 'rejected',
+          processedAt: new Date().toISOString(),
+          processedBy: 'admin@mannamsalon.com',
+          rejectReason: reason
+        });
+        
+        // localStorage 업데이트
+        const approvals = JSON.parse(localStorage.getItem('approvals') || '[]');
+        const index = approvals.findIndex(a => a.id === approvalId);
+        if (index >= 0) {
+          approvals[index].status = 'rejected';
+          approvals[index].processedAt = new Date().toISOString();
+          approvals[index].processedBy = 'admin@mannamsalon.com';
+          approvals[index].rejectReason = reason;
+          localStorage.setItem('approvals', JSON.stringify(approvals));
+        }
+        
+        alert('❌ 거부 처리되었습니다!');
+        await loadApprovals();
+        
+      } catch (error) {
+        console.error('❌ 거부 처리 실패:', error);
+        alert('❌ 거부 처리에 실패했습니다: ' + error.message);
+      }
     }
 
     async function loadContracts() {

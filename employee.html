@@ -310,6 +310,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="attendance" onclick="showTab('attendance')">📋 근무내역</button>
         <button class="tab" data-tab="salary" onclick="showTab('salary')">💰 급여조회</button>
+        <button class="tab" data-tab="approvals" onclick="showTab('approvals')">✔️ 승인요청</button>
         <button class="tab" data-tab="contract" onclick="showTab('contract')">📝 계약서</button>
       </div>
 
@@ -379,6 +380,44 @@
             <div class="alert alert-info">
               조회할 월을 선택하고 조회 버튼을 클릭하세요.
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 컨텐츠: 승인요청 -->
+      <div id="tabApprovals" class="tab-content">
+        <!-- 승인 요청 버튼 -->
+        <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="showApprovalModal('purchase')">💳 구매 승인 요청</button>
+          <button class="btn btn-primary" onclick="showApprovalModal('disposal')">🗑️ 폐기 승인 요청</button>
+          <button class="btn btn-primary" onclick="showApprovalModal('resignation')">📄 퇴직서 제출</button>
+        </div>
+
+        <!-- 내 승인 요청 내역 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>✔️ 내 승인 요청 내역</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>유형</th>
+                  <th>신청일</th>
+                  <th>내용</th>
+                  <th>금액/수량</th>
+                  <th>상태</th>
+                  <th>처리일</th>
+                </tr>
+              </thead>
+              <tbody id="myApprovalsTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    승인 요청 내역을 불러오는 중...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -486,6 +525,54 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 승인 요청 모달 -->
+  <div id="approvalModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="approvalModalTitle" style="margin: 0;">💳 구매 승인 요청</h2>
+        <button class="modal-close" onclick="closeApprovalModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="approvalType">
+        
+        <div class="form-group">
+          <label for="approvalTitle">제목 *</label>
+          <input type="text" id="approvalTitle" placeholder="예: 식재료 구매, 폐기 물품 등" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="approvalDescription">상세 내용 *</label>
+          <textarea id="approvalDescription" placeholder="상세 내용을 입력하세요" required style="min-height: 120px; resize: vertical;"></textarea>
+        </div>
+        
+        <div class="form-row" id="amountSection">
+          <div class="form-group">
+            <label for="approvalAmount">금액 (원)</label>
+            <input type="number" id="approvalAmount" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label for="approvalQuantity">수량</label>
+            <input type="number" id="approvalQuantity" placeholder="0" min="0">
+          </div>
+        </div>
+        
+        <div class="form-group" id="reasonSection" style="display: none;">
+          <label for="approvalReason">퇴직 사유 *</label>
+          <textarea id="approvalReason" placeholder="퇴직 사유를 입력하세요" style="min-height: 100px; resize: vertical;"></textarea>
+        </div>
+        
+        <div class="form-group" id="desiredDateSection" style="display: none;">
+          <label for="approvalDesiredDate">희망 퇴직일</label>
+          <input type="date" id="approvalDesiredDate">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeApprovalModal()">취소</button>
+        <button class="btn btn-primary" onclick="submitApproval()">제출</button>
       </div>
     </div>
   </div>
@@ -674,6 +761,262 @@
           alert('로그아웃 중 오류가 발생했습니다.');
         }
       }
+    }
+
+    // ===== 승인 관리 함수들 =====
+
+    // 탭 전환 함수
+    function showTab(tabName) {
+      // 모든 탭과 컨텐츠 비활성화
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      // 선택된 탭과 컨텐츠 활성화
+      const selectedTab = document.querySelector(`[data-tab="${tabName}"]`);
+      if (selectedTab) selectedTab.classList.add('active');
+      
+      const selectedContent = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (selectedContent) selectedContent.classList.add('active');
+      
+      // 승인 탭 선택 시 내역 로드
+      if (tabName === 'approvals') {
+        loadMyApprovals();
+      }
+    }
+
+    // 승인 요청 모달 열기
+    function showApprovalModal(type) {
+      document.getElementById('approvalType').value = type;
+      
+      const modal = document.getElementById('approvalModal');
+      const amountSection = document.getElementById('amountSection');
+      const reasonSection = document.getElementById('reasonSection');
+      const desiredDateSection = document.getElementById('desiredDateSection');
+      
+      // 초기화
+      document.getElementById('approvalTitle').value = '';
+      document.getElementById('approvalDescription').value = '';
+      document.getElementById('approvalAmount').value = '';
+      document.getElementById('approvalQuantity').value = '';
+      document.getElementById('approvalReason').value = '';
+      document.getElementById('approvalDesiredDate').value = '';
+      
+      // 유형별 UI 조정
+      if (type === 'purchase') {
+        document.getElementById('approvalModalTitle').innerHTML = '💳 구매 승인 요청';
+        amountSection.style.display = 'grid';
+        reasonSection.style.display = 'none';
+        desiredDateSection.style.display = 'none';
+      } else if (type === 'disposal') {
+        document.getElementById('approvalModalTitle').innerHTML = '🗑️ 폐기 승인 요청';
+        amountSection.style.display = 'grid';
+        reasonSection.style.display = 'none';
+        desiredDateSection.style.display = 'none';
+      } else if (type === 'resignation') {
+        document.getElementById('approvalModalTitle').innerHTML = '📄 퇴직서 제출';
+        amountSection.style.display = 'none';
+        reasonSection.style.display = 'block';
+        desiredDateSection.style.display = 'block';
+      }
+      
+      modal.style.display = 'flex';
+    }
+
+    // 승인 요청 모달 닫기
+    function closeApprovalModal() {
+      document.getElementById('approvalModal').style.display = 'none';
+    }
+
+    // 승인 요청 제출
+    async function submitApproval() {
+      const type = document.getElementById('approvalType').value;
+      const title = document.getElementById('approvalTitle').value.trim();
+      const description = document.getElementById('approvalDescription').value.trim();
+      
+      if (!title) {
+        alert('⚠️ 제목을 입력해주세요.');
+        return;
+      }
+      
+      if (!description) {
+        alert('⚠️ 상세 내용을 입력해주세요.');
+        return;
+      }
+      
+      const employeeName = sessionStorage.getItem('employee_name');
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      
+      if (!employeeName || !employeeUid) {
+        alert('⚠️ 로그인 정보가 없습니다. 다시 로그인해주세요.');
+        window.location.href = 'employee-login.html';
+        return;
+      }
+      
+      // 승인 요청 데이터 구성
+      const approvalData = {
+        id: 'A' + Date.now(),
+        type: type,
+        title: title,
+        description: description,
+        employeeName: employeeName,
+        employeeUid: employeeUid,
+        status: 'pending', // pending, approved, rejected
+        createdAt: new Date().toISOString(),
+        processedAt: null,
+        processedBy: null,
+        rejectReason: null
+      };
+      
+      // 유형별 추가 필드
+      if (type === 'purchase' || type === 'disposal') {
+        approvalData.amount = parseInt(document.getElementById('approvalAmount').value) || 0;
+        approvalData.quantity = parseInt(document.getElementById('approvalQuantity').value) || 0;
+      } else if (type === 'resignation') {
+        const reason = document.getElementById('approvalReason').value.trim();
+        if (!reason) {
+          alert('⚠️ 퇴직 사유를 입력해주세요.');
+          return;
+        }
+        approvalData.reason = reason;
+        approvalData.desiredDate = document.getElementById('approvalDesiredDate').value || null;
+      }
+      
+      try {
+        // Firestore에 저장
+        await db.collection('approvals').doc(approvalData.id).set(approvalData);
+        console.log('✅ Firestore 승인 요청 저장 완료');
+        
+        // localStorage에도 백업
+        const approvals = JSON.parse(localStorage.getItem('approvals') || '[]');
+        approvals.push(approvalData);
+        localStorage.setItem('approvals', JSON.stringify(approvals));
+        
+        alert('✅ 승인 요청이 제출되었습니다!');
+        closeApprovalModal();
+        
+        // 내역 새로고침
+        await loadMyApprovals();
+        
+      } catch (error) {
+        console.error('❌ 승인 요청 제출 실패:', error);
+        alert('❌ 승인 요청 제출에 실패했습니다: ' + error.message);
+      }
+    }
+
+    // 내 승인 요청 내역 로드
+    async function loadMyApprovals() {
+      const tbody = document.getElementById('myApprovalsTableBody');
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      
+      if (!employeeUid) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              로그인이 필요합니다.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      // 로딩 표시
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px;">
+            ⏳ 승인 요청 내역을 불러오는 중...
+          </td>
+        </tr>
+      `;
+      
+      let approvals = [];
+      
+      try {
+        // Firestore에서 로드
+        console.log('📥 Firestore에서 내 승인 요청 로드...');
+        const approvalsSnapshot = await db.collection('approvals')
+          .where('employeeUid', '==', employeeUid)
+          .orderBy('createdAt', 'desc')
+          .get();
+        
+        approvalsSnapshot.forEach(doc => {
+          approvals.push(doc.data());
+        });
+        
+        console.log(`✅ ${approvals.length}개 승인 요청 로드 완료`);
+        
+      } catch (error) {
+        console.error('❌ Firestore 로드 실패, localStorage 사용:', error);
+        
+        // localStorage에서 로드
+        const allApprovals = JSON.parse(localStorage.getItem('approvals') || '[]');
+        approvals = allApprovals.filter(a => a.employeeUid === employeeUid);
+        approvals.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+      
+      if (approvals.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              <p style="margin-bottom: 16px;">아직 승인 요청 내역이 없습니다.</p>
+              <button class="btn btn-primary" onclick="showApprovalModal('purchase')">+ 첫 승인 요청하기</button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      // 테이블 렌더링
+      tbody.innerHTML = approvals.map(approval => {
+        const typeIcons = {
+          purchase: '💳',
+          disposal: '🗑️',
+          resignation: '📄'
+        };
+        const typeNames = {
+          purchase: '구매',
+          disposal: '폐기',
+          resignation: '퇴직서'
+        };
+        
+        const statusBadges = {
+          pending: '<span class="badge badge-warning">⏰ 대기중</span>',
+          approved: '<span class="badge badge-success">✅ 승인됨</span>',
+          rejected: '<span class="badge badge-danger">❌ 거부됨</span>'
+        };
+        
+        const createdDate = new Date(approval.createdAt);
+        const createdDateStr = createdDate.toLocaleDateString('ko-KR');
+        const createdTimeStr = createdDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        
+        let processedDateStr = '-';
+        if (approval.processedAt) {
+          const processedDate = new Date(approval.processedAt);
+          processedDateStr = processedDate.toLocaleDateString('ko-KR') + ' ' + 
+                             processedDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        let amountInfo = '-';
+        if (approval.type === 'purchase' || approval.type === 'disposal') {
+          amountInfo = `${approval.amount?.toLocaleString() || 0}원`;
+          if (approval.quantity) {
+            amountInfo += ` / ${approval.quantity}개`;
+          }
+        }
+        
+        return `
+          <tr>
+            <td>${typeIcons[approval.type] || ''} ${typeNames[approval.type] || approval.type}</td>
+            <td>${createdDateStr}<br><small style="color: var(--text-secondary);">${createdTimeStr}</small></td>
+            <td>
+              <strong>${approval.title}</strong><br>
+              <small style="color: var(--text-secondary);">${approval.description}</small>
+            </td>
+            <td>${amountInfo}</td>
+            <td>${statusBadges[approval.status] || approval.status}</td>
+            <td>${processedDateStr}</td>
+          </tr>
+        `;
+      }).join('');
     }
   </script>
   
