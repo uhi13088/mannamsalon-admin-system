@@ -536,8 +536,30 @@
     });
 
     // 공지사항 로드 함수
-    function loadNotices() {
-      const notices = JSON.parse(localStorage.getItem('notices') || '[]');
+    async function loadNotices() {
+      let notices = [];
+      
+      try {
+        // Firestore에서 로드
+        const noticesSnapshot = await db.collection('notices')
+          .orderBy('createdAt', 'desc')
+          .get();
+        
+        noticesSnapshot.forEach(doc => {
+          notices.push(doc.data());
+        });
+        
+        console.log(`✅ Firestore에서 ${notices.length}개 공지사항 로드`);
+        
+      } catch (error) {
+        console.error('❌ Firestore 로드 실패, localStorage 사용:', error);
+        
+        // localStorage에서 로드
+        notices = JSON.parse(localStorage.getItem('notices') || '[]');
+        
+        // 최신순 정렬
+        notices.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
       
       if (notices.length === 0) {
         // 공지사항이 없을 때
@@ -547,9 +569,6 @@
       
       // 공지사항 영역 표시
       document.getElementById('noticeSection').style.display = 'block';
-      
-      // 최신순 정렬
-      notices.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       
       // 중요/일반 공지사항 분리
       const importantNotices = notices.filter(n => n.important);
