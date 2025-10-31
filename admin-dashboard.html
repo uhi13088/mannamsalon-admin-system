@@ -126,7 +126,6 @@
     <div class="top-bar">
       <h1 style="font-size: 20px; font-weight: 700; margin: 0;">🏪 맛남살롱 근무관리</h1>
       <div style="display: flex; align-items: center; gap: 16px;">
-        <button class="btn" style="background: #6c757d; color: white;" onclick="showCompanySettingsModal()">⚙️ 회사 정보 설정</button>
         <span class="admin-badge">관리자</span>
         <button class="btn btn-secondary" onclick="logout()">로그아웃</button>
       </div>
@@ -468,6 +467,21 @@
           <label for="storeBusinessNumber">사업자등록번호</label>
           <input type="text" id="storeBusinessNumber" placeholder="123-45-67890">
         </div>
+        <div class="form-group">
+          <label>대표 서명 이미지</label>
+          <div style="margin-bottom: 10px;">
+            <input type="file" id="storeCeoSignatureInput" accept="image/*" onchange="previewStoreSignature(event)" style="display: none;">
+            <button type="button" class="btn" style="background: #6c757d; color: white; width: 100%;" onclick="document.getElementById('storeCeoSignatureInput').click()">
+              📸 대표 서명 업로드
+            </button>
+          </div>
+          <div id="storeCeoSignaturePreview" style="border: 2px dashed #ddd; padding: 20px; text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+            <span style="color: #999;">서명 이미지 선택 (선택사항)</span>
+          </div>
+          <small style="color: #666; display: block; margin-top: 8px;">
+            💡 매장별 대표자가 다를 경우 각각 서명을 등록할 수 있습니다.
+          </small>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeStoreModal()">취소</button>
@@ -477,38 +491,7 @@
     </div>
   </div>
 
-  <!-- 회사 정보 설정 모달 -->
-  <div id="companySettingsModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-header">
-        <h2 style="margin: 0;">⚙️ 회사 정보 설정</h2>
-        <button class="modal-close" onclick="closeCompanySettingsModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>대표 서명 이미지 *</label>
-          <div style="margin-bottom: 10px;">
-            <input type="file" id="ceoSignatureInput" accept="image/*" onchange="previewCeoSignature(event)" style="display: none;">
-            <button type="button" class="btn" style="background: #6c757d; color: white; width: 100%;" onclick="document.getElementById('ceoSignatureInput').click()">
-              📸 서명 이미지 업로드
-            </button>
-          </div>
-          <div id="ceoSignaturePreview" style="border: 2px dashed #ddd; padding: 20px; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #999;">이미지를 업로드해주세요 (권장: 400x160px)</span>
-          </div>
-          <small style="color: #666; display: block; margin-top: 8px;">
-            💡 대표님의 서명 이미지를 업로드하시면 모든 계약서에 자동으로 표시됩니다.
-          </small>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeCompanySettingsModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveCompanySettings()">저장</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
@@ -1122,9 +1105,10 @@
         console.log('  - 서명일:', signDate.toLocaleDateString('ko-KR'));
         console.log('  - 근로자:', contract.employeeName);
         
-        // 회사 정보에서 대표 서명 가져오기
-        const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
-        const ceoSignature = companyInfo.ceoSignature || '';
+        // 매장별 대표 서명 가져오기
+        const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+        const store = stores.find(s => s.name === contract.workStore);
+        const ceoSignature = store?.ceoSignature || '';
         
         signatureHtml = `
           <div class="avoid-page-break" style="margin-top: 60px; page-break-inside: avoid;">
@@ -1327,9 +1311,10 @@
           }
         });
         
-        // 회사 정보에서 대표 서명 가져오기
-        const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
-        const ceoSignature = companyInfo.ceoSignature || '';
+        // 매장별 대표 서명 가져오기
+        const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+        const store = stores.find(s => s.name === contract.workStore);
+        const ceoSignature = store?.ceoSignature || '';
         
         const signDate = new Date(signedContract.signedAt);
         const signatureHtml = `
@@ -1711,6 +1696,8 @@
       `).join('');
     }
 
+    let storeCeoSignatureData = null;
+
     function showAddStoreModal() {
       document.getElementById('storeModalTitle').textContent = '🏪 매장 추가';
       document.getElementById('editStoreId').value = '';
@@ -1720,6 +1707,11 @@
       document.getElementById('storeCEO').value = '';
       document.getElementById('storeBusinessNumber').value = '';
       document.getElementById('deleteStoreBtn').style.display = 'none';
+      
+      // 서명 초기화
+      storeCeoSignatureData = null;
+      document.getElementById('storeCeoSignaturePreview').innerHTML = '<span style="color: #999;">서명 이미지 선택 (선택사항)</span>';
+      
       document.getElementById('storeModal').style.display = 'flex';
     }
 
@@ -1740,6 +1732,16 @@
       document.getElementById('storeCEO').value = store.ceo || '';
       document.getElementById('storeBusinessNumber').value = store.businessNumber || '';
       document.getElementById('deleteStoreBtn').style.display = 'block';
+      
+      // 서명 불러오기
+      if (store.ceoSignature) {
+        storeCeoSignatureData = store.ceoSignature;
+        document.getElementById('storeCeoSignaturePreview').innerHTML = `<img src="${store.ceoSignature}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
+      } else {
+        storeCeoSignatureData = null;
+        document.getElementById('storeCeoSignaturePreview').innerHTML = '<span style="color: #999;">서명 이미지 선택 (선택사항)</span>';
+      }
+      
       document.getElementById('storeModal').style.display = 'flex';
     }
 
@@ -1766,20 +1768,38 @@
         // 수정
         const index = stores.findIndex(s => s.id === storeId);
         if (index >= 0) {
-          stores[index] = { ...stores[index], name, address, phone, ceo, businessNumber };
+          stores[index] = { 
+            ...stores[index], 
+            name, 
+            address, 
+            phone, 
+            ceo, 
+            businessNumber,
+            ceoSignature: storeCeoSignatureData || stores[index].ceoSignature || null
+          };
         }
       } else {
         // 추가
         const newId = String(Date.now());
-        stores.push({ id: newId, name, address, phone, ceo, businessNumber });
+        stores.push({ 
+          id: newId, 
+          name, 
+          address, 
+          phone, 
+          ceo, 
+          businessNumber,
+          ceoSignature: storeCeoSignatureData || null
+        });
       }
       
       localStorage.setItem('stores', JSON.stringify(stores));
       closeStoreModal();
       loadStores();
       
-      // employee-register.html의 매장 선택도 업데이트되도록 알림
-      alert('✅ 매장 정보가 저장되었습니다.\n\n직원 가입 페이지에서도 자동으로 반영됩니다.');
+      // 서명 초기화
+      storeCeoSignatureData = null;
+      
+      alert('✅ 매장 정보가 저장되었습니다.');
     }
 
     function deleteStore() {
@@ -3853,28 +3873,8 @@
   </div>
 
   <script>
-    // 회사 정보 설정 모달
-    let ceoSignatureData = null;
-
-    function showCompanySettingsModal() {
-      const modal = document.getElementById('companySettingsModal');
-      modal.style.display = 'flex';
-      
-      // 기존 데이터 로드
-      const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
-      if (companyInfo.ceoSignature) {
-        ceoSignatureData = companyInfo.ceoSignature;
-        const preview = document.getElementById('ceoSignaturePreview');
-        preview.innerHTML = `<img src="${companyInfo.ceoSignature}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
-      }
-    }
-
-    function closeCompanySettingsModal() {
-      document.getElementById('companySettingsModal').style.display = 'none';
-      ceoSignatureData = null;
-    }
-
-    function previewCeoSignature(event) {
+    // 매장 서명 미리보기
+    function previewStoreSignature(event) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -3885,26 +3885,11 @@
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        ceoSignatureData = e.target.result;
-        const preview = document.getElementById('ceoSignaturePreview');
-        preview.innerHTML = `<img src="${ceoSignatureData}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
+        storeCeoSignatureData = e.target.result;
+        const preview = document.getElementById('storeCeoSignaturePreview');
+        preview.innerHTML = `<img src="${storeCeoSignatureData}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
       };
       reader.readAsDataURL(file);
-    }
-
-    function saveCompanySettings() {
-      if (!ceoSignatureData) {
-        alert('❌ 대표 서명 이미지를 업로드해주세요.');
-        return;
-      }
-
-      // localStorage에 저장
-      const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
-      companyInfo.ceoSignature = ceoSignatureData;
-      localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
-
-      alert('✅ 회사 정보가 저장되었습니다!');
-      closeCompanySettingsModal();
     }
   </script>
 </body>
