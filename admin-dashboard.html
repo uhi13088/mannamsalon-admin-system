@@ -126,6 +126,7 @@
     <div class="top-bar">
       <h1 style="font-size: 20px; font-weight: 700; margin: 0;">🏪 맛남살롱 근무관리</h1>
       <div style="display: flex; align-items: center; gap: 16px;">
+        <button class="btn" style="background: #6c757d; color: white;" onclick="showCompanySettingsModal()">⚙️ 회사 정보 설정</button>
         <span class="admin-badge">관리자</span>
         <button class="btn btn-secondary" onclick="logout()">로그아웃</button>
       </div>
@@ -472,6 +473,37 @@
         <button class="btn btn-secondary" onclick="closeStoreModal()">취소</button>
         <button class="btn btn-primary" onclick="saveStore()">저장</button>
         <button id="deleteStoreBtn" class="btn btn-danger" onclick="deleteStore()" style="display: none; margin-right: auto;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회사 정보 설정 모달 -->
+  <div id="companySettingsModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2 style="margin: 0;">⚙️ 회사 정보 설정</h2>
+        <button class="modal-close" onclick="closeCompanySettingsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>대표 서명 이미지 *</label>
+          <div style="margin-bottom: 10px;">
+            <input type="file" id="ceoSignatureInput" accept="image/*" onchange="previewCeoSignature(event)" style="display: none;">
+            <button type="button" class="btn" style="background: #6c757d; color: white; width: 100%;" onclick="document.getElementById('ceoSignatureInput').click()">
+              📸 서명 이미지 업로드
+            </button>
+          </div>
+          <div id="ceoSignaturePreview" style="border: 2px dashed #ddd; padding: 20px; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center;">
+            <span style="color: #999;">이미지를 업로드해주세요 (권장: 400x160px)</span>
+          </div>
+          <small style="color: #666; display: block; margin-top: 8px;">
+            💡 대표님의 서명 이미지를 업로드하시면 모든 계약서에 자동으로 표시됩니다.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCompanySettingsModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveCompanySettings()">저장</button>
       </div>
     </div>
   </div>
@@ -1090,11 +1122,32 @@
         console.log('  - 서명일:', signDate.toLocaleDateString('ko-KR'));
         console.log('  - 근로자:', contract.employeeName);
         
+        // 회사 정보에서 대표 서명 가져오기
+        const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
+        const ceoSignature = companyInfo.ceoSignature || '';
+        
         signatureHtml = `
-          <div class="avoid-page-break" style="margin-top: 60px; text-align: right;">
-            <p style="margin-bottom: 10px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
-            <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; margin-left: auto; object-fit: contain;" onerror="console.error('❌ 서명 이미지 로드 실패!', this.src.substring(0,50))">
-            <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+          <div class="avoid-page-break" style="margin-top: 60px; page-break-inside: avoid;">
+            <p style="margin-bottom: 20px; font-size: 16px; text-align: center;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+              <!-- 사용자(대표) 서명 -->
+              <div style="flex: 1; text-align: center;">
+                ${ceoSignature ? `
+                  <img src="${ceoSignature}" alt="대표 서명" style="width: 200px; height: 80px; display: block; margin: 0 auto; object-fit: contain;">
+                ` : `
+                  <div style="width: 200px; height: 80px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #999;">
+                    <span>대표 서명 미등록</span>
+                  </div>
+                `}
+                <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">사용자: ${contract.companyCEO || contract.companyName} (인)</p>
+              </div>
+              
+              <!-- 근로자 서명 -->
+              <div style="flex: 1; text-align: center;">
+                <img src="${signedContract.signature}" alt="근로자 서명" style="width: 200px; height: 80px; display: block; margin: 0 auto; object-fit: contain;" onerror="console.error('❌ 서명 이미지 로드 실패!', this.src.substring(0,50))">
+                <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+              </div>
+            </div>
           </div>
         `;
       } else {
@@ -1265,22 +1318,46 @@
         console.log('🔍 서명 이미지 시작:', signedContract.signature?.substring(0, 50) || 'N/A');
       }
       
-      // 🔥 서명이 있으면 무조건 다시 그려넣기 (네모 박스 제거)
+      // 🔥 서명이 있으면 무조건 다시 그려넣기 (사용자 + 근로자 양쪽)
       if (signedContract && signedContract.signature) {
         // 기존 서명 제거
-        element.querySelectorAll('img[alt="서명"]').forEach(img => img.closest('.avoid-page-break')?.remove());
+        element.querySelectorAll('.avoid-page-break').forEach(div => {
+          if (div.querySelector('img[alt="서명"], img[alt="근로자 서명"], img[alt="대표 서명"]')) {
+            div.remove();
+          }
+        });
         
-        // 새로 추가 - 네모 박스 없이 깔끔하게
+        // 회사 정보에서 대표 서명 가져오기
+        const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
+        const ceoSignature = companyInfo.ceoSignature || '';
+        
         const signDate = new Date(signedContract.signedAt);
         const signatureHtml = `
-          <div class="avoid-page-break" style="margin-top: 60px; text-align: right; page-break-inside: avoid;">
-            <p style="margin-bottom: 10px; font-size: 16px;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
-            <img src="${signedContract.signature}" alt="서명" style="width: 200px; height: 80px; display: block; margin-left: auto;">
-            <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+          <div class="avoid-page-break" style="margin-top: 60px; page-break-inside: avoid;">
+            <p style="margin-bottom: 20px; font-size: 16px; text-align: center;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+              <!-- 사용자(대표) 서명 -->
+              <div style="flex: 1; text-align: center;">
+                ${ceoSignature ? `
+                  <img src="${ceoSignature}" alt="대표 서명" style="width: 200px; height: 80px; display: block; margin: 0 auto; object-fit: contain;">
+                ` : `
+                  <div style="width: 200px; height: 80px; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #999; font-size: 12px;">
+                    대표 서명 미등록
+                  </div>
+                `}
+                <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">사용자: ${contract.companyCEO || contract.companyName} (인)</p>
+              </div>
+              
+              <!-- 근로자 서명 -->
+              <div style="flex: 1; text-align: center;">
+                <img src="${signedContract.signature}" alt="근로자 서명" style="width: 200px; height: 80px; display: block; margin: 0 auto; object-fit: contain;">
+                <p style="margin-top: 8px; font-weight: 600; font-size: 14px;">근로자: ${contract.employeeName} (서명)</p>
+              </div>
+            </div>
           </div>
         `;
         element.insertAdjacentHTML('beforeend', signatureHtml);
-        console.log('✅ 서명 재주입 완료 (네모 박스 제거)');
+        console.log('✅ 양쪽 서명 재주입 완료');
       }
       
       // PDF 생성 시작 알림
@@ -3774,5 +3851,61 @@
       </div>
     </div>
   </div>
+
+  <script>
+    // 회사 정보 설정 모달
+    let ceoSignatureData = null;
+
+    function showCompanySettingsModal() {
+      const modal = document.getElementById('companySettingsModal');
+      modal.style.display = 'flex';
+      
+      // 기존 데이터 로드
+      const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
+      if (companyInfo.ceoSignature) {
+        ceoSignatureData = companyInfo.ceoSignature;
+        const preview = document.getElementById('ceoSignaturePreview');
+        preview.innerHTML = `<img src="${companyInfo.ceoSignature}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
+      }
+    }
+
+    function closeCompanySettingsModal() {
+      document.getElementById('companySettingsModal').style.display = 'none';
+      ceoSignatureData = null;
+    }
+
+    function previewCeoSignature(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert('❌ 이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        ceoSignatureData = e.target.result;
+        const preview = document.getElementById('ceoSignaturePreview');
+        preview.innerHTML = `<img src="${ceoSignatureData}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveCompanySettings() {
+      if (!ceoSignatureData) {
+        alert('❌ 대표 서명 이미지를 업로드해주세요.');
+        return;
+      }
+
+      // localStorage에 저장
+      const companyInfo = JSON.parse(localStorage.getItem('companyInfo') || '{}');
+      companyInfo.ceoSignature = ceoSignatureData;
+      localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
+
+      alert('✅ 회사 정보가 저장되었습니다!');
+      closeCompanySettingsModal();
+    }
+  </script>
 </body>
 </html>
