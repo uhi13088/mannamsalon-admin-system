@@ -612,6 +612,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
+    console.log('🚀 Script 1: Initializing Firebase...');
     const firebaseConfig = {
       apiKey: "AIzaSyCr3Tq2T7oy5rVlK1c33m_G0TlUWv0-g3k",
       authDomain: "abcdc-staff-system.firebaseapp.com",
@@ -624,6 +625,7 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+    console.log('✅ Firebase initialized successfully');
 
     let isAuthenticated = false;
     let currentTab = 'dashboard';
@@ -3106,6 +3108,7 @@
   
   <!-- 계약서 전용 JavaScript (모든 코드 인라인) -->
   <script>
+    console.log('🚀 Script 2: Loading contract configuration...');
     // ===================================================================
     // config.js - 설정 및 디버그 함수
     // ===================================================================
@@ -4897,6 +4900,7 @@
   </div>
 
   <script>
+    console.log('🚀 Script 3: Loading store signature and PDF functions...');
     // 매장 서명 미리보기
     function previewStoreSignature(event) {
       const file = event.target.files[0];
