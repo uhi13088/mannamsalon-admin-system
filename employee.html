@@ -239,18 +239,41 @@
       </div>
 
       <!-- 공지사항 -->
-      <div class="notice-section" id="noticeSection">
-        <div class="card" style="background: linear-gradient(135deg, #fff8e1 0%, #fff 100%); border-left: 4px solid var(--primary-color);">
-          <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
-            <h3 style="display: flex; align-items: center; gap: 8px;">
-              📢 공지사항
-            </h3>
-          </div>
-          <div class="card-body" style="padding-top: var(--spacing-sm);">
-            <div id="noticeContent" style="font-size: 15px; line-height: 1.7; color: var(--text-secondary); white-space: pre-wrap; font-style: italic;">
-              현재 등록된 공지사항이 없습니다.
+      <div class="notice-section" id="noticeSection" style="display: none;">
+        <!-- 중요 공지사항 영역 (빨간색 강조) -->
+        <div id="importantNoticeArea" style="display: none;">
+          <div class="card" style="background: linear-gradient(135deg, #fee2e2 0%, #fff5f5 100%); border-left: 4px solid #ef4444; margin-bottom: var(--spacing-lg);">
+            <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+              <h3 style="display: flex; align-items: center; gap: 8px; color: #dc2626;">
+                ⭐ 중요 공지사항
+              </h3>
             </div>
-            <div id="noticeDate" style="margin-top: var(--spacing-md); font-size: 12px; color: var(--text-secondary); text-align: right;">
+            <div class="card-body" style="padding-top: var(--spacing-sm);">
+              <div id="importantNoticeList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 일반 공지사항 영역 -->
+        <div id="normalNoticeArea" style="display: none;">
+          <div class="card" style="background: linear-gradient(135deg, #fff8e1 0%, #fff 100%); border-left: 4px solid var(--primary-color);">
+            <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+              <h3 style="display: flex; align-items: center; gap: 8px;">
+                📢 공지사항
+              </h3>
+            </div>
+            <div class="card-body" style="padding-top: var(--spacing-sm);">
+              <div id="normalNoticeList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 공지사항 없을 때 -->
+        <div id="noNoticeMessage" style="display: none;">
+          <div class="card" style="background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);">
+            <div class="card-body" style="text-align: center; padding: var(--spacing-xl);">
+              <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📭</div>
+              <p style="color: var(--text-secondary); margin: 0;">현재 등록된 공지사항이 없습니다.</p>
             </div>
           </div>
         </div>
@@ -507,7 +530,109 @@
         nameElement.textContent = name + '님';
       }
       console.log('✅ 직원 페이지 로드:', name);
+      
+      // 공지사항 로드
+      loadNotices();
     });
+
+    // 공지사항 로드 함수
+    function loadNotices() {
+      const notices = JSON.parse(localStorage.getItem('notices') || '[]');
+      
+      if (notices.length === 0) {
+        // 공지사항이 없을 때
+        document.getElementById('noticeSection').style.display = 'none';
+        return;
+      }
+      
+      // 공지사항 영역 표시
+      document.getElementById('noticeSection').style.display = 'block';
+      
+      // 최신순 정렬
+      notices.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // 중요/일반 공지사항 분리
+      const importantNotices = notices.filter(n => n.important);
+      const normalNotices = notices.filter(n => !n.important);
+      
+      // 중요 공지사항 표시
+      if (importantNotices.length > 0) {
+        const importantArea = document.getElementById('importantNoticeArea');
+        const importantList = document.getElementById('importantNoticeList');
+        
+        importantArea.style.display = 'block';
+        importantList.innerHTML = importantNotices.map(notice => {
+          const date = new Date(notice.createdAt);
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          
+          return `
+            <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--border-radius); border: 1px solid #fecaca;">
+              <h4 style="margin: 0 0 var(--spacing-xs) 0; font-size: 16px; color: #dc2626;">
+                ⭐ ${notice.title}
+              </h4>
+              <p style="white-space: pre-wrap; line-height: 1.7; color: var(--text-primary); margin: var(--spacing-sm) 0;">
+                ${notice.content}
+              </p>
+              <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
+                ${dateStr} ${timeStr}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        document.getElementById('importantNoticeArea').style.display = 'none';
+      }
+      
+      // 일반 공지사항 표시
+      if (normalNotices.length > 0) {
+        const normalArea = document.getElementById('normalNoticeArea');
+        const normalList = document.getElementById('normalNoticeList');
+        
+        normalArea.style.display = 'block';
+        
+        // 최신 3개만 표시
+        const displayNotices = normalNotices.slice(0, 3);
+        
+        normalList.innerHTML = displayNotices.map(notice => {
+          const date = new Date(notice.createdAt);
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          
+          return `
+            <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--border-radius); border: 1px solid #fde68a;">
+              <h4 style="margin: 0 0 var(--spacing-xs) 0; font-size: 16px; color: var(--text-primary);">
+                ${notice.title}
+              </h4>
+              <p style="white-space: pre-wrap; line-height: 1.7; color: var(--text-primary); margin: var(--spacing-sm) 0;">
+                ${notice.content}
+              </p>
+              <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
+                ${dateStr} ${timeStr}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        // 더 많은 공지사항이 있을 때 안내 메시지
+        if (normalNotices.length > 3) {
+          normalList.innerHTML += `
+            <div style="text-align: center; padding: var(--spacing-sm); color: var(--text-secondary); font-size: 13px;">
+              외 ${normalNotices.length - 3}개의 공지사항이 더 있습니다.
+            </div>
+          `;
+        }
+      } else {
+        document.getElementById('normalNoticeArea').style.display = 'none';
+      }
+      
+      // 공지사항이 하나도 없을 때 (중요+일반 모두 없음)
+      if (importantNotices.length === 0 && normalNotices.length === 0) {
+        document.getElementById('noNoticeMessage').style.display = 'block';
+      } else {
+        document.getElementById('noNoticeMessage').style.display = 'none';
+      }
+    }
 
     // 로그아웃 함수
     async function handleLogout() {
