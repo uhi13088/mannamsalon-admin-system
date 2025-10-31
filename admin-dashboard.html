@@ -162,7 +162,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 대시보드</button>
         <button class="tab" data-tab="employees" onclick="switchTab('employees')">👥 직원 관리</button>
-        <button class="tab" data-tab="attendance" onclick="switchTab('attendance')">📋 근태 관리</button>
+        <button class="tab" data-tab="attendance" onclick="switchTab('attendance')">📋 근무기록</button>
         <button class="tab" data-tab="salary" onclick="switchTab('salary')">💰 급여 관리</button>
         <button class="tab" data-tab="approvals" onclick="switchTab('approvals')">✔️ 승인 관리</button>
         <button class="tab" data-tab="contracts" onclick="switchTab('contracts')">📝 계약서 관리</button>
@@ -298,7 +298,7 @@
 
       <div id="tabAttendance" class="tab-content">
         <div class="card">
-          <div class="card-header"><h3>📋 근태 기록</h3></div>
+          <div class="card-header"><h3>📋 근무기록</h3></div>
           <div class="card-body">
             <div class="filters">
               <div class="filter-group">
@@ -795,9 +795,34 @@
         }
       }
       
+      // 오늘 출근 직원 수 계산
+      let todayAttendanceCount = 0;
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const attendanceSnapshot = await db.collection('attendance')
+          .where('date', '==', today)
+          .get();
+        todayAttendanceCount = attendanceSnapshot.size;
+        console.log(`📈 오늘 출근: ${todayAttendanceCount}명`);
+      } catch (error) {
+        console.warn('⚠️ 출근 수 조회 실패:', error);
+      }
+      
+      // 대기중 승인 수 계산
+      let pendingApprovalsCount = 0;
+      try {
+        const approvalsSnapshot = await db.collection('approvals')
+          .where('status', '==', 'pending')
+          .get();
+        pendingApprovalsCount = approvalsSnapshot.size;
+        console.log(`📈 대기중 승인: ${pendingApprovalsCount}건`);
+      } catch (error) {
+        console.warn('⚠️ 승인 수 조회 실패:', error);
+      }
+      
       document.getElementById('totalEmployees').textContent = totalEmployees;
-      document.getElementById('todayAttendance').textContent = '0';
-      document.getElementById('pendingApprovals').textContent = '0';
+      document.getElementById('todayAttendance').textContent = todayAttendanceCount;
+      document.getElementById('pendingApprovals').textContent = pendingApprovalsCount;
       document.getElementById('unsignedContracts').textContent = unsignedContracts;
     }
 
@@ -1649,7 +1674,76 @@
     function loadAttendanceList() {
       const tbody = document.getElementById('attendanceTableBody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
+      
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">\u23f3 \uadfc\ubb34\uae30\ub85d\uc744 \ubd88\ub7ec\uc624\ub294 \uc911...</td></tr>';
+      
+      try {
+        // Firestore\uc5d0\uc11c \ucd5c\uc2e0 15\uac1c \uadfc\ubb34\uae30\ub85d \ub85c\ub4dc
+        const attendanceSnapshot = await db.collection('attendance')
+          .orderBy('createdAt', 'desc')
+          .limit(15)
+          .get();
+        
+        if (attendanceSnapshot.empty) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">\uadfc\ubb34\uae30\ub85d\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.</td></tr>';
+          return;
+        }
+        
+        const records = [];
+        attendanceSnapshot.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
+        
+        tbody.innerHTML = records.map(record => {
+          const date = new Date(record.date).toLocaleDateString('ko-KR');
+          const clockIn = record.clockIn ? new Date(record.clockIn).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
+          const clockOut = record.clockOut ? new Date(record.clockOut).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '\uadfc\ubb34\uc911';
+          const workHours = record.workHours ? record.workHours.toFixed(1) + '\uc2dc\uac04' : '-';
+          
+          // \uc0c1\ud0dc \ud310\ub2e8
+          let status = '\uc815\uc0c1';
+          let statusClass = 'badge-success';
+          let statusReason = '';
+          
+          if (!record.clockOut) {
+            status = '\uadfc\ubb34\uc911';
+            statusClass = 'badge-warning';
+          } else if (record.lateReason) {
+            status = '\uc9c0\uac01';
+            statusClass = 'badge-danger';
+            statusReason = record.lateReason;
+          } else if (record.absentReason) {
+            status = '\uacb0\uadfc';
+            statusClass = 'badge-danger';
+            statusReason = record.absentReason;
+          }
+          
+          const statusAction = statusReason 
+            ? `<span class="badge ${statusClass}" style="cursor: pointer;" onclick="showReasonModal('${record.id}', '${status}', '${statusReason.replace(/'/g, "\\\\'")}')">${status}</span>`
+            : `<span class="badge ${statusClass}">${status}</span>`;
+          
+          return `
+            <tr>
+              <td>${record.employeeName || '-'}</td>
+              <td>${date}</td>
+              <td>\uc77c\ubc18\uadfc\ubb34</td>
+              <td>${clockIn}</td>
+              <td>${clockOut}</td>
+              <td>${workHours}</td>
+              <td>${statusAction}</td>
+            </tr>
+          `;
+        }).join('');
+        
+        console.log(`\u2705 ${records.length}\uac1c \uadfc\ubb34\uae30\ub85d \ub85c\ub4dc \uc644\ub8cc`);
+        
+      } catch (error) {
+        console.error('\u274c \uadfc\ubb34\uae30\ub85d \ub85c\ub4dc \uc2e4\ud328:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">\uadfc\ubb34\uae30\ub85d\uc744 \ubd88\ub7ec\uc624\ub294\ub370 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.</td></tr>';
+      }
+    }
+    
+    // \uadfc\ubb34 \uc0c1\ud0dc \uc0ac\uc720 \ubcf4\uae30 \ubaa8\ub2ec
+    function showReasonModal(recordId, status, reason) {
+      alert(`[\uadfc\ubb34 \uc0c1\ud0dc: ${status}]\\n\\n\uc0ac\uc720: ${reason}`);
     }
 
     function loadSalaryList() {
@@ -2722,6 +2816,12 @@
         console.error('❌ contractModal을 찾을 수 없습니다');
         return;
       }
+      
+      // 직원 정보 초기화 (빈칸으로)
+      if (document.getElementById('employeeName')) document.getElementById('employeeName').value = '';
+      if (document.getElementById('employeeBirth')) document.getElementById('employeeBirth').value = '';
+      if (document.getElementById('employeePhone')) document.getElementById('employeePhone').value = '';
+      if (document.getElementById('employeeAddress')) document.getElementById('employeeAddress').value = '';
       
       // 모달 표시
       modal.style.display = 'flex';
