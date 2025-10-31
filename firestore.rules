@@ -9,10 +9,12 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // 관리자인지 확인 (admin@mannamsalon.com)
+    // 관리자인지 확인 (role 기반 또는 email 기반)
     function isAdmin() {
       return isAuthenticated() && 
-             request.auth.token.email == 'admin@mannamsalon.com';
+             (request.auth.token.email == 'admin@mannamsalon.com' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager');
     }
     
     // 본인의 데이터인지 확인

@@ -633,11 +633,14 @@
       if (!user) {
         // Firebase Auth 로그인되지 않음
         const authenticated = sessionStorage.getItem('employee_authenticated');
-        if (authenticated === 'true') {
+        const isLoggingOut = sessionStorage.getItem('employee_logging_out');
+        
+        if (authenticated === 'true' && !isLoggingOut) {
           // sessionStorage에는 있지만 Firebase Auth는 없음 - 다시 로그인 필요
           alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
-          sessionStorage.clear();
         }
+        
+        sessionStorage.clear();
         window.location.href = 'employee-login.html';
         return;
       }
@@ -785,21 +788,22 @@
     async function handleLogout() {
       if (confirm('로그아웃 하시겠습니까?')) {
         try {
+          // 로그아웃 플래그 설정 (중복 알림 방지)
+          sessionStorage.setItem('employee_logging_out', 'true');
+          
           // Firebase 로그아웃
           await auth.signOut();
           console.log('✅ Firebase 로그아웃 성공');
           
           // 세션 스토리지 정리
-          sessionStorage.removeItem('employee_authenticated');
-          sessionStorage.removeItem('employee_name');
-          sessionStorage.removeItem('employee_email');
-          sessionStorage.removeItem('employee_uid');
+          sessionStorage.clear();
           
           // 로그인 페이지로 이동
           window.location.href = 'employee-login.html';
         } catch (error) {
           console.error('❌ 로그아웃 오류:', error);
           alert('로그아웃 중 오류가 발생했습니다.');
+          sessionStorage.removeItem('employee_logging_out');
         }
       }
     }
