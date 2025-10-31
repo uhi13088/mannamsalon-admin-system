@@ -610,7 +610,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="firestore-utils.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -628,6 +627,11 @@
 
     let isAuthenticated = false;
     let currentTab = 'dashboard';
+
+    // Firebase 초기화 후 firestore-utils.js 동적 로드
+    const firestoreUtilsScript = document.createElement('script');
+    firestoreUtilsScript.src = 'firestore-utils.js';
+    document.head.appendChild(firestoreUtilsScript);
 
     document.addEventListener('DOMContentLoaded', function() {
       const today = new Date();
