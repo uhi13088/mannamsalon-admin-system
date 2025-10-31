@@ -135,6 +135,13 @@
       <input type="password" id="adminPassword" placeholder="비밀번호를 입력하세요" onkeypress="if(event.key==='Enter') handleAdminLogin()">
     </div>
     
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
+        <input type="checkbox" id="rememberMe" style="width: auto; margin-right: 8px; cursor: pointer;">
+        <span style="font-size: 14px; color: var(--text-secondary);">아이디/비밀번호 기억하기</span>
+      </label>
+    </div>
+    
     <button class="btn btn-primary" style="width: 100%;" onclick="handleAdminLogin()">로그인</button>
     
     <p id="loginError" style="color: #c67b7b; font-size: 13px; margin-top: 12px; display: none;"></p>
@@ -167,9 +174,22 @@
     
     console.log('✅ 관리자 로그인 페이지 로드');
 
+    // 페이지 로드 시 저장된 정보 불러오기
+    window.addEventListener('DOMContentLoaded', function() {
+      const savedEmail = localStorage.getItem('admin_saved_email');
+      const savedPassword = localStorage.getItem('admin_saved_password');
+      
+      if (savedEmail && savedPassword) {
+        document.getElementById('adminEmail').value = savedEmail;
+        document.getElementById('adminPassword').value = savedPassword;
+        document.getElementById('rememberMe').checked = true;
+      }
+    });
+
     async function handleAdminLogin() {
       const email = document.getElementById('adminEmail').value.trim();
       const password = document.getElementById('adminPassword').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
       const errorEl = document.getElementById('loginError');
       
       if (!email) {
@@ -192,6 +212,15 @@
         if (userDoc.exists) {
           const userData = userDoc.data();
           if (userData.role === 'admin' || userData.role === 'manager') {
+            // 기억하기 체크 시 저장, 아니면 삭제
+            if (rememberMe) {
+              localStorage.setItem('admin_saved_email', email);
+              localStorage.setItem('admin_saved_password', password);
+            } else {
+              localStorage.removeItem('admin_saved_email');
+              localStorage.removeItem('admin_saved_password');
+            }
+            
             // 인증 성공 - 세션 저장 후 대시보드로 이동
             sessionStorage.setItem('admin_authenticated', 'true');
             sessionStorage.setItem('admin_email', email);
