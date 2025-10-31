@@ -109,9 +109,18 @@
    - 관리자 로그인 (admin-dashboard.html)
    - 직원 가입/로그인 (employee-register.html)
    
-2. **Firestore Database**
-   - `users` 컬렉션: 전체 사용자 정보
-   - `employees` 컬렉션: 직원 전용 정보
+2. **Firestore Database** ✅ **영구 저장 (2025-01-31 업그레이드)**
+   - `contracts` 컬렉션: 계약서 (영구 저장)
+   - `signedContracts` 컬렉션: 서명된 계약서
+   - `stores` 컬렉션: 매장 정보
+   - `notices` 컬렉션: 공지사항
+   - `employee_docs` 컬렉션: 직원 서류 (통장사본, 보건증)
+   - `users` 컬렉션: 직원 정보
+   
+3. **자동 데이터 정리 시스템** ✅ **NEW!**
+   - 1년 이상 지난 데이터 자동 삭제
+   - 용량 950MB 초과 시 오래된 데이터부터 삭제
+   - 24시간마다 자동 실행
    
 ### 데이터 구조
 
@@ -135,18 +144,36 @@
 
 ---
 
-## 💾 localStorage 사용 데이터
+## 💾 데이터 저장 전략 (2025-01-31 업그레이드)
 
-### 1. 매장 정보 (`stores`)
-```javascript
-[
-  { id: "1", name: "부천시청점", address: "경기도 부천시 원미구", phone: "032-123-4567" },
-  { id: "2", name: "상동점", address: "경기도 부천시 상동", phone: "032-123-4568" },
-  { id: "3", name: "부천역사점", address: "경기도 부천시 부천역 인근", phone: "032-123-4569" }
-]
-```
+### ✅ 이중 저장 방식 (Firestore + localStorage)
 
-### 2. 계약서 데이터 (`contract_C202501...`)
+**Firestore (메인 저장소 - 영구)**
+- 모든 데이터를 Firestore에 먼저 저장
+- 브라우저 변경/캐시 삭제에도 데이터 유지
+- 모든 기기에서 동일한 데이터 조회 가능
+- **완전 무료** (무료 플랜으로 충분)
+
+**localStorage (캐시 - 백업)**
+- Firestore 데이터를 캐시로 저장
+- 오프라인에서도 최근 데이터 조회 가능
+- 빠른 로딩 속도
+- Firestore 장애 시 백업으로 사용
+
+### 데이터 우선순위
+1. **저장 시**: Firestore 먼저 저장 → localStorage 캐시
+2. **로드 시**: Firestore 먼저 읽기 → 실패 시 localStorage
+3. **삭제 시**: Firestore와 localStorage 모두 삭제
+
+### 자동 정리 정책
+- **1년 경과 데이터**: 자동 삭제
+- **용량 초과 (950MB)**: 오래된 데이터부터 자동 삭제
+- **실행 주기**: 24시간마다 자동
+- **수동 실행**: 관리자 대시보드에서 가능
+
+### Firestore 컬렉션 구조
+
+#### 1. `contracts` (계약서)
 ```javascript
 {
   id: "C20250130...",
@@ -155,23 +182,44 @@
   contractType: "정규직",
   startDate: "2025-01-01",
   endDate: "2025-12-31",
-  baseSalary: 2500000,
-  workDays: ["월", "화", "수", "목", "금"],
-  workSchedule: [...],
   createdAt: "2025-01-30T...",
   // ... 기타 계약 조건
 }
 ```
 
-### 3. 서명된 계약서 (`signedContracts`)
+#### 2. `signedContracts` (서명)
 ```javascript
-[
-  {
-    id: "C20250130...",
-    signedAt: "2025-01-30T...",
-    signature: "data:image/png;base64,..."
-  }
-]
+{
+  id: "C20250130...",
+  signedAt: "2025-01-30T...",
+  signature: "data:image/png;base64,..."
+}
+```
+
+#### 3. `stores` (매장)
+```javascript
+{
+  id: "1",
+  name: "부천시청점",
+  address: "경기도 부천시 원미구",
+  phone: "032-123-4567",
+  ceo: "홍길동",
+  businessNumber: "123-45-67890",
+  ceoSignature: "data:image/png;base64,...",
+  createdAt: "2025-01-30T..."
+}
+```
+
+#### 4. `notices` (공지사항)
+```javascript
+{
+  id: "N1706678400000",
+  title: "공지사항 제목",
+  content: "공지사항 내용",
+  important: true,
+  createdAt: "2025-01-30T...",
+  updatedAt: "2025-01-31T..."
+}
 ```
 
 ---
@@ -224,19 +272,38 @@
 
 ---
 
-## 🔐 보안 고려사항
+## 🔐 보안 및 권한 관리 (2025-01-31 업그레이드)
 
-### 현재 구현
+### ✅ 구현 완료
 - ✅ Firebase Authentication 사용
-- ⚠️ Firestore Security Rules 적용 필요
-- ⚠️ 주민등록번호 암호화 필요 (현재 평문 저장)
+- ✅ **Firestore Security Rules 적용** (역할 기반 접근 제어)
+- ✅ 관리자 전용 기능 분리
+- ✅ 직원 데이터 본인만 접근 가능
 
-### 추천 개선 사항
-1. Firestore Security Rules 설정
-2. 주민등록번호 암호화 (AES-256)
-3. HTTPS 강제 적용
-4. 세션 타임아웃 설정
-5. 비밀번호 정책 강화
+### Firestore 보안 규칙
+
+**파일**: `firestore.rules`
+
+**규칙**:
+```javascript
+// 관리자 (admin@mannamsalon.com): 모든 권한
+// 직원: 본인 데이터만 읽기/쓰기
+// 미인증: 접근 불가
+
+contracts/          → 관리자: 모든 권한, 직원: 본인 계약서만 읽기
+signedContracts/    → 관리자: 모든 권한, 직원: 서명 생성 가능
+stores/             → 관리자: 쓰기, 모든 인증 사용자: 읽기
+notices/            → 관리자: 쓰기, 모든 인증 사용자: 읽기
+employee_docs/      → 관리자: 모든 권한, 직원: 본인 서류만
+users/              → 관리자: 모든 권한, 직원: 본인 정보만
+```
+
+### ⚠️ 개선 필요 사항
+1. 주민등록번호 암호화 (AES-256) - 현재 평문 저장
+2. HTTPS 강제 적용
+3. 세션 타임아웃 설정
+4. 비밀번호 정책 강화 (최소 8자리, 특수문자 포함)
+5. 계약서 PDF 암호화
 
 ---
 
@@ -282,7 +349,35 @@
 
 ---
 
-## 🧹 리팩토링 이력
+## 🧹 업데이트 이력
+
+### 2025-01-31 (Firebase 영구 저장 + 자동 정리)
+- ✅ **Firestore 기반 영구 저장 구현**
+  - 계약서, 매장, 공지사항 → Firestore 우선 저장
+  - localStorage는 캐시로만 사용
+  - Firestore 장애 시 localStorage 백업 사용
+  
+- ✅ **자동 데이터 정리 시스템**
+  - `firestore-utils.js` 추가
+  - 1년 경과 데이터 자동 삭제
+  - 용량 950MB 초과 시 오래된 데이터부터 삭제
+  - 24시간마다 자동 실행
+  
+- ✅ **보안 규칙 설정**
+  - `firestore.rules` 추가
+  - 역할 기반 접근 제어 (RBAC)
+  - 관리자/직원 권한 분리
+  
+- ✅ **관리자 대시보드 업그레이드**
+  - 데이터 관리 섹션 추가
+  - 용량 확인, 정리 미리보기, 자동 정리 실행
+  - localStorage → Firestore 마이그레이션 UI
+  - 로컬 백업 기능
+  
+- ✅ **공지사항 기능 완료**
+  - 관리자: 작성/수정/삭제
+  - 직원: 조회 (중요 공지사항 상단 고정)
+  - Firestore 영구 저장
 
 ### 2025-01-30 (대규모 리팩토링)
 - ✅ 불필요한 파일 8개 삭제
@@ -313,12 +408,27 @@
 
 ## 🎯 다음 단계
 
-1. **Genspark 404 에러 해결** (서브페이지 접근 문제)
-2. **계약서 모달 완전 통합** (admin-dashboard.html)
-3. **직원 페이지 실제 기능 구현** (출퇴근, 급여조회)
-4. **Firestore Security Rules 설정**
-5. **주민등록번호 암호화**
-6. **Google Apps Script 연동** (스프레드시트 동기화)
+### 즉시 필요 (배포 전)
+1. **Firestore 보안 규칙 배포** ⚠️ **필수!**
+   - Firebase Console → Firestore Database → 규칙
+   - `firestore.rules` 파일 내용 붙여넣기
+   - 게시 버튼 클릭
+   - **상세 가이드**: `FIREBASE_SETUP.md` 참고
+
+2. **localStorage → Firestore 마이그레이션**
+   - 관리자 대시보드 → 데이터 관리
+   - "🔄 지금 마이그레이션" 버튼 클릭
+   - 기존 계약서/공지사항 이동
+
+### 기능 개발
+3. **직원 페이지 실제 기능 구현**
+   - 출근/퇴근 버튼 작동
+   - 근무내역 Firestore 연동
+   - 급여조회 API 연동
+
+4. **주민등록번호 암호화** (AES-256)
+5. **Google Apps Script 연동** (스프레드시트 동기화)
+6. **알림 시스템** (계약서 서명 요청, 공지사항 업데이트)
 
 ---
 
