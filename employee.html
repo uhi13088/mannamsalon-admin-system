@@ -629,22 +629,35 @@
     const db = firebase.firestore();
 
     // 인증 체크
-    window.addEventListener('load', function() {
-      const authenticated = sessionStorage.getItem('employee_authenticated');
-      const name = sessionStorage.getItem('employee_name');
-      
-      if (authenticated !== 'true' || !name) {
-        alert('⚠️ 로그인이 필요합니다.');
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        // Firebase Auth 로그인되지 않음
+        const authenticated = sessionStorage.getItem('employee_authenticated');
+        if (authenticated === 'true') {
+          // sessionStorage에는 있지만 Firebase Auth는 없음 - 다시 로그인 필요
+          alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
+          sessionStorage.clear();
+        }
         window.location.href = 'employee-login.html';
         return;
       }
       
+      // Firebase Auth 로그인됨
+      const name = sessionStorage.getItem('employee_name');
+      
       // 이름 표시
       const nameElement = document.getElementById('displayName');
       if (nameElement) {
-        nameElement.textContent = name + '님';
+        nameElement.textContent = (name || '직원') + '님';
       }
-      console.log('✅ 직원 페이지 로드:', name);
+      
+      // sessionStorage 업데이트 (uid 확실히 저장)
+      sessionStorage.setItem('employee_uid', user.uid);
+      sessionStorage.setItem('employee_email', user.email);
+      sessionStorage.setItem('employee_authenticated', 'true');
+      if (name) sessionStorage.setItem('employee_name', name);
+      
+      console.log('✅ 직원 페이지 로드:', name, 'UID:', user.uid);
       
       // 공지사항 로드
       loadNotices();

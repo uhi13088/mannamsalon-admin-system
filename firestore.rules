@@ -90,6 +90,31 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     
+    // 출퇴근 기록 (attendance)
+    match /attendance/{attendanceId} {
+      // 관리자: 모든 권한
+      // 직원: 본인 기록만 읽기/생성/수정
+      allow read: if isAdmin() || 
+                     (isAuthenticated() && 
+                      resource.data.employeeUid == request.auth.uid);
+      allow create: if isAuthenticated() && 
+                       request.resource.data.employeeUid == request.auth.uid;
+      allow update: if isAdmin() || 
+                       (isAuthenticated() && 
+                        resource.data.employeeUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    
+    // 급여 정보 (salaries)
+    match /salaries/{salaryId} {
+      // 관리자: 모든 권한
+      // 직원: 본인 급여만 읽기
+      allow read: if isAdmin() || 
+                     (isAuthenticated() && 
+                      resource.data.employeeUid == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
+    
     // ===== 기본 규칙 (다른 모든 경로 차단) =====
     match /{document=**} {
       allow read, write: if false;
