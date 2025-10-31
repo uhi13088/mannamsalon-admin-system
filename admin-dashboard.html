@@ -641,15 +641,32 @@
     });
 
     function checkAuthStatus() {
-      const savedAuth = sessionStorage.getItem('admin_authenticated');
-      if (savedAuth === 'true') {
+      // Firebase Auth 상태 확인
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          // Firebase Auth 로그인되지 않음
+          alert('⚠️ 로그인이 필요합니다.');
+          sessionStorage.clear();
+          window.location.href = 'admin-login.html';
+          return;
+        }
+        
+        // 관리자 권한 확인
+        if (user.email !== 'admin@mannamsalon.com') {
+          alert('⚠️ 관리자 권한이 없습니다.');
+          await auth.signOut();
+          sessionStorage.clear();
+          window.location.href = 'admin-login.html';
+          return;
+        }
+        
+        // 인증 성공
         isAuthenticated = true;
+        sessionStorage.setItem('admin_authenticated', 'true');
+        sessionStorage.setItem('admin_email', user.email);
+        sessionStorage.setItem('admin_uid', user.uid);
         showMainScreen();
-      } else {
-        // 인증되지 않은 경우 로그인 페이지로 리다이렉트
-        alert('⚠️ 로그인이 필요합니다.');
-        window.location.href = 'admin-login.html';
-      }
+      });
     }
 
     // handleAdminLogin 함수는 admin-login.html로 이동됨
