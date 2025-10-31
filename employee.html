@@ -348,7 +348,7 @@
               </thead>
               <tbody id="attendanceTableBody">
                 <tr>
-                  <td colspan="6" class="empty-state">데이터를 불러오는 중...</td>
+                  <td colspan="6" class="empty-state">조회할 월을 선택하고 조회 버튼을 클릭하세요.</td>
                 </tr>
               </tbody>
             </table>
@@ -539,14 +539,17 @@
       <div class="modal-body">
         <input type="hidden" id="approvalType">
         
-        <div class="form-group">
-          <label for="approvalTitle">제목 *</label>
-          <input type="text" id="approvalTitle" placeholder="예: 식재료 구매, 폐기 물품 등" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="approvalDescription">상세 내용 *</label>
-          <input type="text" id="approvalDescription" placeholder="간단히 한 줄로 입력하세요" required maxlength="100">
+        <!-- 구매/폐기 승인 전용 필드 -->
+        <div id="purchaseDisposalSection" style="display: none;">
+          <div class="form-group">
+            <label for="approvalTitle">제목 *</label>
+            <input type="text" id="approvalTitle" placeholder="예: 식재료 구매, 폐기 물품 등" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="approvalDescription">상세 내용 *</label>
+            <input type="text" id="approvalDescription" placeholder="간단히 한 줄로 입력하세요" required maxlength="100">
+          </div>
         </div>
         
         <!-- 구매 승인 전용 필드 -->
@@ -586,7 +589,7 @@
           <div class="form-group">
             <label>직원 서명 *</label>
             <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-md); background: white;">
-              <canvas id="employeeSignatureCanvas" width="400" height="150" style="width: 100%; height: auto; border: 1px dashed var(--border-color); cursor: crosshair;"></canvas>
+              <canvas id="employeeSignatureCanvas" width="600" height="200" style="width: 100%; max-width: 600px; height: 200px; border: 1px dashed var(--border-color); cursor: crosshair; display: block;"></canvas>
               <div style="margin-top: var(--spacing-sm); display: flex; gap: var(--spacing-sm);">
                 <button type="button" class="btn btn-sm btn-secondary" onclick="clearEmployeeSignature()">🔄 다시 그리기</button>
                 <small style="color: var(--text-secondary); line-height: 32px;">마우스나 터치로 서명해주세요</small>
@@ -819,13 +822,14 @@
       document.getElementById('approvalType').value = type;
       
       const modal = document.getElementById('approvalModal');
+      const purchaseDisposalSection = document.getElementById('purchaseDisposalSection');
       const purchaseSection = document.getElementById('purchaseSection');
       const disposalSection = document.getElementById('disposalSection');
       const resignationSection = document.getElementById('resignationSection');
       
       // 초기화
-      document.getElementById('approvalTitle').value = '';
-      document.getElementById('approvalDescription').value = '';
+      if (document.getElementById('approvalTitle')) document.getElementById('approvalTitle').value = '';
+      if (document.getElementById('approvalDescription')) document.getElementById('approvalDescription').value = '';
       if (document.getElementById('approvalAmount')) document.getElementById('approvalAmount').value = '';
       if (document.getElementById('approvalQuantity')) document.getElementById('approvalQuantity').value = '';
       if (document.getElementById('disposalQuantity')) document.getElementById('disposalQuantity').value = '';
@@ -833,6 +837,7 @@
       if (document.getElementById('resignationDesiredDate')) document.getElementById('resignationDesiredDate').value = '';
       
       // 모든 섹션 숨기기
+      purchaseDisposalSection.style.display = 'none';
       purchaseSection.style.display = 'none';
       disposalSection.style.display = 'none';
       resignationSection.style.display = 'none';
@@ -840,9 +845,11 @@
       // 유형별 UI 조정
       if (type === 'purchase') {
         document.getElementById('approvalModalTitle').innerHTML = '💳 구매 승인 요청';
+        purchaseDisposalSection.style.display = 'block';
         purchaseSection.style.display = 'block';
       } else if (type === 'disposal') {
         document.getElementById('approvalModalTitle').innerHTML = '🗑️ 폐기 승인 요청';
+        purchaseDisposalSection.style.display = 'block';
         disposalSection.style.display = 'block';
       } else if (type === 'resignation') {
         document.getElementById('approvalModalTitle').innerHTML = '📄 퇴직서 제출';
@@ -852,15 +859,32 @@
         setTimeout(() => {
           employeeSignatureCanvas = document.getElementById('employeeSignatureCanvas');
           if (employeeSignatureCanvas) {
+            // 캔버스 실제 크기 설정
+            const rect = employeeSignatureCanvas.getBoundingClientRect();
+            employeeSignatureCanvas.width = rect.width;
+            employeeSignatureCanvas.height = rect.height;
+            
             employeeSignatureCtx = employeeSignatureCanvas.getContext('2d');
             employeeSignatureCtx.strokeStyle = '#000';
             employeeSignatureCtx.lineWidth = 2;
             employeeSignatureCtx.lineCap = 'round';
+            employeeSignatureCtx.lineJoin = 'round';
+            
+            // 기존 이벤트 리스너 제거
+            const newCanvas = employeeSignatureCanvas.cloneNode(true);
+            employeeSignatureCanvas.parentNode.replaceChild(newCanvas, employeeSignatureCanvas);
+            employeeSignatureCanvas = newCanvas;
+            employeeSignatureCtx = employeeSignatureCanvas.getContext('2d');
+            employeeSignatureCtx.strokeStyle = '#000';
+            employeeSignatureCtx.lineWidth = 2;
+            employeeSignatureCtx.lineCap = 'round';
+            employeeSignatureCtx.lineJoin = 'round';
             
             // 이벤트 리스너
             employeeSignatureCanvas.addEventListener('mousedown', startEmployeeSign);
             employeeSignatureCanvas.addEventListener('mousemove', drawEmployeeSign);
             employeeSignatureCanvas.addEventListener('mouseup', stopEmployeeSign);
+            employeeSignatureCanvas.addEventListener('mouseleave', stopEmployeeSign);
             employeeSignatureCanvas.addEventListener('touchstart', handleEmployeeTouch);
             employeeSignatureCanvas.addEventListener('touchmove', handleEmployeeTouch);
             employeeSignatureCanvas.addEventListener('touchend', stopEmployeeSign);
@@ -873,17 +897,27 @@
     
     // 직원 서명 시작
     function startEmployeeSign(e) {
+      e.preventDefault();
       isEmployeeSigning = true;
       const rect = employeeSignatureCanvas.getBoundingClientRect();
+      const scaleX = employeeSignatureCanvas.width / rect.width;
+      const scaleY = employeeSignatureCanvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
       employeeSignatureCtx.beginPath();
-      employeeSignatureCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+      employeeSignatureCtx.moveTo(x, y);
     }
     
     // 직원 서명 그리기
     function drawEmployeeSign(e) {
+      e.preventDefault();
       if (!isEmployeeSigning) return;
       const rect = employeeSignatureCanvas.getBoundingClientRect();
-      employeeSignatureCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      const scaleX = employeeSignatureCanvas.width / rect.width;
+      const scaleY = employeeSignatureCanvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      employeeSignatureCtx.lineTo(x, y);
       employeeSignatureCtx.stroke();
     }
     
@@ -918,19 +952,6 @@
     // 승인 요청 제출
     async function submitApproval() {
       const type = document.getElementById('approvalType').value;
-      const title = document.getElementById('approvalTitle').value.trim();
-      const description = document.getElementById('approvalDescription').value.trim();
-      
-      if (!title) {
-        alert('⚠️ 제목을 입력해주세요.');
-        return;
-      }
-      
-      if (!description) {
-        alert('⚠️ 상세 내용을 입력해주세요.');
-        return;
-      }
-      
       const employeeName = sessionStorage.getItem('employee_name');
       const employeeUid = sessionStorage.getItem('employee_uid');
       
@@ -940,20 +961,37 @@
         return;
       }
       
-      // 승인 요청 데이터 구성
+      // 기본 승인 요청 데이터
       const approvalData = {
         id: 'A' + Date.now(),
         type: type,
-        title: title,
-        description: description,
         employeeName: employeeName,
         employeeUid: employeeUid,
-        status: 'pending', // pending, approved, rejected
+        status: 'pending',
         createdAt: new Date().toISOString(),
         processedAt: null,
         processedBy: null,
         rejectReason: null
       };
+      
+      // 구매/폐기는 제목과 설명 필요
+      if (type === 'purchase' || type === 'disposal') {
+        const title = document.getElementById('approvalTitle')?.value.trim();
+        const description = document.getElementById('approvalDescription')?.value.trim();
+        
+        if (!title) {
+          alert('⚠️ 제목을 입력해주세요.');
+          return;
+        }
+        
+        if (!description) {
+          alert('⚠️ 상세 내용을 입력해주세요.');
+          return;
+        }
+        
+        approvalData.title = title;
+        approvalData.description = description;
+      }
       
       // 유형별 추가 필드
       if (type === 'purchase') {
@@ -989,10 +1027,12 @@
           return;
         }
         
+        // 퇴직서는 제목/설명 대신 사유와 희망일
+        approvalData.title = '퇴직서';
+        approvalData.description = reason;
         approvalData.reason = reason;
         approvalData.desiredDate = desiredDate;
         approvalData.employeeSignature = signatureData;
-        // 사용자 서명 (관리자가 승인할 때 추가됨)
         approvalData.adminSignature = null;
       }
       
@@ -1236,6 +1276,77 @@
       } catch (error) {
         console.error('❌ 퇴근 처리 실패:', error);
         alert('❌ 퇴근 처리에 실패했습니다: ' + error.message);
+      }
+    }
+    
+    // ===== 근무내역 조회 =====
+    
+    async function loadAttendance() {
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      const month = document.getElementById('filterMonth').value;
+      
+      if (!month) {
+        alert('⚠️ 조회할 월을 선택해주세요.');
+        return;
+      }
+      
+      const tbody = document.getElementById('attendanceTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">⏳ 근무내역을 불러오는 중...</td></tr>';
+      
+      try {
+        // Firestore에서 근무 데이터 조회
+        const startDate = month + '-01';
+        const endDate = month + '-31';
+        
+        const attendanceSnapshot = await db.collection('attendance')
+          .where('employeeUid', '==', employeeUid)
+          .where('date', '>=', startDate)
+          .where('date', '<=', endDate)
+          .orderBy('date', 'desc')
+          .get();
+        
+        if (attendanceSnapshot.empty) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <strong>${month}</strong>에 대한 근무 기록이 없습니다.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        const records = [];
+        attendanceSnapshot.forEach(doc => records.push(doc.data()));
+        
+        tbody.innerHTML = records.map(record => {
+          const date = new Date(record.date).toLocaleDateString('ko-KR');
+          const clockIn = record.clockIn ? new Date(record.clockIn).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
+          const clockOut = record.clockOut ? new Date(record.clockOut).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '근무중';
+          const workHours = record.workHours ? `${record.workHours}시간` : '-';
+          const status = record.clockOut ? '<span class="badge badge-success">완료</span>' : '<span class="badge badge-warning">근무중</span>';
+          
+          return `
+            <tr>
+              <td>${date}</td>
+              <td>일반근무</td>
+              <td>${clockIn}</td>
+              <td>${clockOut}</td>
+              <td>${workHours}</td>
+              <td>${status}</td>
+            </tr>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('❌ 근무내역 조회 실패:', error);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--danger-color);">
+              근무 데이터를 불러오는데 실패했습니다.
+            </td>
+          </tr>
+        `;
       }
     }
     
