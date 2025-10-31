@@ -238,8 +238,8 @@
         <div class="status-time" id="statusTime">좋은 하루 되세요!</div>
       </div>
 
-      <!-- 공지사항 -->
-      <div class="notice-section" id="noticeSection" style="display: none;">
+      <!-- 공지사항 (상단에 항상 표시) -->
+      <div class="notice-section" id="noticeSection" style="margin-bottom: var(--spacing-xl);">
         <!-- 중요 공지사항 영역 (빨간색 강조) -->
         <div id="importantNoticeArea" style="display: none;">
           <div class="card" style="background: linear-gradient(135deg, #fee2e2 0%, #fff5f5 100%); border-left: 4px solid #ef4444; margin-bottom: var(--spacing-lg);">
@@ -281,13 +281,13 @@
 
       <!-- 퀵 액션 -->
       <div class="quick-actions">
-        <div class="quick-action-card" onclick="showClockIn()">
+        <div class="quick-action-card" onclick="clockIn()">
           <div class="quick-action-icon">🟢</div>
           <div class="quick-action-title">출근하기</div>
           <div class="quick-action-desc">근무 시작을 기록합니다</div>
         </div>
 
-        <div class="quick-action-card" onclick="showClockOut()">
+        <div class="quick-action-card" onclick="clockOut()">
           <div class="quick-action-icon">🔴</div>
           <div class="quick-action-title">퇴근하기</div>
           <div class="quick-action-desc">근무 종료를 기록합니다</div>
@@ -546,28 +546,53 @@
         
         <div class="form-group">
           <label for="approvalDescription">상세 내용 *</label>
-          <textarea id="approvalDescription" placeholder="상세 내용을 입력하세요" required style="min-height: 120px; resize: vertical;"></textarea>
+          <input type="text" id="approvalDescription" placeholder="간단히 한 줄로 입력하세요" required maxlength="100">
         </div>
         
-        <div class="form-row" id="amountSection">
-          <div class="form-group">
-            <label for="approvalAmount">금액 (원)</label>
-            <input type="number" id="approvalAmount" placeholder="0" min="0">
+        <!-- 구매 승인 전용 필드 -->
+        <div id="purchaseSection" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="approvalAmount">금액 (원)</label>
+              <input type="number" id="approvalAmount" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label for="approvalQuantity">수량</label>
+              <input type="number" id="approvalQuantity" placeholder="0" min="0">
+            </div>
           </div>
+        </div>
+        
+        <!-- 폐기 승인 전용 필드 -->
+        <div id="disposalSection" style="display: none;">
           <div class="form-group">
-            <label for="approvalQuantity">수량</label>
-            <input type="number" id="approvalQuantity" placeholder="0" min="0">
+            <label for="disposalQuantity">수량</label>
+            <input type="number" id="disposalQuantity" placeholder="0" min="0">
           </div>
         </div>
         
-        <div class="form-group" id="reasonSection" style="display: none;">
-          <label for="approvalReason">퇴직 사유 *</label>
-          <textarea id="approvalReason" placeholder="퇴직 사유를 입력하세요" style="min-height: 100px; resize: vertical;"></textarea>
-        </div>
-        
-        <div class="form-group" id="desiredDateSection" style="display: none;">
-          <label for="approvalDesiredDate">희망 퇴직일</label>
-          <input type="date" id="approvalDesiredDate">
+        <!-- 퇴직서 전용 필드 -->
+        <div id="resignationSection" style="display: none;">
+          <div class="form-group">
+            <label for="resignationReason">퇴직 사유 *</label>
+            <input type="text" id="resignationReason" placeholder="퇴직 사유를 간단히 입력하세요" maxlength="100">
+          </div>
+          
+          <div class="form-group">
+            <label for="resignationDesiredDate">희망 퇴직일 *</label>
+            <input type="date" id="resignationDesiredDate" required>
+          </div>
+          
+          <div class="form-group">
+            <label>직원 서명 *</label>
+            <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-md); background: white;">
+              <canvas id="employeeSignatureCanvas" width="400" height="150" style="width: 100%; height: auto; border: 1px dashed var(--border-color); cursor: crosshair;"></canvas>
+              <div style="margin-top: var(--spacing-sm); display: flex; gap: var(--spacing-sm);">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="clearEmployeeSignature()">🔄 다시 그리기</button>
+                <small style="color: var(--text-secondary); line-height: 32px;">마우스나 터치로 서명해주세요</small>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -784,42 +809,105 @@
       }
     }
 
+    // 서명 캔버스 관련 변수
+    let employeeSignatureCanvas = null;
+    let employeeSignatureCtx = null;
+    let isEmployeeSigning = false;
+    
     // 승인 요청 모달 열기
     function showApprovalModal(type) {
       document.getElementById('approvalType').value = type;
       
       const modal = document.getElementById('approvalModal');
-      const amountSection = document.getElementById('amountSection');
-      const reasonSection = document.getElementById('reasonSection');
-      const desiredDateSection = document.getElementById('desiredDateSection');
+      const purchaseSection = document.getElementById('purchaseSection');
+      const disposalSection = document.getElementById('disposalSection');
+      const resignationSection = document.getElementById('resignationSection');
       
       // 초기화
       document.getElementById('approvalTitle').value = '';
       document.getElementById('approvalDescription').value = '';
-      document.getElementById('approvalAmount').value = '';
-      document.getElementById('approvalQuantity').value = '';
-      document.getElementById('approvalReason').value = '';
-      document.getElementById('approvalDesiredDate').value = '';
+      if (document.getElementById('approvalAmount')) document.getElementById('approvalAmount').value = '';
+      if (document.getElementById('approvalQuantity')) document.getElementById('approvalQuantity').value = '';
+      if (document.getElementById('disposalQuantity')) document.getElementById('disposalQuantity').value = '';
+      if (document.getElementById('resignationReason')) document.getElementById('resignationReason').value = '';
+      if (document.getElementById('resignationDesiredDate')) document.getElementById('resignationDesiredDate').value = '';
+      
+      // 모든 섹션 숨기기
+      purchaseSection.style.display = 'none';
+      disposalSection.style.display = 'none';
+      resignationSection.style.display = 'none';
       
       // 유형별 UI 조정
       if (type === 'purchase') {
         document.getElementById('approvalModalTitle').innerHTML = '💳 구매 승인 요청';
-        amountSection.style.display = 'grid';
-        reasonSection.style.display = 'none';
-        desiredDateSection.style.display = 'none';
+        purchaseSection.style.display = 'block';
       } else if (type === 'disposal') {
         document.getElementById('approvalModalTitle').innerHTML = '🗑️ 폐기 승인 요청';
-        amountSection.style.display = 'grid';
-        reasonSection.style.display = 'none';
-        desiredDateSection.style.display = 'none';
+        disposalSection.style.display = 'block';
       } else if (type === 'resignation') {
         document.getElementById('approvalModalTitle').innerHTML = '📄 퇴직서 제출';
-        amountSection.style.display = 'none';
-        reasonSection.style.display = 'block';
-        desiredDateSection.style.display = 'block';
+        resignationSection.style.display = 'block';
+        
+        // 서명 캔버스 초기화
+        setTimeout(() => {
+          employeeSignatureCanvas = document.getElementById('employeeSignatureCanvas');
+          if (employeeSignatureCanvas) {
+            employeeSignatureCtx = employeeSignatureCanvas.getContext('2d');
+            employeeSignatureCtx.strokeStyle = '#000';
+            employeeSignatureCtx.lineWidth = 2;
+            employeeSignatureCtx.lineCap = 'round';
+            
+            // 이벤트 리스너
+            employeeSignatureCanvas.addEventListener('mousedown', startEmployeeSign);
+            employeeSignatureCanvas.addEventListener('mousemove', drawEmployeeSign);
+            employeeSignatureCanvas.addEventListener('mouseup', stopEmployeeSign);
+            employeeSignatureCanvas.addEventListener('touchstart', handleEmployeeTouch);
+            employeeSignatureCanvas.addEventListener('touchmove', handleEmployeeTouch);
+            employeeSignatureCanvas.addEventListener('touchend', stopEmployeeSign);
+          }
+        }, 100);
       }
       
       modal.style.display = 'flex';
+    }
+    
+    // 직원 서명 시작
+    function startEmployeeSign(e) {
+      isEmployeeSigning = true;
+      const rect = employeeSignatureCanvas.getBoundingClientRect();
+      employeeSignatureCtx.beginPath();
+      employeeSignatureCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+    
+    // 직원 서명 그리기
+    function drawEmployeeSign(e) {
+      if (!isEmployeeSigning) return;
+      const rect = employeeSignatureCanvas.getBoundingClientRect();
+      employeeSignatureCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      employeeSignatureCtx.stroke();
+    }
+    
+    // 직원 서명 종료
+    function stopEmployeeSign() {
+      isEmployeeSigning = false;
+    }
+    
+    // 터치 이벤트 처리
+    function handleEmployeeTouch(e) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      });
+      employeeSignatureCanvas.dispatchEvent(mouseEvent);
+    }
+    
+    // 직원 서명 지우기
+    function clearEmployeeSignature() {
+      if (employeeSignatureCtx && employeeSignatureCanvas) {
+        employeeSignatureCtx.clearRect(0, 0, employeeSignatureCanvas.width, employeeSignatureCanvas.height);
+      }
     }
 
     // 승인 요청 모달 닫기
@@ -868,17 +956,44 @@
       };
       
       // 유형별 추가 필드
-      if (type === 'purchase' || type === 'disposal') {
+      if (type === 'purchase') {
         approvalData.amount = parseInt(document.getElementById('approvalAmount').value) || 0;
         approvalData.quantity = parseInt(document.getElementById('approvalQuantity').value) || 0;
+      } else if (type === 'disposal') {
+        approvalData.quantity = parseInt(document.getElementById('disposalQuantity').value) || 0;
       } else if (type === 'resignation') {
-        const reason = document.getElementById('approvalReason').value.trim();
+        const reason = document.getElementById('resignationReason').value.trim();
+        const desiredDate = document.getElementById('resignationDesiredDate').value;
+        
         if (!reason) {
           alert('⚠️ 퇴직 사유를 입력해주세요.');
           return;
         }
+        
+        if (!desiredDate) {
+          alert('⚠️ 희망 퇴직일을 선택해주세요.');
+          return;
+        }
+        
+        // 서명 확인
+        if (!employeeSignatureCanvas) {
+          alert('⚠️ 서명 캔버스를 찾을 수 없습니다.');
+          return;
+        }
+        
+        const signatureData = employeeSignatureCanvas.toDataURL();
+        const isBlank = !employeeSignatureCtx.getImageData(0, 0, employeeSignatureCanvas.width, employeeSignatureCanvas.height).data.some(channel => channel !== 0);
+        
+        if (isBlank) {
+          alert('⚠️ 직원 서명을 해주세요.');
+          return;
+        }
+        
         approvalData.reason = reason;
-        approvalData.desiredDate = document.getElementById('approvalDesiredDate').value || null;
+        approvalData.desiredDate = desiredDate;
+        approvalData.employeeSignature = signatureData;
+        // 사용자 서명 (관리자가 승인할 때 추가됨)
+        approvalData.adminSignature = null;
       }
       
       try {
@@ -1018,6 +1133,193 @@
         `;
       }).join('');
     }
+    
+    // ===== 출퇴근 관리 =====
+    
+    async function clockIn() {
+      const employeeName = sessionStorage.getItem('employee_name');
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      
+      if (!employeeName || !employeeUid) {
+        alert('⚠️ 로그인 정보가 없습니다.');
+        return;
+      }
+      
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      
+      const attendanceData = {
+        id: 'ATT' + Date.now(),
+        employeeName: employeeName,
+        employeeUid: employeeUid,
+        date: today,
+        clockIn: now.toISOString(),
+        clockOut: null,
+        workHours: 0,
+        createdAt: now.toISOString()
+      };
+      
+      try {
+        // Firestore에 저장
+        await db.collection('attendance').doc(attendanceData.id).set(attendanceData);
+        console.log('✅ 출근 기록 완료');
+        
+        // localStorage 백업
+        const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+        attendance.push(attendanceData);
+        localStorage.setItem('attendance', JSON.stringify(attendance));
+        
+        alert(`✅ 출근 처리되었습니다!\n시간: ${now.toLocaleTimeString('ko-KR')}`);
+        
+        // 근무내역 탭으로 이동
+        showTab('attendance');
+        
+      } catch (error) {
+        console.error('❌ 출근 처리 실패:', error);
+        alert('❌ 출근 처리에 실패했습니다: ' + error.message);
+      }
+    }
+    
+    async function clockOut() {
+      const employeeName = sessionStorage.getItem('employee_name');
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      
+      if (!employeeName || !employeeUid) {
+        alert('⚠️ 로그인 정보가 없습니다.');
+        return;
+      }
+      
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      
+      try {
+        // 오늘 출근 기록 찾기
+        const attendanceSnapshot = await db.collection('attendance')
+          .where('employeeUid', '==', employeeUid)
+          .where('date', '==', today)
+          .where('clockOut', '==', null)
+          .limit(1)
+          .get();
+        
+        if (attendanceSnapshot.empty) {
+          alert('⚠️ 오늘의 출근 기록이 없습니다. 먼저 출근해주세요.');
+          return;
+        }
+        
+        const doc = attendanceSnapshot.docs[0];
+        const attendanceData = doc.data();
+        const clockInTime = new Date(attendanceData.clockIn);
+        const workHours = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
+        
+        // Firestore 업데이트
+        await db.collection('attendance').doc(doc.id).update({
+          clockOut: now.toISOString(),
+          workHours: parseFloat(workHours)
+        });
+        
+        console.log('✅ 퇴근 기록 완료');
+        
+        // localStorage 업데이트
+        const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+        const index = attendance.findIndex(a => a.id === doc.id);
+        if (index >= 0) {
+          attendance[index].clockOut = now.toISOString();
+          attendance[index].workHours = parseFloat(workHours);
+          localStorage.setItem('attendance', JSON.stringify(attendance));
+        }
+        
+        alert(`✅ 퇴근 처리되었습니다!\n근무시간: ${workHours}시간`);
+        
+        // 근무내역 탭으로 이동
+        showTab('attendance');
+        
+      } catch (error) {
+        console.error('❌ 퇴근 처리 실패:', error);
+        alert('❌ 퇴근 처리에 실패했습니다: ' + error.message);
+      }
+    }
+    
+    // ===== 급여조회 =====
+    
+    async function loadSalary() {
+      const employeeUid = sessionStorage.getItem('employee_uid');
+      const month = document.getElementById('salaryFilterMonth').value;
+      
+      if (!month) {
+        alert('⚠️ 조회할 월을 선택해주세요.');
+        return;
+      }
+      
+      const salaryContent = document.getElementById('salaryContent');
+      salaryContent.innerHTML = '<div class="alert alert-info">급여 데이터를 불러오는 중...</div>';
+      
+      try {
+        // Firestore에서 급여 데이터 조회
+        const salarySnapshot = await db.collection('salaries')
+          .where('employeeUid', '==', employeeUid)
+          .where('month', '==', month)
+          .limit(1)
+          .get();
+        
+        if (salarySnapshot.empty) {
+          salaryContent.innerHTML = `
+            <div class="alert alert-warning">
+              <strong>${month}</strong>에 대한 급여 데이터가 없습니다.
+            </div>
+          `;
+          return;
+        }
+        
+        const salaryData = salarySnapshot.docs[0].data();
+        
+        salaryContent.innerHTML = `
+          <div style="background: var(--bg-light); padding: var(--spacing-lg); border-radius: var(--border-radius); margin-top: var(--spacing-md);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+              <div>
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">기본급</div>
+                <div style="font-size: 20px; font-weight: 600;">${(salaryData.baseSalary || 0).toLocaleString()}원</div>
+              </div>
+              <div>
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">수당</div>
+                <div style="font-size: 20px; font-weight: 600; color: var(--success-color);">+${(salaryData.allowance || 0).toLocaleString()}원</div>
+              </div>
+              <div>
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">공제액</div>
+                <div style="font-size: 20px; font-weight: 600; color: var(--danger-color);">-${(salaryData.deduction || 0).toLocaleString()}원</div>
+              </div>
+              <div style="border-left: 2px solid var(--border-color); padding-left: var(--spacing-md);">
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">실수령액</div>
+                <div style="font-size: 24px; font-weight: 700; color: var(--primary-color);">${(salaryData.netSalary || 0).toLocaleString()}원</div>
+              </div>
+            </div>
+            ${salaryData.memo ? `
+              <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--border-color);">
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">메모</div>
+                <div>${salaryData.memo}</div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        
+      } catch (error) {
+        console.error('❌ 급여 조회 실패:', error);
+        salaryContent.innerHTML = `
+          <div class="alert alert-danger">
+            급여 데이터를 불러오는데 실패했습니다.
+          </div>
+        `;
+      }
+    }
+    
+    // 페이지 로드 시 급여조회 월 기본값 설정
+    window.addEventListener('load', function() {
+      const now = new Date();
+      const currentMonth = now.toISOString().substring(0, 7);
+      const salaryFilterMonth = document.getElementById('salaryFilterMonth');
+      if (salaryFilterMonth) {
+        salaryFilterMonth.value = currentMonth;
+      }
+    });
   </script>
   
   <script src="js/config.js"></script>

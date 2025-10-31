@@ -609,6 +609,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="firestore-utils.js"></script>
 
   <script>
@@ -1703,12 +1704,17 @@
           amountInfo = `희망일:<br><small style="color: var(--text-secondary);">${approval.desiredDate}</small>`;
         }
         
-        // 처리 버튼 (대기중일 때만 표시)
+        // 처리 버튼
         let actionButtons = '';
         if (approval.status === 'pending') {
           actionButtons = `
             <button class="btn btn-sm btn-success" onclick="approveRequest('${approval.id}')">✅ 승인</button>
             <button class="btn btn-sm btn-danger" onclick="rejectRequest('${approval.id}')">❌ 거부</button>
+          `;
+        } else if (approval.status === 'approved' && approval.type === 'resignation') {
+          actionButtons = `
+            <button class="btn btn-sm btn-primary" onclick="generateResignationPDF('${approval.id}')">📝 PDF</button>
+            <span style="color: var(--success-color); font-size: 13px; margin-left: 8px;">✅ 승인됨</span>
           `;
         } else {
           actionButtons = '<span style="color: var(--text-secondary); font-size: 13px;">처리 완료</span>';
@@ -4679,6 +4685,150 @@
         preview.innerHTML = `<img src="${storeCeoSignatureData}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
       };
       reader.readAsDataURL(file);
+    }
+    
+    // ===== 퇴직서 PDF 생성 =====
+    
+    async function generateResignationPDF(approvalId) {
+      try {
+        // Firestore에서 승인 데이터 가져오기
+        const approvalDoc = await db.collection('approvals').doc(approvalId).get();
+        
+        if (!approvalDoc.exists) {
+          alert('❌ 퇴직서 데이터를 찾을 수 없습니다.');
+          return;
+        }
+        
+        const approval = approvalDoc.data();
+        
+        if (approval.type !== 'resignation') {
+          alert('❌ 퇴직서가 아닙니다.');
+          return;
+        }
+        
+        if (approval.status !== 'approved') {
+          alert('⚠️ 승인된 퇴직서만 PDF로 출력할 수 있습니다.');
+          return;
+        }
+        
+        // jsPDF 초기화
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // 한글 폰트 설정 (기본 폰트 사용)
+        doc.setFont('helvetica');
+        
+        // 제목
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('퇴 직 서', 105, 30, { align: 'center' });
+        
+        // 기본 정보
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        
+        const startY = 60;
+        const lineHeight = 12;
+        let currentY = startY;
+        
+        // 퇴직서 본문
+        doc.text('맛남살롱 귀중', 20, currentY);
+        currentY += lineHeight * 2;
+        
+        doc.text('본인은 아래와 같은 사유로 퇴직하고자 하오니', 20, currentY);
+        currentY += lineHeight;
+        doc.text('승인하여 주시기 바랍니다.', 20, currentY);
+        currentY += lineHeight * 2;
+        
+        // 구분선
+        doc.setLineWidth(0.5);
+        doc.line(20, currentY, 190, currentY);
+        currentY += lineHeight;
+        
+        // 퇴직 정보
+        doc.setFont('helvetica', 'bold');
+        doc.text('- 기본 정보 -', 20, currentY);
+        doc.setFont('helvetica', 'normal');
+        currentY += lineHeight * 1.5;
+        
+        doc.text(`성     명: ${approval.employeeName}`, 30, currentY);
+        currentY += lineHeight;
+        
+        const desiredDateStr = approval.desiredDate ? new Date(approval.desiredDate).toLocaleDateString('ko-KR') : '-';
+        doc.text(`희망 퇴직일: ${desiredDateStr}`, 30, currentY);
+        currentY += lineHeight;
+        
+        const submitDateStr = new Date(approval.createdAt).toLocaleDateString('ko-KR');
+        doc.text(`신청일: ${submitDateStr}`, 30, currentY);
+        currentY += lineHeight * 2;
+        
+        // 퇴직 사유
+        doc.setFont('helvetica', 'bold');
+        doc.text('- 퇴직 사유 -', 20, currentY);
+        doc.setFont('helvetica', 'normal');
+        currentY += lineHeight * 1.5;
+        
+        // 사유 텍스트 (긴 텍스트는 자동 줄바꿈)
+        const reasonLines = doc.splitTextToSize(approval.reason || '', 160);
+        reasonLines.forEach(line => {
+          doc.text(line, 30, currentY);
+          currentY += lineHeight;
+        });
+        
+        currentY += lineHeight;
+        
+        // 구분선
+        doc.line(20, currentY, 190, currentY);
+        currentY += lineHeight * 2;
+        
+        // 서명란
+        doc.text(`신청일: ${new Date().toLocaleDateString('ko-KR')}`, 20, currentY);
+        currentY += lineHeight * 2;
+        
+        // 직원 서명
+        if (approval.employeeSignature) {
+          doc.text('신 청 인:', 120, currentY);
+          try {
+            doc.addImage(approval.employeeSignature, 'PNG', 145, currentY - 8, 40, 15);
+          } catch (e) {
+            console.error('직원 서명 추가 실패:', e);
+            doc.text('(서명)', 145, currentY);
+          }
+        } else {
+          doc.text('신 청 인: __________________', 120, currentY);
+        }
+        currentY += lineHeight * 2;
+        
+        // 승인자 서명 (관리자)
+        doc.text('승 인 자:', 120, currentY);
+        doc.text('맛남살롱 관리자', 145, currentY);
+        currentY += lineHeight;
+        
+        const approvedDateStr = approval.processedAt ? new Date(approval.processedAt).toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR');
+        doc.text(`승인일: ${approvedDateStr}`, 145, currentY);
+        
+        // 하단 정보
+        currentY = 270;
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('맛남살롱', 105, currentY, { align: 'center' });
+        currentY += 5;
+        doc.text('Tel: 032-123-4567 | Email: info@mannamsalon.com', 105, currentY, { align: 'center' });
+        
+        // PDF 저장
+        const fileName = `퇴직서_${approval.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        console.log('✅ 퇴직서 PDF 생성 완료:', fileName);
+        
+      } catch (error) {
+        console.error('❌ 퇴직서 PDF 생성 실패:', error);
+        alert('❌ PDF 생성에 실패했습니다: ' + error.message);
+      }
     }
   </script>
 </body>
