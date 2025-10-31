@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Firebase</title>
+</head>
+<body>
+  <h1>Testing...</h1>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    console.log('🚀 Script 1: Starting Firebase init...');
+    const firebaseConfig = {
+      apiKey: "AIzaSyCr3Tq2T7oy5rVlK1c33m_G0TlUWv0-g3k",
+      authDomain: "abcdc-staff-system.firebaseapp.com",
+      projectId: "abcdc-staff-system",
+      storageBucket: "abcdc-staff-system.firebasestorage.app",
+      messagingSenderId: "442207878284",
+      appId: "1:442207878284:web:49b157573851b124d28fa9",
+      measurementId: "G-WYPQ3YEJRT"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    console.log('✅ Firebase initialized');
+    
+    // Load firestore-utils.js dynamically
+    const firestoreUtilsScript = document.createElement('script');
+    firestoreUtilsScript.src = 'firestore-utils.js';
+    firestoreUtilsScript.onload = () => console.log('✅ firestore-utils.js loaded');
+    firestoreUtilsScript.onerror = (e) => console.error('❌ firestore-utils.js failed:', e);
+    document.head.appendChild(firestoreUtilsScript);
+  </script>
+  
+  <script>
+    console.log('🚀 Script 2: Testing async function...');
+    async function testAsync() {
+      console.log('Inside async function');
+      const result = await Promise.resolve('test');
+      console.log('Async result:', result);
+    }
+    console.log('✅ Async function defined');
+  </script>
+</body>
+</html>

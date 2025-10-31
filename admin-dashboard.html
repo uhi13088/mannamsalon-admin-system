@@ -628,10 +628,15 @@
     let isAuthenticated = false;
     let currentTab = 'dashboard';
 
-    // Firebase 초기화 후 firestore-utils.js 동적 로드
-    const firestoreUtilsScript = document.createElement('script');
-    firestoreUtilsScript.src = 'firestore-utils.js';
-    document.head.appendChild(firestoreUtilsScript);
+    // Firebase 초기화 후 firestore-utils.js 동적 로드 (오류 처리 포함)
+    setTimeout(() => {
+      const firestoreUtilsScript = document.createElement('script');
+      firestoreUtilsScript.src = 'firestore-utils.js';
+      firestoreUtilsScript.onerror = (e) => {
+        console.warn('⚠️ firestore-utils.js 로드 실패 (무시됨):', e);
+      };
+      document.head.appendChild(firestoreUtilsScript);
+    }, 100); // Firebase 초기화 완료 대기
 
     document.addEventListener('DOMContentLoaded', function() {
       const today = new Date();
