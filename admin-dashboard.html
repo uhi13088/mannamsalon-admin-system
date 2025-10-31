@@ -2008,30 +2008,28 @@
       }
       
       // 회사 목록
-      const companySelect = document.getElementById('companySelect');
-      if (companySelect) {
-        const saved = localStorage.getItem('companies');
-        companies = saved ? JSON.parse(saved) : [
-          { id: '1', name: '(주)ABC디저트센터', ceo: '홍길동', businessNumber: '123-45-67890', phone: '032-123-4567', address: '경기도 부천시 원미구 74' }
-        ];
+      const storeSelect = document.getElementById('storeSelect');
+      if (storeSelect) {
+        const stores = JSON.parse(localStorage.getItem('stores') || '[]');
         
-        companySelect.innerHTML = '<option value="">선택하세요</option>';
-        companies.forEach(company => {
-          companySelect.innerHTML += `<option value="${company.id}">${company.name}</option>`;
+        storeSelect.innerHTML = '<option value="">선택하세요</option>';
+        stores.forEach(store => {
+          storeSelect.innerHTML += `<option value="${store.id}">${store.name}</option>`;
         });
         
-        if (companies.length > 0) {
-          companySelect.value = companies[0].id;
-          // 회사 정보 자동 입력
-          const company = companies[0];
-          document.getElementById('companyCEO').value = company.ceo;
-          document.getElementById('companyBusinessNumber').value = company.businessNumber;
-          document.getElementById('companyPhone').value = company.phone;
-          document.getElementById('companyAddress').value = company.address;
-          console.log('✅ 회사 정보 자동 입력 완료:', company.name);
+        if (stores.length > 0) {
+          storeSelect.value = stores[0].id;
+          // 매장 정보 자동 입력
+          const store = stores[0];
+          document.getElementById('companyCEO').value = store.ceo || '';
+          document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
+          document.getElementById('companyPhone').value = store.phone || '';
+          document.getElementById('companyAddress').value = store.address || '';
+          document.getElementById('workStore').value = store.name || '';
+          console.log('✅ 매장 정보 자동 입력 완료:', store.name);
         }
         
-        console.log('✅ 회사 목록 로드 완료');
+        console.log('✅ 매장 목록 로드 완료');
       }
       
       // 기본 템플릿
@@ -2523,26 +2521,35 @@
       }
     }
 
-    function loadCompanyInfo() {
-      const companyId = document.getElementById('companySelect').value;
+    function loadStoreInfoToContract() {
+      const storeId = document.getElementById('storeSelect').value;
       
-      if (!companyId) {
+      if (!storeId) {
         document.getElementById('companyCEO').value = '';
         document.getElementById('companyBusinessNumber').value = '';
         document.getElementById('companyPhone').value = '';
         document.getElementById('companyAddress').value = '';
-        updatePreview(); // 미리보기 업데이트
+        document.getElementById('workStore').value = '';
+        updatePreview();
         return;
       }
       
-      const company = companies.find(c => c.id === companyId);
-      if (company) {
-        document.getElementById('companyCEO').value = company.ceo || '';
-        document.getElementById('companyBusinessNumber').value = company.businessNumber || '';
-        document.getElementById('companyPhone').value = company.phone || '';
-        document.getElementById('companyAddress').value = company.address || '';
-        updatePreview(); // 미리보기 업데이트
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      const store = stores.find(s => s.id === storeId);
+      
+      if (store) {
+        document.getElementById('companyCEO').value = store.ceo || '';
+        document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
+        document.getElementById('companyPhone').value = store.phone || '';
+        document.getElementById('companyAddress').value = store.address || '';
+        document.getElementById('workStore').value = store.name || '';
+        updatePreview();
       }
+    }
+
+    function loadCompanyInfo() {
+      // 하위 호환성 유지
+      loadStoreInfoToContract();
     }
 
     function showAddCompanyModal() {
@@ -3319,7 +3326,8 @@
       const signLink = `${baseUrl}contract-sign.html?id=${contractId}`;
       console.log('🔗 서명 링크 생성:', signLink);
       
-      const company = companies.find(c => c.id === document.getElementById('companySelect').value);
+      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      const store = stores.find(s => s.id === document.getElementById('storeSelect').value);
       
       const contractData = {
         id: contractId,
@@ -3327,11 +3335,11 @@
         employeeBirth: document.getElementById('employeeBirth').value,
         employeeAddress: document.getElementById('employeeAddress').value,
         employeePhone: document.getElementById('employeePhone').value,
-        companyName: company?.name || '',
-        companyCEO: company?.ceo || '',
-        companyBusinessNumber: company?.businessNumber || '',
-        companyPhone: company?.phone || '',
-        companyAddress: company?.address || '',
+        companyName: store?.name || '',
+        companyCEO: store?.ceo || '',
+        companyBusinessNumber: store?.businessNumber || '',
+        companyPhone: store?.phone || '',
+        companyAddress: store?.address || '',
         contractType: document.getElementById('contractType').value,
         workStore: document.getElementById('workStore').value,
         startDate: document.getElementById('startDate').value,
@@ -3438,16 +3446,15 @@
             <h4>🏢 사용자 (회사) 정보</h4>
             <div class="form-row">
               <div class="form-group">
-                <label for="companySelect">회사 선택 *</label>
-                <select id="companySelect" required onchange="loadCompanyInfo(); updatePreview();">
+                <label for="storeSelect">매장 선택 *</label>
+                <select id="storeSelect" required onchange="loadStoreInfoToContract(); updatePreview();">
                   <option value="">선택하세요</option>
                 </select>
               </div>
-              <div style="align-self: flex-end; display: flex; gap: 8px;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="showEditCompanyModal()" style="height: 42px;">✏️ 수정</button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="showAddCompanyModal()" style="height: 42px;">➕ 추가</button>
-              </div>
             </div>
+            <p class="help-text" style="margin-top: -12px; margin-bottom: 16px;">
+              💡 매장 정보는 '매장 관리' 탭에서 관리할 수 있습니다.
+            </p>
             <div class="form-row">
               <div class="form-group">
                 <label for="companyCEO">대표자명 *</label>
@@ -3485,12 +3492,7 @@
               </div>
               <div class="form-group">
                 <label for="workStore">근무 매장 *</label>
-                <select id="workStore" required>
-                  <option value="">선택하세요</option>
-                  <option value="부천시청점">부천시청점</option>
-                  <option value="상동점">상동점</option>
-                  <option value="부천역사점">부천역사점</option>
-                </select>
+                <input type="text" id="workStore" placeholder="자동 입력" readonly required>
               </div>
             </div>
             <div class="form-row">
