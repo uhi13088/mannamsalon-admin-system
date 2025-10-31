@@ -1054,6 +1054,27 @@
       }
       
       try {
+        // 퇴직서는 기존 것을 덮어쓰기 (하나만 유지)
+        if (type === 'resignation') {
+          // 기존 퇴직서 삭제
+          const existingResignations = await db.collection('approvals')
+            .where('employeeUid', '==', employeeUid)
+            .where('type', '==', 'resignation')
+            .get();
+          
+          const batch = db.batch();
+          existingResignations.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          await batch.commit();
+          console.log('✅ 기존 퇴직서 삭제 완료');
+          
+          // localStorage에서도 삭제
+          let localApprovals = JSON.parse(localStorage.getItem('approvals') || '[]');
+          localApprovals = localApprovals.filter(a => !(a.employeeUid === employeeUid && a.type === 'resignation'));
+          localStorage.setItem('approvals', JSON.stringify(localApprovals));
+        }
+        
         // Firestore에 저장
         await db.collection('approvals').doc(approvalData.id).set(approvalData);
         console.log('✅ Firestore 승인 요청 저장 완료');

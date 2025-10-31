@@ -646,10 +646,13 @@
         if (!user) {
           // Firebase Auth 로그인되지 않음
           const savedAuth = sessionStorage.getItem('admin_authenticated');
-          if (savedAuth === 'true') {
+          const isLoggingOut = sessionStorage.getItem('admin_logging_out');
+          
+          if (savedAuth === 'true' && !isLoggingOut) {
             // sessionStorage에는 있지만 Firebase Auth는 없음 - 다시 로그인 필요
             alert('⚠️ 세션이 만료되었습니다. 다시 로그인해주세요.');
           }
+          
           sessionStorage.clear();
           window.location.href = 'admin-login.html';
           return;
@@ -701,12 +704,16 @@
     async function logout() {
       if (confirm('로그아웃 하시겠습니까?')) {
         try {
+          // 로그아웃 플래그 설정
+          sessionStorage.setItem('admin_logging_out', 'true');
+          
           await auth.signOut();
           isAuthenticated = false;
-          sessionStorage.removeItem('admin_authenticated');
+          sessionStorage.clear();
           window.location.href = 'admin-login.html';
         } catch (error) {
           console.error('로그아웃 오류:', error);
+          sessionStorage.removeItem('admin_logging_out');
         }
       }
     }
@@ -1788,16 +1795,32 @@
 
     // 승인 처리
     async function approveRequest(approvalId) {
-      if (!confirm('✅ 이 요청을 승인하시겠습니까?')) {
-        return;
-      }
-      
       try {
+        // 승인 요청 데이터 가져오기
+        const approvalDoc = await db.collection('approvals').doc(approvalId).get();
+        if (!approvalDoc.exists) {
+          alert('❌ 승인 요청을 찾을 수 없습니다.');
+          return;
+        }
+        
+        const approvalData = approvalDoc.data();
+        
+        // 퇴직서 승인 시 추가 확인
+        if (approvalData.type === 'resignation') {
+          if (!confirm('⚠️ 퇴직서를 승인하시겠습니까?\n\n승인 시 해당 직원의 계정이 완전히 삭제됩니다.\n(Firebase Authentication 계정 포함)\n\n직원명: ' + approvalData.employeeName)) {
+            return;
+          }
+        } else {
+          if (!confirm('✅ 이 요청을 승인하시겠습니까?')) {
+            return;
+          }
+        }
+        
         // Firestore 업데이트
         await db.collection('approvals').doc(approvalId).update({
           status: 'approved',
           processedAt: new Date().toISOString(),
-          processedBy: 'admin@mannamsalon.com'
+          processedBy: sessionStorage.getItem('admin_email') || 'admin@mannamsalon.com'
         });
         
         // localStorage 업데이트
@@ -1806,11 +1829,31 @@
         if (index >= 0) {
           approvals[index].status = 'approved';
           approvals[index].processedAt = new Date().toISOString();
-          approvals[index].processedBy = 'admin@mannamsalon.com';
+          approvals[index].processedBy = sessionStorage.getItem('admin_email') || 'admin@mannamsalon.com';
           localStorage.setItem('approvals', JSON.stringify(approvals));
         }
         
-        alert('✅ 승인 처리되었습니다!');
+        // 퇴직서 승인 시 직원 삭제
+        if (approvalData.type === 'resignation') {
+          try {
+            const employeeUid = approvalData.employeeUid;
+            
+            // 1. Firestore users 문서 삭제
+            await db.collection('users').doc(employeeUid).delete();
+            console.log('✅ Firestore users 문서 삭제 완료');
+            
+            // 2. Firebase Authentication 계정 삭제는 서버에서만 가능
+            // 클라이언트에서는 불가능하므로 안내 메시지 표시
+            alert('✅ 퇴직서가 승인되었습니다!\n\n⚠️ Firebase Authentication 계정 삭제:\nFirebase Console > Authentication에서\n' + approvalData.employeeName + ' 계정을 수동으로 삭제해주세요.');
+            
+          } catch (deleteError) {
+            console.error('❌ 직원 삭제 실패:', deleteError);
+            alert('⚠️ 승인은 완료되었으나 직원 데이터 삭제에 실패했습니다.\n수동으로 삭제해주세요.');
+          }
+        } else {
+          alert('✅ 승인 처리되었습니다!');
+        }
+        
         await loadApprovals();
         
       } catch (error) {
