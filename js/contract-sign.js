@@ -45,41 +45,42 @@ document.addEventListener('DOMContentLoaded', function() {
 // 계약서 데이터 로드 (시뮬레이션)
 // ===================================================================
 
-function loadContractData() {
+async function loadContractData() {
   console.log('📥 계약서 데이터 로드 시작...');
   
-  setTimeout(() => {
-    try {
-      const storageKey = `contract_${contractId}`;
-      console.log('🔍 localStorage 키:', storageKey);
-      
-      // localStorage에서 계약서 데이터 가져오기
-      const savedData = localStorage.getItem(storageKey);
-      
-      console.log('📦 저장된 데이터:', savedData ? '있음' : '없음');
-      
-      if (!savedData) {
-        console.error('❌ 계약서 데이터를 찾을 수 없습니다');
-        
-        // 디버깅: localStorage의 모든 키 출력
-        console.log('📋 localStorage의 모든 키:', Object.keys(localStorage));
-        
-        showError(`계약서를 찾을 수 없습니다.<br><br>
-          <strong>계약서 ID:</strong> ${contractId}<br>
-          <strong>찾는 키:</strong> ${storageKey}<br><br>
-          계약서 생성이 완료되었는지 확인해주세요.`);
-        return;
-      }
-      
-      contractData = JSON.parse(savedData);
-      console.log('✅ 계약서 데이터 로드 성공:', contractData.employeeName);
-      
+  try {
+    // Firestore에서 계약서 데이터 가져오기
+    const docRef = db.collection('contracts').doc(contractId);
+    const docSnap = await docRef.get();
+    
+    if (docSnap.exists) {
+      contractData = docSnap.data();
+      console.log('✅ Firestore에서 계약서 데이터 로드 성공:', contractData.employeeName);
       displayContract();
-    } catch (error) {
-      console.error('❌ 계약서 데이터 로드 오류:', error);
-      showError('계약서 데이터를 불러오는 중 오류가 발생했습니다: ' + error.message);
+      return;
     }
-  }, 500);
+    
+    // [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
+    console.log('⚠️ Firestore에 계약서가 없습니다. localStorage 확인...');
+    const storageKey = `contract_${contractId}`;
+    const savedData = localStorage.getItem(storageKey);
+    
+    if (savedData) {
+      contractData = JSON.parse(savedData);
+      console.log('✅ localStorage에서 계약서 데이터 로드 성공:', contractData.employeeName);
+      displayContract();
+      return;
+    }
+    
+    // 둘 다 없으면 오류 표시
+    console.error('❌ 계약서 데이터를 찾을 수 없습니다');
+    showError(`계약서를 찾을 수 없습니다.<br><br>
+      <strong>계약서 ID:</strong> ${contractId}<br><br>
+      계약서 생성이 완료되었는지 확인해주세요.`);
+  } catch (error) {
+    console.error('❌ 계약서 데이터 로드 오류:', error);
+    showError('계약서 데이터를 불러오는 중 오류가 발생했습니다: ' + error.message);
+  }
 }
 
 function displayContract() {

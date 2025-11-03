@@ -1109,31 +1109,69 @@
       return employeeMap[contract.employeeName] || 0;
     }
 
-    function viewContract(id) {
-      const contractData = localStorage.getItem(`contract_${id}`);
-      if (!contractData) {
-        alert('⚠️ 계약서를 찾을 수 없습니다.');
-        return;
-      }
+    async function viewContract(id) {
       try {
-        const contract = JSON.parse(contractData);
+        // Firestore에서 계약서 찾기
+        const docRef = firebase.firestore().collection('contracts').doc(id);
+        const docSnap = await docRef.get();
         
-        // 같은 직원의 모든 계약서 찾기
+        let contract = null;
+        
+        if (docSnap.exists) {
+          contract = docSnap.data();
+        } else {
+          // [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
+          const contractData = localStorage.getItem(`contract_${id}`);
+          if (contractData) {
+            contract = JSON.parse(contractData);
+          }
+        }
+        
+        if (!contract) {
+          alert('⚠️ 계약서를 찾을 수 없습니다.');
+          return;
+        }
+        
+        // 같은 직원의 모든 계약서 찾기 (Firestore + localStorage)
         const allContracts = [];
+        
+        // 1. Firestore에서 찾기
+        const snapshot = await firebase.firestore().collection('contracts').get();
+        snapshot.forEach(doc => {
+          const c = doc.data();
+          if (c.employeeBirth === contract.employeeBirth && c.employeeName === contract.employeeName) {
+            allContracts.push({
+              id: doc.id,
+              data: c,
+              createdAt: c.createdAt || new Date().toISOString()
+            });
+          }
+        });
+        
+        // 2. [하이브리드 모드] localStorage에서도 찾기
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith('contract_C')) {
             try {
               const c = JSON.parse(localStorage.getItem(key));
+              const cId = key.replace('contract_', '');
+              
+              // 이미 Firestore에서 찾은 계약서는 건너뛰기
+              if (allContracts.some(ac => ac.id === cId)) {
+                continue;
+              }
+              
               // 주민번호로 같은 직원 확인
               if (c.employeeBirth === contract.employeeBirth && c.employeeName === contract.employeeName) {
                 allContracts.push({
-                  id: key.replace('contract_', ''),
+                  id: cId,
                   data: c,
                   createdAt: c.createdAt || Date.now()
                 });
               }
-            } catch (e) {}
+            } catch (e) {
+              console.warn('localStorage 계약서 읽기 오류:', e);
+            }
           }
         }
         
@@ -1142,6 +1180,7 @@
         
         showContractViewModal(contract, id, allContracts);
       } catch (e) {
+        console.error('❌ 계약서 조회 실패:', e);
         alert('⚠️ 계약서 데이터를 불러올 수 없습니다.');
       }
     }
@@ -1670,103 +1709,139 @@
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td></tr>';
     }
 
-    function loadContracts() {
+    async function loadContracts() {
       const tbody = document.getElementById('contractsTableBody');
       if (!tbody) return;
       
-      // 모든 계약서 로드
-      const allContracts = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('contract_C')) {
-          try {
-            const contractData = JSON.parse(localStorage.getItem(key));
-            const contractId = key.replace('contract_', '');
-            const signedContracts = signedContractsCache;
-            const isSigned = signedContracts.some(sc => sc.id === contractId);
-            
-            allContracts.push({
-              id: contractId,
-              name: contractData.employeeName,
-              birth: contractData.employeeBirth,
-              type: contractData.contractType,
-              period: `${contractData.startDate} ~ ${contractData.endDate}`,
-              createdAt: contractData.createdAt || Date.now(),
-              status: isSigned ? '서명완료' : '서명대기',
-              data: contractData
-            });
-          } catch (e) {}
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">계약서를 불러오는 중...</td></tr>';
+      
+      try {
+        // Firestore에서 모든 계약서 로드
+        const snapshot = await firebase.firestore().collection('contracts').get();
+        const allContracts = [];
+        
+        snapshot.forEach(doc => {
+          const contractData = doc.data();
+          const contractId = doc.id;
+          const signedContracts = signedContractsCache;
+          const isSigned = signedContracts.some(sc => sc.id === contractId);
+          
+          allContracts.push({
+            id: contractId,
+            name: contractData.employeeName,
+            birth: contractData.employeeBirth,
+            type: contractData.contractType,
+            period: `${contractData.startDate} ~ ${contractData.endDate}`,
+            createdAt: contractData.createdAt || new Date().toISOString(),
+            status: isSigned ? '서명완료' : '서명대기',
+            data: contractData
+          });
+        });
+        
+        // [하이브리드 모드] localStorage에서도 계약서 읽기 (마이그레이션 기간)
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('contract_C')) {
+            try {
+              const contractData = JSON.parse(localStorage.getItem(key));
+              const contractId = key.replace('contract_', '');
+              
+              // 이미 Firestore에 있는 계약서는 건너뛰기
+              if (allContracts.some(c => c.id === contractId)) {
+                continue;
+              }
+              
+              const signedContracts = signedContractsCache;
+              const isSigned = signedContracts.some(sc => sc.id === contractId);
+              
+              allContracts.push({
+                id: contractId,
+                name: contractData.employeeName,
+                birth: contractData.employeeBirth,
+                type: contractData.contractType,
+                period: `${contractData.startDate} ~ ${contractData.endDate}`,
+                createdAt: contractData.createdAt || Date.now(),
+                status: isSigned ? '서명완료' : '서명대기',
+                data: contractData
+              });
+            } catch (e) {
+              console.warn('localStorage 계약서 읽기 오류:', e);
+            }
+          }
         }
-      }
-      
-      if (allContracts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);"><p style="margin-bottom: 16px;">생성된 계약서가 없습니다.</p><button class="btn btn-primary" onclick="openContractPage()">+ 첫 계약서 작성하기</button></td></tr>';
-        return;
-      }
-      
-      // 직원별로 계약서 그룹화 (주민번호 기준)
-      const employeeGroups = new Map();
-      allContracts.forEach(contract => {
-        const key = `${contract.name}_${contract.birth}`;
-        if (!employeeGroups.has(key)) {
-          employeeGroups.set(key, []);
+        
+        if (allContracts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);"><p style="margin-bottom: 16px;">생성된 계약서가 없습니다.</p><button class="btn btn-primary" onclick="openContractPage()">+ 첫 계약서 작성하기</button></td></tr>';
+          return;
         }
-        employeeGroups.get(key).push(contract);
-      });
-      
-      // 각 그룹의 계약서를 날짜순 정렬 (최신순)
-      employeeGroups.forEach((contracts, key) => {
-        contracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      });
-      
-      // 테이블 행 생성
-      const rows = [];
-      employeeGroups.forEach((contracts, key) => {
-        const latestContract = contracts[0]; // 최신 계약서
-        const contractCount = contracts.length;
         
-        // 계약서 선택 드롭다운 생성
-        const contractOptions = contracts.map((contract, index) => {
-          const date = new Date(contract.createdAt);
-          const dateStr = date.toLocaleDateString('ko-KR');
-          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-          const label = `${dateStr} ${timeStr}${index === 0 ? ' (최신)' : ''}`;
-          return `<option value="${contract.id}">${label}</option>`;
-        }).join('');
+        // 직원별로 계약서 그룹화 (주민번호 기준)
+        const employeeGroups = new Map();
+        allContracts.forEach(contract => {
+          const key = `${contract.name}_${contract.birth}`;
+          if (!employeeGroups.has(key)) {
+            employeeGroups.set(key, []);
+          }
+          employeeGroups.get(key).push(contract);
+        });
         
-        const selectId = `contract-select-${latestContract.id}`;
-        const statusClass = latestContract.status === '서명완료' ? 'badge-success' : 'badge-warning';
+        // 각 그룹의 계약서를 날짜순 정렬 (최신순)
+        employeeGroups.forEach((contracts, key) => {
+          contracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
         
-        rows.push(`
-          <tr>
-            <td>
-              <strong>${latestContract.name}</strong>
-              ${contractCount > 1 ? `<br><span class="badge" style="background: var(--primary-color); color: white; font-size: 11px;">📝 ${contractCount}건</span>` : ''}
-            </td>
-            <td>${latestContract.type}</td>
-            <td>${latestContract.period}</td>
-            <td>
-              ${contractCount > 1 ? `
-                <select id="${selectId}" class="form-control" style="font-size: 13px; padding: 4px 8px;" onchange="updateContractButtons('${selectId}', this.value)">
-                  ${contractOptions}
-                </select>
-              ` : `
-                ${new Date(latestContract.createdAt).toLocaleDateString('ko-KR')} ${new Date(latestContract.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-              `}
-            </td>
-            <td><span class="badge ${statusClass}" id="status-${latestContract.id}">${latestContract.status}</span></td>
-            <td>
-              <div id="buttons-${latestContract.id}" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                <button class="btn btn-sm btn-secondary" onclick="viewContract('${latestContract.id}')">📄 보기</button>
-                ${latestContract.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${latestContract.id}')">📧 링크전송</button>` : ''}
-                <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="deleteContract('${latestContract.id}', '${latestContract.name}')">🗑️ 삭제</button>
-              </div>
-            </td>
-          </tr>
-        `);
-      });
-      
-      tbody.innerHTML = rows.join('');
+        // 테이블 행 생성
+        const rows = [];
+        employeeGroups.forEach((contracts, key) => {
+          const latestContract = contracts[0]; // 최신 계약서
+          const contractCount = contracts.length;
+          
+          // 계약서 선택 드롭다운 생성
+          const contractOptions = contracts.map((contract, index) => {
+            const date = new Date(contract.createdAt);
+            const dateStr = date.toLocaleDateString('ko-KR');
+            const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            const label = `${dateStr} ${timeStr}${index === 0 ? ' (최신)' : ''}`;
+            return `<option value="${contract.id}">${label}</option>`;
+          }).join('');
+          
+          const selectId = `contract-select-${latestContract.id}`;
+          const statusClass = latestContract.status === '서명완료' ? 'badge-success' : 'badge-warning';
+          
+          rows.push(`
+            <tr>
+              <td>
+                <strong>${latestContract.name}</strong>
+                ${contractCount > 1 ? `<br><span class="badge" style="background: var(--primary-color); color: white; font-size: 11px;">📝 ${contractCount}건</span>` : ''}
+              </td>
+              <td>${latestContract.type}</td>
+              <td>${latestContract.period}</td>
+              <td>
+                ${contractCount > 1 ? `
+                  <select id="${selectId}" class="form-control" style="font-size: 13px; padding: 4px 8px;" onchange="updateContractButtons('${selectId}', this.value)">
+                    ${contractOptions}
+                  </select>
+                ` : `
+                  ${new Date(latestContract.createdAt).toLocaleDateString('ko-KR')} ${new Date(latestContract.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                `}
+              </td>
+              <td><span class="badge ${statusClass}" id="status-${latestContract.id}">${latestContract.status}</span></td>
+              <td>
+                <div id="buttons-${latestContract.id}" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  <button class="btn btn-sm btn-secondary" onclick="viewContract('${latestContract.id}')">📄 보기</button>
+                  ${latestContract.status === '서명대기' ? `<button class="btn btn-sm btn-primary" onclick="sendContractLink('${latestContract.id}')">📧 링크전송</button>` : ''}
+                  <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="deleteContract('${latestContract.id}', '${latestContract.name}')">🗑️ 삭제</button>
+                </div>
+              </td>
+            </tr>
+          `);
+        });
+        
+        tbody.innerHTML = rows.join('');
+      } catch (error) {
+        console.error('❌ 계약서 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">계약서를 불러오는데 실패했습니다.</td></tr>';
+      }
     }
     
     // 드롭다운 변경 시 버튼 업데이트
@@ -1798,31 +1873,31 @@
     };
     
     // 계약서 삭제 함수
-    window.deleteContract = function(contractId, employeeName) {
+    window.deleteContract = async function(contractId, employeeName) {
       if (!confirm(`⚠️ 정말로 "${employeeName}"님의 계약서를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
         return;
       }
       
       try {
-        // localStorage에서 계약서 삭제
+        // Firestore에서 계약서 삭제
+        await firebase.firestore().collection('contracts').doc(contractId).delete();
+        console.log(`✅ Firestore contracts 삭제 완료: ${contractId}`);
+        
+        // [하이브리드 모드] localStorage에서도 제거 (있을 경우)
         localStorage.removeItem(`contract_${contractId}`);
+        console.log(`✅ localStorage 계약서 삭제 완료: ${contractId}`);
         
         // signedContracts Firestore에서도 제거
-        firebase.firestore().collection('signedContracts').doc(contractId).delete()
-          .then(() => {
-            console.log('✅ signedContracts에서도 삭제 완료');
-            // 캐시 업데이트
-            signedContractsCache = signedContractsCache.filter(sc => sc.id !== contractId);
-          })
-          .catch(error => {
-            console.error('⚠️ signedContracts 삭제 실패:', error);
-          });
+        await firebase.firestore().collection('signedContracts').doc(contractId).delete();
+        console.log('✅ signedContracts에서도 삭제 완료');
         
-        console.log(`✅ 계약서 삭제 완료: ${contractId}`);
+        // 캐시 업데이트
+        signedContractsCache = signedContractsCache.filter(sc => sc.id !== contractId);
+        
         alert(`✅ "${employeeName}"님의 계약서가 삭제되었습니다.`);
         
         // 계약서 목록 새로고침
-        loadContracts();
+        await loadContracts();
         
         // 대시보드도 업데이트
         if (currentTab === 'dashboard') {
@@ -3737,7 +3812,7 @@
     }
 
     // 계약서 생성
-    function generateContract() {
+    async function generateContract() {
       console.log('📝 계약서 생성 시작');
       
       // 유효성 검사
@@ -3754,7 +3829,13 @@
       const signLink = `${baseUrl}contract-sign.html?id=${contractId}`;
       console.log('🔗 서명 링크 생성:', signLink);
       
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
+      // Firestore에서 stores 가져오기
+      const storesSnapshot = await firebase.firestore().collection('stores').get();
+      const stores = [];
+      storesSnapshot.forEach(doc => {
+        stores.push({ id: doc.id, ...doc.data() });
+      });
+      
       const store = stores.find(s => s.id === document.getElementById('storeSelect').value);
       
       const contractData = {
@@ -3783,31 +3864,40 @@
         contractContent: document.getElementById('contractContent').value,
         contractDate: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
         createdAt: new Date().toISOString(),
-        signLink: signLink
+        signLink: signLink,
+        createdBy: firebase.auth().currentUser?.uid || 'unknown'
       };
       
-      console.log('💾 계약서 데이터 저장:', contractId);
-      localStorage.setItem(`contract_${contractId}`, JSON.stringify(contractData));
+      console.log('💾 계약서 데이터 Firestore 저장:', contractId);
       
-      // 서명 링크 표시
-      document.getElementById('signLinkSection').style.display = 'block';
-      document.getElementById('contractIdDisplay').textContent = contractId;
-      document.getElementById('signLinkInput').value = signLink;
-      
-      alert(`✅ 계약서가 생성되었습니다!\n\n계약서 ID: ${contractId}\n\n서명 링크가 클립보드에 복사됩니다.`);
-      
-      // 서명 링크 자동 복사
-      const input = document.getElementById('signLinkInput');
-      input.select();
-      document.execCommand('copy');
-      
-      // 3초 후 모달 닫고 목록 새로고침
-      setTimeout(() => {
-        console.log('🔄 모달 닫기 및 목록 새로고침');
-        closeContractModal();
-        loadContracts(); // 계약서 목록 새로고침
-        switchTab('contracts'); // 계약서 관리 탭으로 이동
-      }, 3000);
+      try {
+        // Firestore에 저장 (문서 ID를 contractId로 지정)
+        await firebase.firestore().collection('contracts').doc(contractId).set(contractData);
+        console.log('✅ Firestore 저장 완료:', contractId);
+        
+        // 서명 링크 표시
+        document.getElementById('signLinkSection').style.display = 'block';
+        document.getElementById('contractIdDisplay').textContent = contractId;
+        document.getElementById('signLinkInput').value = signLink;
+        
+        alert(`✅ 계약서가 생성되었습니다!\n\n계약서 ID: ${contractId}\n\n서명 링크가 클립보드에 복사됩니다.`);
+        
+        // 서명 링크 자동 복사
+        const input = document.getElementById('signLinkInput');
+        input.select();
+        document.execCommand('copy');
+        
+        // 3초 후 모달 닫고 목록 새로고침
+        setTimeout(() => {
+          console.log('🔄 모달 닫기 및 목록 새로고침');
+          closeContractModal();
+          loadContracts(); // 계약서 목록 새로고침
+          switchTab('contracts'); // 계약서 관리 탭으로 이동
+        }, 3000);
+      } catch (error) {
+        console.error('❌ Firestore 저장 실패:', error);
+        alert('❌ 계약서 저장에 실패했습니다: ' + error.message);
+      }
     }
 
     function copySignLink() {
