@@ -33,421 +33,158 @@
 
 ---
 
-## 🗂️ 파일 구조
+## ✅ 현재 구현 완료 기능
 
-```
-📁 프로젝트 루트
-├── index.html                  # 메인 랜딩 페이지 (관리자/직원 선택)
-├── admin-dashboard.html        # 관리자 대시보드 (Firebase Auth + 계약서 모달)
-├── employee.html               # 직원 페이지 (출퇴근, 급여조회)
-├── employee-register.html      # 직원 가입 페이지 (Firebase Auth + Firestore)
-├── contract-sign.html          # 계약서 서명 페이지
-├── index.html.backup           # 백업 파일 (안전용)
-└── README.md                   # 프로젝트 문서
-```
+### 1️⃣ **관리자 대시보드**
+- ✅ 대시보드 (통계 카드)
+- ✅ 직원 관리 (Firestore 연동)
+- ✅ **근무기록 조회** (월별/매장별 필터링)
+- ✅ 급여 관리 (Firestore 연동)
+- ✅ 계약서 관리 (localStorage)
+- ✅ 계약서 작성 모달 (직원 정보 자동 로드)
+- ✅ 공지사항 (Firestore 연동)
+- ✅ 매장 관리 (localStorage)
 
-**총 5개 HTML 파일 (핵심 페이지만 유지)**
+### 2️⃣ **직원 페이지**
+- ✅ 출근/퇴근 기능 (Firestore `attendance` 컬렉션)
+- ✅ 근무내역 조회 (월별 필터링)
+- ✅ 급여 자동 계산 (기본급, 주휴수당, 4대보험, 소득세)
+- ✅ 계약서 조회 및 서명
+- ✅ 공지사항 조회
+- ✅ 서류 관리 (통장사본, 보건증)
 
----
-
-## ✅ 완료된 기능
-
-### 1️⃣ **메인 랜딩 페이지** (`index.html`)
-- ✅ 관리자/직원 선택 카드 UI
-- ✅ 직원 가입하기 링크
-- ✅ 반응형 디자인 (브라운/베이지 테마)
-- ✅ 모든 페이지로 연결
-
-### 2️⃣ **관리자 대시보드** (`admin-dashboard.html`)
-- ✅ Firebase Authentication 로그인
-- ✅ 8개 탭 관리 시스템
-  - 📊 대시보드 (총 직원 수, 오늘 출근, 승인 대기, 미서명 계약서)
-  - 👥 직원 관리 (Firestore 연동)
-  - 📋 근태 관리
-  - 💰 급여 관리
-  - ✔️ 승인 관리
-  - 📝 계약서 관리
-  - 📢 공지사항
-  - 🏪 매장 관리 (localStorage)
-- ✅ 계약서 작성 모달 (3단계: 기본정보 → 근무조건 → 미리보기)
-- ✅ 실시간 Firestore 직원 목록 조회
-- ✅ 더미 데이터 (김민수 직원)
-- ✅ 메인으로 돌아가기 링크
-
-### 3️⃣ **직원 페이지** (`employee.html`) ⭐ **NEW! 완전 리팩토링**
-- ✅ Firebase Authentication 로그인 연동
-- ✅ **출근/퇴근 기능 실제 작동** (Firestore `attendance` 컬렉션)
-- ✅ **근무내역 실시간 조회** (Firestore 연동)
-- ✅ **급여 자동 계산** (근무 기록 기반, 주휴수당/4대보험/소득세 자동 계산)
-- ✅ **계약서 조회 및 서명** (Firestore `contracts` 컬렉션)
-- ✅ **공지사항 실시간 조회** (Firestore `notices` 컬렉션)
-- ✅ **서류 관리** (통장사본, 보건증 - Firestore `employee_docs` 컬렉션)
-- ✅ localStorage 완전 제거, Firestore 영구 저장
-- ✅ 메인으로 돌아가기 링크
-
-### 4️⃣ **직원 가입 페이지** (`employee-register.html`)
+### 3️⃣ **직원 가입**
 - ✅ Firebase Authentication 계정 생성
 - ✅ Firestore 직원 정보 저장
-- ✅ 주민등록번호 입력 (13자리 자동 하이픈)
-- ✅ 매장 선택 (localStorage 연동)
-- ✅ 이메일/비밀번호 기반 로그인
-- ✅ 입력 검증 및 에러 처리
-- ✅ 메인으로 돌아가기 링크
-
-### 5️⃣ **계약서 서명 페이지** (`contract-sign.html`)
-- ✅ URL 파라미터로 계약서 ID 전달
-- ✅ Firestore에서 계약서 데이터 로드
-- ✅ Canvas 기반 서명 기능
-- ✅ 서명 완료 시 Firestore 업데이트
+- ✅ 주민등록번호 입력 및 검증
+- ✅ 매장 선택 및 직급 설정
 
 ---
 
-## 🔥 Firebase 연동 상태
+## 🔥 Firebase 구조
 
-### 프로젝트 정보
-- **Project ID**: `abcdc-staff-system`
-- **Auth Domain**: `abcdc-staff-system.firebaseapp.com`
-- **SDK Version**: 9.22.0 (compat 모드)
+### Firestore 컬렉션
+- `users` - 직원 정보
+- `employees` - 직원 목록 (관리자용)
+- `attendance` - 출퇴근 기록
+- `contracts` - 계약서 (미서명)
+- `signedContracts` - 서명된 계약서
+- `salaries` - 급여 지급 내역
+- `notices` - 공지사항
+- `employee_docs` - 직원 서류
+- `stores` - 매장 정보
 
-### 사용 중인 Firebase 서비스
-1. **Authentication** (이메일/비밀번호)
-   - 관리자 로그인 (admin-dashboard.html)
-   - 직원 가입/로그인 (employee-register.html)
-   
-2. **Firestore Database** ✅ **영구 저장 (2025-01-31 업그레이드)**
-   - `contracts` 컬렉션: 계약서 (영구 저장)
-   - `signedContracts` 컬렉션: 서명된 계약서
-   - `stores` 컬렉션: 매장 정보
-   - `notices` 컬렉션: 공지사항
-   - `employee_docs` 컬렉션: 직원 서류 (통장사본, 보건증)
-   - `users` 컬렉션: 직원 정보
-   
-3. **자동 데이터 정리 시스템** ✅ **NEW!**
-   - 1년 이상 지난 데이터 자동 삭제
-   - 용량 950MB 초과 시 오래된 데이터부터 삭제
-   - 24시간마다 자동 실행
-   
-### 데이터 구조
+### Firestore 인덱스 (필수)
+**다음 인덱스가 생성되어 있어야 합니다:**
 
-#### `users` / `employees` 컬렉션
-```javascript
-{
-  uid: "Firebase Auth UID",
-  email: "minsu@example.com",
-  name: "김민수",
-  birth: "900315-1234567",  // 주민등록번호
-  phone: "010-1234-5678",
-  address: "경기도 부천시 원미구",
-  store: "부천시청점",
-  position: "바리스타",
-  userType: "employee" | "admin" | "manager",
-  status: "active" | "inactive",
-  createdAt: Timestamp,
-  updatedAt: Timestamp
-}
-```
+| 컬렉션 | 필드 1 | 필드 2 | 정렬 | 용도 |
+|--------|--------|--------|------|------|
+| `attendance` | `uid` | `date` | desc | 직원: 근무내역 조회 |
+| `attendance` | `uid` | `date` | asc | 직원: 급여 계산 |
+| `attendance` | `date` | - | desc | 관리자: 전체 근무기록 |
+| `contracts` | `employeeUid` | `createdAt` | desc | 직원: 계약서 조회 |
+| `salaries` | `month` | - | desc | 관리자: 급여 목록 |
+
+**인덱스 생성 방법:**
+1. Firebase Console → Firestore Database → 인덱스
+2. "복합 인덱스 만들기" 클릭
+3. 위 표의 정보대로 입력하여 생성
 
 ---
 
-## 💾 데이터 저장 전략 (2025-01-31 업그레이드)
+## 🐛 최근 수정 내역 (2025-02-01)
 
-### ✅ 이중 저장 방식 (Firestore + localStorage)
+### ✅ 수정 완료된 문제들
 
-**Firestore (메인 저장소 - 영구)**
-- 모든 데이터를 Firestore에 먼저 저장
-- 브라우저 변경/캐시 삭제에도 데이터 유지
-- 모든 기기에서 동일한 데이터 조회 가능
-- **완전 무료** (무료 플랜으로 충분)
+#### 1. **관리자 페이지 - 근무기록 월별 필터링**
+- ❌ 문제: 11월 조회 시 10월 데이터도 함께 표시됨
+- ✅ 해결: `loadAttendanceList()` 함수에 월 필터 및 매장 필터 추가
+- 파일: `admin-dashboard.html` (line 1557-1621)
 
-**localStorage (캐시 - 백업)**
-- Firestore 데이터를 캐시로 저장
-- 오프라인에서도 최근 데이터 조회 가능
-- 빠른 로딩 속도
-- Firestore 장애 시 백업으로 사용
+#### 2. **관리자 페이지 - 급여 목록 표시**
+- ❌ 문제: 급여 탭에서 데이터가 표시되지 않음
+- ✅ 해결: `loadSalaryList()` 함수를 Firestore 연동으로 재작성
+- 파일: `admin-dashboard.html` (line 1623-1652)
+- 참고: 급여 데이터는 Firestore `salaries` 컬렉션에서 조회 (관리자가 직접 등록 필요)
 
-### 데이터 우선순위
-1. **저장 시**: Firestore 먼저 저장 → localStorage 캐시
-2. **로드 시**: Firestore 먼저 읽기 → 실패 시 localStorage
-3. **삭제 시**: Firestore와 localStorage 모두 삭제
+#### 3. **계약서 작성 - 직원 선택 오류 메시지**
+- ❌ 문제: 직원 선택 시 "Cannot read properties of null" 오류
+- ✅ 해결: `loadEmployeeInfo()` 함수에 null 체크 추가, alert 제거
+- 파일: `admin-dashboard.html` (line 2787-2862)
+- 동작: 오류 시 콘솔 로그만 남기고 조용히 처리
 
-### 자동 정리 정책
-- **1년 경과 데이터**: 자동 삭제
-- **용량 초과 (950MB)**: 오래된 데이터부터 자동 삭제
-- **실행 주기**: 24시간마다 자동
-- **수동 실행**: 관리자 대시보드에서 가능
+#### 4. **계약서 작성 - 회사 정보 검증 개선**
+- ❌ 문제: 회사 정보가 입력되어 있어도 계속 요구함
+- ✅ 해결: `validateForm()` 함수 수정 - 회사 선택 또는 직접 입력 중 하나만 있으면 통과
+- 파일: `admin-dashboard.html` (line 3250-3290)
 
-### Firestore 컬렉션 구조
-
-#### 1. `contracts` (계약서)
-```javascript
-{
-  id: "C20250130...",
-  employeeName: "김민수",
-  employeeBirth: "900315-1234567",
-  contractType: "정규직",
-  startDate: "2025-01-01",
-  endDate: "2025-12-31",
-  createdAt: "2025-01-30T...",
-  // ... 기타 계약 조건
-}
-```
-
-#### 2. `signedContracts` (서명)
-```javascript
-{
-  id: "C20250130...",
-  signedAt: "2025-01-30T...",
-  signature: "data:image/png;base64,..."
-}
-```
-
-#### 3. `stores` (매장)
-```javascript
-{
-  id: "1",
-  name: "부천시청점",
-  address: "경기도 부천시 원미구",
-  phone: "032-123-4567",
-  ceo: "홍길동",
-  businessNumber: "123-45-67890",
-  ceoSignature: "data:image/png;base64,...",
-  createdAt: "2025-01-30T..."
-}
-```
-
-#### 4. `notices` (공지사항)
-```javascript
-{
-  id: "N1706678400000",
-  title: "공지사항 제목",
-  content: "공지사항 내용",
-  important: true,
-  createdAt: "2025-01-30T...",
-  updatedAt: "2025-01-31T..."
-}
-```
+#### 5. **직원 페이지 - 급여 조회**
+- ❌ 문제: 급여 상세내역이 표시되지 않음
+- ✅ 원인: Firestore 인덱스 부족 (이미 생성됨)
+- ✅ 해결: 인덱스 생성 완료 (`attendance` 컬렉션: `uid` + `date` asc)
+- 파일: `js/employee.js` (line 458-652) - 코드는 정상, 인덱스만 필요했음
 
 ---
 
-## 🚧 개발 중인 기능
+## 📋 현재 작동 상태
 
-### 우선순위 높음
-- ⏳ 관리자 대시보드 근태 관리 기능 강화
-- ⏳ 관리자 대시보드 급여 관리 기능 강화
-- ⏳ 승인 관리 워크플로우
+### ✅ 정상 작동하는 기능
+- 직원 가입 및 로그인
+- 출퇴근 기록 (Firestore 저장)
+- 근무내역 조회 (월별 필터링)
+- 급여 자동 계산 (근무 기록 기반)
+- 계약서 조회 및 서명
+- 공지사항 조회
+- 관리자 대시보드 - 직원 관리
+- 관리자 대시보드 - 근무기록 (월별/매장별 필터)
+- 관리자 대시보드 - 계약서 작성 (직원 정보 자동 로드)
 
-### 우선순위 중간
-- ⏳ 관리자 계약서 작성 Firestore 연동
-- ⏳ 매장 관리 Firestore 연동
-
-### 우선순위 낮음
-- ⏳ Google Apps Script 백엔드 연동
-- ⏳ 스프레드시트 동기화
-- ⏳ 알림 시스템 (이메일/SMS)
-
----
-
-## 🎨 디자인 시스템
-
-### 컬러 테마 (브라운/베이지)
-```css
---primary-color: #8b7355;      /* 메인 브라운 */
---primary-dark: #6b5d4f;       /* 다크 브라운 */
---bg-light: #f5f1e8;           /* 배경 베이지 */
---bg-white: #fdfcfa;           /* 카드 백그라운드 */
---text-primary: #6b5d4f;       /* 주요 텍스트 */
---text-secondary: #9b8a76;     /* 보조 텍스트 */
---border-color: #e8dfd0;       /* 테두리 */
---success-color: #7a9b7a;      /* 성공 */
---warning-color: #d4a574;      /* 경고 */
---danger-color: #c67b7b;       /* 위험 */
-```
-
-**✅ 모든 페이지에서 동일한 CSS 변수 사용**
-
-### 반응형 브레이크포인트
-- 모바일: `< 640px`
-- 태블릿: `640px ~ 768px`
-- 데스크톱: `> 768px`
-
----
-
-## 🔐 보안 및 권한 관리 (2025-01-31 업그레이드)
-
-### ✅ 구현 완료
-- ✅ Firebase Authentication 사용
-- ✅ **Firestore Security Rules 적용** (역할 기반 접근 제어)
-- ✅ 관리자 전용 기능 분리
-- ✅ 직원 데이터 본인만 접근 가능
-
-### Firestore 보안 규칙
-
-**파일**: `firestore.rules`
-
-**규칙**:
-```javascript
-// 관리자 (admin@mannamsalon.com): 모든 권한
-// 직원: 본인 데이터만 읽기/쓰기
-// 미인증: 접근 불가
-
-contracts/          → 관리자: 모든 권한, 직원: 본인 계약서만 읽기
-signedContracts/    → 관리자: 모든 권한, 직원: 서명 생성 가능
-stores/             → 관리자: 쓰기, 모든 인증 사용자: 읽기
-notices/            → 관리자: 쓰기, 모든 인증 사용자: 읽기
-employee_docs/      → 관리자: 모든 권한, 직원: 본인 서류만
-users/              → 관리자: 모든 권한, 직원: 본인 정보만
-```
-
-### ⚠️ 개선 필요 사항
-1. 주민등록번호 암호화 (AES-256) - 현재 평문 저장
-2. HTTPS 강제 적용
-3. 세션 타임아웃 설정
-4. 비밀번호 정책 강화 (최소 8자리, 특수문자 포함)
-5. 계약서 PDF 암호화
-
----
-
-## 📱 테스트 계정
-
-### 관리자 계정
-- Email: (Firebase Console에서 생성 필요)
-- Password: (Firebase Console에서 생성 필요)
-
-### 테스트 직원
-- 이름: 김민수, 이지은, 박서준, 최영희, 정수민, 강호동
-- (직원 페이지에서 이름만으로 로그인 가능)
-
-### 더미 데이터
-- 직원: 김민수 (부천시청점, 바리스타)
-  - 주민등록번호: 900315-1234567
-  - 연락처: 010-1234-5678
-  - 이메일: minsu@example.com
+### ⏳ 제한적 작동 (데이터 입력 필요)
+- **급여 목록** (관리자 페이지)
+  - Firestore `salaries` 컬렉션에 데이터가 있어야 표시됨
+  - 현재는 관리자가 직접 등록해야 함
+  - 향후 자동 계산 및 저장 기능 추가 예정
 
 ---
 
 ## 🚀 배포 방법
 
-### Genspark 배포
-1. **Publish 탭** 클릭
-2. 자동 배포 완료
-3. 생성된 URL 확인
+### Cloudflare Pages 배포
+```bash
+# Git push 시 자동 배포
+git add .
+git commit -m "Update"
+git push origin main
+```
 
-### 주의사항
-- ✅ 모든 HTML 파일이 루트에 위치해야 함
-- ✅ 상대 경로 사용 (`admin-dashboard.html`, `employee.html`)
-- ✅ Firebase Config는 클라이언트 사이드에 노출됨 (보안 규칙으로 제어)
+Cloudflare Pages가 자동으로 감지하여 1-2분 내에 배포 완료
+
+---
+
+## 🔐 보안
+
+### Firestore Security Rules
+**파일**: `firestore.rules`
+
+**주요 규칙**:
+- `users`: 본인만 읽기/쓰기, 회원가입 시 생성 가능
+- `employees`: 모든 인증 사용자 읽기, 회원가입 시 본인 정보 생성 가능
+- `attendance`: 모든 인증 사용자 읽기, 본인만 생성/수정
+- `contracts`: 본인 계약서만 읽기, 관리자만 쓰기
+- `salaries`: 관리자만 읽기/쓰기
+- `notices`: 모든 인증 사용자 읽기, 관리자만 쓰기
+
+**규칙 배포 방법**:
+Firebase Console → Firestore Database → 규칙 탭 → `firestore.rules` 내용 붙여넣기 → 게시
 
 ---
 
 ## 🛠️ 기술 스택
 
-- **Frontend**: HTML5, CSS3 (CSS Variables), Vanilla JavaScript
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
 - **Backend**: Firebase (Authentication, Firestore)
-- **Storage**: localStorage (계약서, 매장 정보)
-- **Design**: 커스텀 CSS (브라운/베이지 테마)
-- **Icons**: Emoji (☕, 👨‍💼, 👤, 📝 등)
-
----
-
-## 🧹 업데이트 이력
-
-### 2025-02-01 ⭐ **직원 페이지 완전 리팩토링**
-- ✅ **employee.html 리팩토링**
-  - Firebase SDK 중복 제거 (HTML 내부 스크립트 → 외부 JS 파일)
-  - 코드 일관성 개선
-  
-- ✅ **employee.js 완전 재작성 (Firestore 완전 연동)**
-  - localStorage 완전 제거, Firestore 영구 저장으로 전환
-  - 출퇴근 기능: Firestore `attendance` 컬렉션 실시간 연동
-  - 근무내역 조회: Firestore에서 실시간 조회
-  - 급여 자동 계산: 근무 기록 기반 (기본급, 주휴수당, 4대보험, 소득세)
-  - 계약서 조회: Firestore `contracts`/`signedContracts` 컬렉션
-  - 공지사항: Firestore `notices` 컬렉션 (중요/일반 분리)
-  - 서류 관리: Firestore `employee_docs` 컬렉션 (통장사본, 보건증)
-  
-- ✅ **데이터 영구 저장 및 실시간 동기화**
-  - 모든 데이터가 Firestore에 영구 저장됨
-  - 브라우저 캐시 삭제해도 데이터 유지
-  - 모든 기기에서 동일한 데이터 조회 가능
-
-### 2025-01-31 (Firebase 영구 저장 + 자동 정리)
-- ✅ **Firestore 기반 영구 저장 구현**
-  - 계약서, 매장, 공지사항 → Firestore 우선 저장
-  - localStorage는 캐시로만 사용
-  - Firestore 장애 시 localStorage 백업 사용
-  
-- ✅ **자동 데이터 정리 시스템**
-  - `firestore-utils.js` 추가
-  - 1년 경과 데이터 자동 삭제
-  - 용량 950MB 초과 시 오래된 데이터부터 삭제
-  - 24시간마다 자동 실행
-  
-- ✅ **보안 규칙 설정**
-  - `firestore.rules` 추가
-  - 역할 기반 접근 제어 (RBAC)
-  - 관리자/직원 권한 분리
-  
-- ✅ **관리자 대시보드 업그레이드**
-  - 데이터 관리 섹션 추가
-  - 용량 확인, 정리 미리보기, 자동 정리 실행
-  - localStorage → Firestore 마이그레이션 UI
-  - 로컬 백업 기능
-  
-- ✅ **공지사항 기능 완료**
-  - 관리자: 작성/수정/삭제
-  - 직원: 조회 (중요 공지사항 상단 고정)
-  - Firestore 영구 저장
-
-### 2025-01-30 (대규모 리팩토링)
-- ✅ 불필요한 파일 8개 삭제
-  - contract.html, contract-modal.html, contract-modal-content.html
-  - admin.html, login.html
-  - firebase-test.html, index-firebase-test.html, index-original.html
-- ✅ admin-dashboard.html "직원 추가" 버튼 제거
-- ✅ Firebase Config 통일 검증 (2개 파일)
-- ✅ Firebase SDK 버전 통일 확인 (9.22.0)
-- ✅ CSS 변수 통일 검증 (5개 파일)
-- ✅ JavaScript 함수 중복 검사 (중복 없음 확인)
-- ✅ 페이지 간 내비게이션 로직 검증
-- ✅ 모든 페이지에 "메인으로 돌아가기" 링크 확인
-
-### 2025-01-30 (초기)
-- ✅ 멀티페이지 구조로 복원 (SPA 구조 제거)
-- ✅ 모든 페이지에 "메인으로 돌아가기" 링크 추가
-- ✅ index.html 간소화 (4.3KB)
-- ✅ 페이지 간 링크 정상화
-
-### 2025-01-29
-- ✅ Firebase 연동 완료
-- ✅ 직원 가입 기능 구현
-- ✅ 계약서 서명 기능 추가
-- ✅ 더미 데이터 (김민수) 추가
-
----
-
-## 🎯 다음 단계
-
-### 즉시 필요 (배포 전)
-1. **Firestore 보안 규칙 배포** ⚠️ **필수!**
-   - Firebase Console → Firestore Database → 규칙
-   - `firestore.rules` 파일 내용 붙여넣기
-   - 게시 버튼 클릭
-   - **상세 가이드**: `FIREBASE_SETUP.md` 참고
-
-2. **localStorage → Firestore 마이그레이션**
-   - 관리자 대시보드 → 데이터 관리
-   - "🔄 지금 마이그레이션" 버튼 클릭
-   - 기존 계약서/공지사항 이동
-
-### 기능 개발
-3. **직원 페이지 실제 기능 구현**
-   - 출근/퇴근 버튼 작동
-   - 근무내역 Firestore 연동
-   - 급여조회 API 연동
-
-4. **주민등록번호 암호화** (AES-256)
-5. **Google Apps Script 연동** (스프레드시트 동기화)
-6. **알림 시스템** (계약서 서명 요청, 공지사항 업데이트)
+- **Hosting**: Cloudflare Pages
+- **Design**: CSS Variables (브라운/베이지 테마)
 
 ---
 
@@ -459,4 +196,5 @@ users/              → 관리자: 모든 권한, 직원: 본인 정보만
 
 ---
 
-**✨ 리팩토링 완료! 깔끔한 5개 파일 구조**
+**✨ 최종 업데이트: 2025-02-01**
+**✅ 주요 버그 수정 완료, 안정적 운영 가능**
