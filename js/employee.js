@@ -647,21 +647,14 @@ async function loadContracts() {
   }
   
   try {
-    console.log('📝 계약서 조회:', { uid: currentUser.uid });
-    
-    // Firestore에서 현재 사용자의 계약서 조회
-    const snapshot = await db.collection('contracts')
-      .where('employeeUid', '==', currentUser.uid)
-      .orderBy('createdAt', 'desc')
-      .get();
-    
-    if (snapshot.empty) {
-      document.getElementById('contractContent').innerHTML = 
-        '<div class="alert alert-info">📄 아직 작성된 계약서가 없습니다.<br><br>관리자가 계약서를 작성하면 여기에서 확인하고 서명할 수 있습니다.</div>';
-      return;
-    }
+    console.log('📝 계약서 조회:', { uid: currentUser.uid, name: currentUser.name, birth: currentUser.birth });
     
     const contracts = [];
+    
+    // 1. Firestore에서 계약서 조회
+    const snapshot = await db.collection('contracts')
+      .where('employeeUid', '==', currentUser.uid)
+      .get();
     
     for (const doc of snapshot.docs) {
       const contractData = doc.data();
@@ -678,6 +671,48 @@ async function loadContracts() {
         signedAt: isSigned ? signedDoc.data().signedAt : null
       });
     }
+    
+    // 2. localStorage에서 계약서 조회 (임시 - 마이그레이션 전까지)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('contract_C')) {
+        try {
+          const contractData = JSON.parse(localStorage.getItem(key));
+          const contractId = key.replace('contract_', '');
+          
+          // 현재 사용자의 계약서인지 확인 (이름과 생년월일로)
+          if (contractData.employeeName === currentUser.name && 
+              contractData.employeeBirth === currentUser.birth) {
+            
+            // 서명 상태 확인
+            const signedDoc = await db.collection('signedContracts').doc(contractId).get();
+            const isSigned = signedDoc.exists;
+            
+            contracts.push({
+              contractId: contractId,
+              ...contractData,
+              status: isSigned ? '서명완료' : '서명대기',
+              signedAt: isSigned ? signedDoc.data().signedAt : null
+            });
+          }
+        } catch (e) {
+          console.error('계약서 파싱 오류:', key, e);
+        }
+      }
+    }
+    
+    if (contracts.length === 0) {
+      document.getElementById('contractContent').innerHTML = 
+        '<div class="alert alert-info">📄 아직 작성된 계약서가 없습니다.<br><br>관리자가 계약서를 작성하면 여기에서 확인하고 서명할 수 있습니다.</div>';
+      return;
+    }
+    
+    // 날짜 기준 정렬 (최신순)
+    contracts.sort((a, b) => {
+      const dateA = a.savedAt ? new Date(a.savedAt) : new Date(0);
+      const dateB = b.savedAt ? new Date(b.savedAt) : new Date(0);
+      return dateB - dateA;
+    });
     
     renderContracts(contracts);
     
