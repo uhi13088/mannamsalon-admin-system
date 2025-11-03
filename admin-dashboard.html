@@ -2095,29 +2095,36 @@
       document.getElementById('noticeModal').style.display = 'flex';
     }
 
-    function showEditNoticeModal(noticeId) {
-      const notices = JSON.parse(localStorage.getItem('notices') || '[]');
-      const notice = notices.find(n => n.id === noticeId);
-      
-      if (!notice) {
-        alert('공지사항을 찾을 수 없습니다.');
-        return;
+    async function showEditNoticeModal(noticeId) {
+      try {
+        // Firestore에서 공지사항 가져오기
+        const noticeDoc = await firebase.firestore().collection('notices').doc(noticeId).get();
+        
+        if (!noticeDoc.exists) {
+          alert('공지사항을 찾을 수 없습니다.');
+          return;
+        }
+        
+        const notice = noticeDoc.data();
+        
+        document.getElementById('noticeModalTitle').textContent = '✏️ 공지사항 수정';
+        document.getElementById('editNoticeId').value = noticeId;
+        document.getElementById('noticeTitle').value = notice.title || '';
+        document.getElementById('noticeContent').value = notice.content || '';
+        document.getElementById('noticeImportant').checked = notice.important || false;
+        document.getElementById('deleteNoticeBtn').style.display = 'block';
+        document.getElementById('noticeModal').style.display = 'flex';
+      } catch (error) {
+        console.error('❌ 공지사항 로드 실패:', error);
+        alert('공지사항을 불러오는데 실패했습니다.');
       }
-      
-      document.getElementById('noticeModalTitle').textContent = '✏️ 공지사항 수정';
-      document.getElementById('editNoticeId').value = notice.id;
-      document.getElementById('noticeTitle').value = notice.title;
-      document.getElementById('noticeContent').value = notice.content;
-      document.getElementById('noticeImportant').checked = notice.important || false;
-      document.getElementById('deleteNoticeBtn').style.display = 'block';
-      document.getElementById('noticeModal').style.display = 'flex';
     }
 
     function closeNoticeModal() {
       document.getElementById('noticeModal').style.display = 'none';
     }
 
-    function saveNotice() {
+    async function saveNotice() {
       const noticeId = document.getElementById('editNoticeId').value;
       const title = document.getElementById('noticeTitle').value.trim();
       const content = document.getElementById('noticeContent').value.trim();
@@ -2133,49 +2140,50 @@
         return;
       }
       
-      let notices = JSON.parse(localStorage.getItem('notices') || '[]');
-      
-      if (noticeId) {
-        // 수정
-        const index = notices.findIndex(n => n.id === noticeId);
-        if (index >= 0) {
-          notices[index] = { 
-            ...notices[index], 
-            title, 
-            content, 
-            important,
-            updatedAt: new Date().toISOString()
-          };
+      try {
+        const noticeData = {
+          title,
+          content,
+          important
+        };
+        
+        if (noticeId) {
+          // 수정 - Firestore 업데이트
+          noticeData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+          await firebase.firestore().collection('notices').doc(noticeId).update(noticeData);
+          console.log('✅ 공지사항 수정 완료:', noticeId);
+        } else {
+          // 추가 - Firestore 신규 생성
+          noticeData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+          const docRef = await firebase.firestore().collection('notices').add(noticeData);
+          console.log('✅ 공지사항 추가 완료:', docRef.id);
         }
-      } else {
-        // 추가
-        const newId = 'N' + Date.now();
-        notices.push({ 
-          id: newId, 
-          title, 
-          content, 
-          important,
-          createdAt: new Date().toISOString()
-        });
+        
+        closeNoticeModal();
+        loadNotices();
+        alert('✅ 공지사항이 저장되었습니다.');
+      } catch (error) {
+        console.error('❌ 공지사항 저장 실패:', error);
+        alert('공지사항 저장에 실패했습니다.');
       }
-      
-      localStorage.setItem('notices', JSON.stringify(notices));
-      closeNoticeModal();
-      loadNotices();
-      alert('✅ 공지사항이 저장되었습니다.');
     }
 
-    function deleteNoticeConfirm(noticeId) {
+    async function deleteNoticeConfirm(noticeId) {
       if (!confirm('⚠️ 정말 이 공지사항을 삭제하시겠습니까?')) {
         return;
       }
       
-      let notices = JSON.parse(localStorage.getItem('notices') || '[]');
-      notices = notices.filter(n => n.id !== noticeId);
-      
-      localStorage.setItem('notices', JSON.stringify(notices));
-      loadNotices();
-      alert('✅ 공지사항이 삭제되었습니다.');
+      try {
+        // Firestore에서 삭제
+        await firebase.firestore().collection('notices').doc(noticeId).delete();
+        console.log('✅ 공지사항 삭제 완료:', noticeId);
+        
+        loadNotices();
+        alert('✅ 공지사항이 삭제되었습니다.');
+      } catch (error) {
+        console.error('❌ 공지사항 삭제 실패:', error);
+        alert('공지사항 삭제에 실패했습니다.');
+      }
     }
 
     function deleteNotice() {
