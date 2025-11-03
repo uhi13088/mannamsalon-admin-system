@@ -525,7 +525,7 @@
         </div>
         <div class="form-group">
           <label for="noticeContent">내용 *</label>
-          <textarea id="noticeContent" placeholder="공지사항 내용을 입력하세요" required style="min-height: 300px; resize: vertical;"></textarea>
+          <textarea id="noticeContent" placeholder="공지사항 내용을 입력하세요" required style="width: 100%; min-height: 300px; resize: vertical; box-sizing: border-box;"></textarea>
         </div>
         <div class="form-group">
           <label style="display: flex; align-items: center; cursor: pointer;">
@@ -1812,7 +1812,8 @@
     };
 
     function loadNotice() {
-      // 공지사항 기능 추후 구현
+      // loadNotices() 호출
+      loadNotices();
     }
 
     // 매장 관리 함수들
