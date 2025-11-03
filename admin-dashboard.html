@@ -3668,12 +3668,18 @@
         // Firestore에서 저장된 계약서 가져오기
         const snapshot = await firebase.firestore().collection('savedContracts')
           .where('createdBy', '==', firebase.auth().currentUser.uid)
-          .orderBy('createdAt', 'desc')
           .get();
         
         savedContracts = [];
         snapshot.forEach(doc => {
           savedContracts.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // 클라이언트에서 날짜 기준 정렬 (최신순)
+        savedContracts.sort((a, b) => {
+          const dateA = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+          const dateB = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+          return dateB - dateA; // 내림차순
         });
         
         if (savedContracts.length === 0) {
