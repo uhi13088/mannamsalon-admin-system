@@ -2415,8 +2415,7 @@
               address: '경기도 부천시 부천역'
             }
           ];
-          localStorage.setItem('companies', JSON.stringify(stores));
-          console.log('✅ 기본 회사 정보 생성 완료');
+          // companies는 제거됨 - stores Firestore 사용
         }
         
         storeSelect.innerHTML = '<option value="">매장을 선택하세요</option>';
@@ -2922,39 +2921,13 @@
       }
     }
 
-    // 회사 정보
+    // 회사 정보 - 더 이상 사용하지 않음 (stores로 통합)
     function loadCompanyList() {
-      console.log('🏢 회사 목록 로드 시작');
-      const saved = localStorage.getItem('companies');
-      companies = saved ? JSON.parse(saved) : [
-        { 
-          id: '1', 
-          name: '(주)ABC디저트센터', 
-          ceo: '홍길동', 
-          businessNumber: '123-45-67890',
-          phone: '032-123-4567',
-          address: '경기도 부천시 원미구 74'
-        }
-      ];
-      
-      const select = document.getElementById('companySelect');
-      if (!select) return;
-      select.innerHTML = '<option value="">선택하세요</option>';
-      
-      companies.forEach(company => {
-        const option = document.createElement('option');
-        option.value = company.id;
-        option.textContent = company.name;
-        select.appendChild(option);
-      });
-      
-      if (companies.length > 0) {
-        select.value = companies[0].id;
-        loadCompanyInfo();
-      }
+      console.log('ℹ️ loadCompanyList는 더 이상 사용되지 않습니다. stores를 사용하세요.');
+      // companies는 제거됨 - stores Firestore 사용
     }
 
-    function loadStoreInfoToContract() {
+    async function loadStoreInfoToContract() {
       const storeSelect = document.getElementById('storeSelect');
       if (!storeSelect) {
         console.log('ℹ️ storeSelect 요소를 찾을 수 없음');
@@ -2972,16 +2945,21 @@
         return;
       }
       
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
-      const store = stores.find(s => s.id === storeId);
-      
-      if (store) {
-        document.getElementById('companyCEO').value = store.ceo || '';
-        document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
-        document.getElementById('companyPhone').value = store.phone || '';
-        document.getElementById('companyAddress').value = store.address || '';
-        document.getElementById('workStore').value = store.name || '';
-        updatePreview();
+      try {
+        // Firestore에서 매장 정보 가져오기
+        const storeDoc = await firebase.firestore().collection('stores').doc(storeId).get();
+        
+        if (storeDoc.exists) {
+          const store = storeDoc.data();
+          document.getElementById('companyCEO').value = store.ceo || '';
+          document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
+          document.getElementById('companyPhone').value = store.phone || '';
+          document.getElementById('companyAddress').value = store.address || '';
+          document.getElementById('workStore').value = store.name || '';
+          updatePreview();
+        }
+      } catch (error) {
+        console.error('❌ 매장 정보 로드 실패:', error);
       }
     }
 
@@ -2991,21 +2969,13 @@
     }
 
     function showAddCompanyModal() {
-      document.getElementById('companyModalTitle').textContent = '🏢 회사 추가';
-      document.getElementById('editCompanyId').value = '';
-      document.getElementById('deleteCompanyBtnContainer').style.display = 'none';
-      document.getElementById('addCompanyModal').style.display = 'flex';
+      // companies는 제거됨 - 매장 관리에서 관리하세요
+      alert('ℹ️ 회사/매장 정보는 "매장 관리" 탭에서 관리할 수 있습니다.');
     }
 
     function showEditCompanyModal() {
-      const companyId = document.getElementById('companySelect').value;
-      
-      if (!companyId) {
-        alert('⚠️ 수정할 회사를 먼저 선택해주세요.');
-        return;
-      }
-      
-      const company = companies.find(c => c.id === companyId);
+      // companies는 제거됨 - 매장 관리에서 관리하세요
+      alert('ℹ️ 회사/매장 정보는 "매장 관리" 탭에서 관리할 수 있습니다.');
       
       if (!company) {
         alert('⚠️ 회사 정보를 찾을 수 없습니다.');
@@ -3036,81 +3006,14 @@
     }
 
     function saveCompany() {
-      const name = document.getElementById('newCompanyName').value.trim();
-      const ceo = document.getElementById('newCompanyCEO').value.trim();
-      const businessNumber = document.getElementById('newCompanyBusinessNumber').value.trim();
-      const phone = document.getElementById('newCompanyPhone').value.trim();
-      const address = document.getElementById('newCompanyAddress').value.trim();
-      const editId = document.getElementById('editCompanyId').value;
-      
-      if (!name || !ceo || !businessNumber || !phone || !address) {
-        alert('⚠️ 모든 필수 항목을 입력해주세요.');
-        return;
-      }
-      
-      if (editId) {
-        const companyIndex = companies.findIndex(c => c.id === editId);
-        
-        if (companyIndex >= 0) {
-          companies[companyIndex] = {
-            id: editId,
-            name: name,
-            ceo: ceo,
-            businessNumber: businessNumber,
-            phone: phone,
-            address: address
-          };
-          
-          localStorage.setItem('companies', JSON.stringify(companies));
-          
-          loadCompanyList();
-          document.getElementById('companySelect').value = editId;
-          loadCompanyInfo();
-          closeAddCompanyModal();
-          
-          alert('✅ 회사 정보가 수정되었습니다.');
-        }
-      } else {
-        const newCompany = {
-          id: Date.now().toString(),
-          name: name,
-          ceo: ceo,
-          businessNumber: businessNumber,
-          phone: phone,
-          address: address
-        };
-        
-        companies.push(newCompany);
-        localStorage.setItem('companies', JSON.stringify(companies));
-        
-        loadCompanyList();
-        document.getElementById('companySelect').value = newCompany.id;
-        loadCompanyInfo();
-        closeAddCompanyModal();
-        
-        alert('✅ 회사가 추가되었습니다.');
-      }
+      // companies는 제거됨 - 매장 관리 사용
+      alert('ℹ️ 회사/매장 정보는 "매장 관리" 탭에서 관리할 수 있습니다.');
+      closeAddCompanyModal();
     }
 
     function deleteCompany() {
-      const editId = document.getElementById('editCompanyId').value;
-      
-      if (!editId) {
-        return;
-      }
-      
-      const company = companies.find(c => c.id === editId);
-      
-      if (!company) {
-        return;
-      }
-      
-      if (!confirm(`"${company.name}" 회사를 삭제하시겠습니까?\n\n⚠️ 이 회사로 작성된 계약서는 영향을 받지 않지만,\n새로운 계약서 작성 시 선택할 수 없게 됩니다.`)) {
-        return;
-      }
-      
-      companies = companies.filter(c => c.id !== editId);
-      localStorage.setItem('companies', JSON.stringify(companies));
+      // companies는 제거됨 - 매장 관리 사용
+      alert('ℹ️ 회사/매장 정보는 "매장 관리" 탭에서 관리할 수 있습니다.');
       
       closeAddCompanyModal();
       loadCompanyList();
