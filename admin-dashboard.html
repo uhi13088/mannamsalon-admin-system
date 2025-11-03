@@ -1554,10 +1554,70 @@
       setTimeout(() => closeSendLinkModal(), 500);
     }
 
-    function loadAttendanceList() {
+    async function loadAttendanceList() {
+      console.log('🔍 loadAttendanceList 호출됨');
+      
       const tbody = document.getElementById('attendanceTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">근무기록이 없습니다.</td></tr>';
+      if (!tbody) {
+        console.log('❌ attendanceTableBody 요소를 찾을 수 없습니다');
+        return;
+      }
+      
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보를 불러오는 중...</td></tr>';
+      
+      try {
+        console.log('🔍 Firestore 쿼리 시작: attendance 컬렉션');
+        
+        // Firestore에서 근태 데이터 가져오기
+        const attendanceSnapshot = await firebase.firestore().collection('attendance')
+          .orderBy('date', 'desc')
+          .limit(100)
+          .get();
+        
+        console.log('📊 조회 결과:', {
+          empty: attendanceSnapshot.empty,
+          size: attendanceSnapshot.size,
+          docs: attendanceSnapshot.docs.length
+        });
+        
+        if (attendanceSnapshot.empty) {
+          console.warn('⚠️ attendance 컬렉션이 비어있습니다');
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
+          return;
+        }
+        
+        const attendanceList = [];
+        attendanceSnapshot.forEach(doc => {
+          const data = doc.data();
+          console.log('📄 문서 데이터:', { id: doc.id, data });
+          attendanceList.push({ id: doc.id, ...data });
+        });
+        
+        console.log('✅ 총 근태 기록:', attendanceList.length);
+        
+        tbody.innerHTML = attendanceList.map(att => {
+          const statusClass = att.status === '정상' ? 'success' : 
+                              att.status === '지각' ? 'warning' : 
+                              att.status === '조퇴' ? 'info' : 'danger';
+          return `
+            <tr>
+              <td>${att.date || '-'}</td>
+              <td>${att.employeeName || att.name || '-'}</td>
+              <td>${att.store || '-'}</td>
+              <td>${att.clockIn || '-'}</td>
+              <td>${att.clockOut || '-'}</td>
+              <td>${att.workType || '정규근무'}</td>
+              <td><span class="badge badge-${statusClass}">${att.status || '정상'}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="alert('근태 ${att.id} 상세 기능은 추후 구현 예정')">상세</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('❌ 근태 목록 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger-color);">❌ 근태 정보를 불러오는데 실패했습니다.</td></tr>';
+      }
     }
 
     function loadSalaryList() {
