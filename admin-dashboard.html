@@ -608,6 +608,8 @@
       document.getElementById('mainScreen').classList.remove('hidden');
       // signedContracts 캐시 로드
       await loadSignedContractsCache();
+      // localStorage contracts 자동 마이그레이션
+      await migrateLocalStorageContracts();
       loadDashboard();
       switchTab('employees');
     }
@@ -624,6 +626,88 @@
       } catch (error) {
         console.error('❌ signedContracts 로드 실패:', error);
         signedContractsCache = [];
+      }
+    }
+
+    // localStorage contracts를 Firestore로 자동 마이그레이션
+    async function migrateLocalStorageContracts() {
+      console.log('🔄 localStorage contracts 마이그레이션 시작...');
+      
+      try {
+        let migratedCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+        
+        // localStorage에서 모든 contract 키 찾기
+        const contractKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('contract_C')) {
+            contractKeys.push(key);
+          }
+        }
+        
+        if (contractKeys.length === 0) {
+          console.log('✅ localStorage에 마이그레이션할 계약서가 없습니다.');
+          return;
+        }
+        
+        console.log(`📊 총 ${contractKeys.length}개의 localStorage 계약서 발견`);
+        
+        // 각 계약서 마이그레이션
+        for (const key of contractKeys) {
+          try {
+            const contractId = key.replace('contract_', '');
+            
+            // Firestore에 이미 존재하는지 확인
+            const docRef = firebase.firestore().collection('contracts').doc(contractId);
+            const docSnap = await docRef.get();
+            
+            if (docSnap.exists) {
+              console.log(`⏭️  건너뛰기: ${contractId} (이미 Firestore에 존재)`);
+              skippedCount++;
+              continue;
+            }
+            
+            // localStorage에서 데이터 가져오기
+            const contractData = JSON.parse(localStorage.getItem(key));
+            
+            // Firestore에 저장
+            await docRef.set({
+              ...contractData,
+              migratedFrom: 'localStorage',
+              migratedAt: new Date().toISOString()
+            });
+            
+            console.log(`✅ 마이그레이션 완료: ${contractId} (${contractData.employeeName})`);
+            migratedCount++;
+            
+            // localStorage에서 삭제
+            localStorage.removeItem(key);
+            console.log(`🗑️  localStorage에서 삭제: ${key}`);
+            
+          } catch (error) {
+            console.error(`❌ 마이그레이션 실패: ${key}`, error);
+            errorCount++;
+          }
+        }
+        
+        // 결과 요약
+        console.log('');
+        console.log('='.repeat(50));
+        console.log('📊 마이그레이션 완료 요약');
+        console.log('='.repeat(50));
+        console.log(`✅ 성공: ${migratedCount}개`);
+        console.log(`⏭️  건너뛰기: ${skippedCount}개 (이미 Firestore에 존재)`);
+        console.log(`❌ 실패: ${errorCount}개`);
+        console.log('='.repeat(50));
+        
+        if (migratedCount > 0) {
+          alert(`✅ localStorage 계약서 마이그레이션 완료!\n\n성공: ${migratedCount}개\n건너뛰기: ${skippedCount}개\n실패: ${errorCount}개`);
+        }
+        
+      } catch (error) {
+        console.error('❌ 마이그레이션 중 오류 발생:', error);
       }
     }
 
@@ -1115,27 +1199,16 @@
         const docRef = firebase.firestore().collection('contracts').doc(id);
         const docSnap = await docRef.get();
         
-        let contract = null;
-        
-        if (docSnap.exists) {
-          contract = docSnap.data();
-        } else {
-          // [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
-          const contractData = localStorage.getItem(`contract_${id}`);
-          if (contractData) {
-            contract = JSON.parse(contractData);
-          }
-        }
-        
-        if (!contract) {
+        if (!docSnap.exists) {
           alert('⚠️ 계약서를 찾을 수 없습니다.');
           return;
         }
         
-        // 같은 직원의 모든 계약서 찾기 (Firestore + localStorage)
+        const contract = docSnap.data();
+        
+        // 같은 직원의 모든 계약서 찾기 (Firestore만)
         const allContracts = [];
         
-        // 1. Firestore에서 찾기
         const snapshot = await firebase.firestore().collection('contracts').get();
         snapshot.forEach(doc => {
           const c = doc.data();
@@ -1147,33 +1220,6 @@
             });
           }
         });
-        
-        // 2. [하이브리드 모드] localStorage에서도 찾기
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('contract_C')) {
-            try {
-              const c = JSON.parse(localStorage.getItem(key));
-              const cId = key.replace('contract_', '');
-              
-              // 이미 Firestore에서 찾은 계약서는 건너뛰기
-              if (allContracts.some(ac => ac.id === cId)) {
-                continue;
-              }
-              
-              // 주민번호로 같은 직원 확인
-              if (c.employeeBirth === contract.employeeBirth && c.employeeName === contract.employeeName) {
-                allContracts.push({
-                  id: cId,
-                  data: c,
-                  createdAt: c.createdAt || Date.now()
-                });
-              }
-            } catch (e) {
-              console.warn('localStorage 계약서 읽기 오류:', e);
-            }
-          }
-        }
         
         // 날짜순 정렬 (최신순)
         allContracts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1716,7 +1762,7 @@
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">계약서를 불러오는 중...</td></tr>';
       
       try {
-        // Firestore에서 모든 계약서 로드
+        // Firestore에서 모든 계약서 로드 (localStorage 제거 완료)
         const snapshot = await firebase.firestore().collection('contracts').get();
         const allContracts = [];
         
@@ -1737,38 +1783,6 @@
             data: contractData
           });
         });
-        
-        // [하이브리드 모드] localStorage에서도 계약서 읽기 (마이그레이션 기간)
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('contract_C')) {
-            try {
-              const contractData = JSON.parse(localStorage.getItem(key));
-              const contractId = key.replace('contract_', '');
-              
-              // 이미 Firestore에 있는 계약서는 건너뛰기
-              if (allContracts.some(c => c.id === contractId)) {
-                continue;
-              }
-              
-              const signedContracts = signedContractsCache;
-              const isSigned = signedContracts.some(sc => sc.id === contractId);
-              
-              allContracts.push({
-                id: contractId,
-                name: contractData.employeeName,
-                birth: contractData.employeeBirth,
-                type: contractData.contractType,
-                period: `${contractData.startDate} ~ ${contractData.endDate}`,
-                createdAt: contractData.createdAt || Date.now(),
-                status: isSigned ? '서명완료' : '서명대기',
-                data: contractData
-              });
-            } catch (e) {
-              console.warn('localStorage 계약서 읽기 오류:', e);
-            }
-          }
-        }
         
         if (allContracts.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);"><p style="margin-bottom: 16px;">생성된 계약서가 없습니다.</p><button class="btn btn-primary" onclick="openContractPage()">+ 첫 계약서 작성하기</button></td></tr>';
@@ -1882,10 +1896,6 @@
         // Firestore에서 계약서 삭제
         await firebase.firestore().collection('contracts').doc(contractId).delete();
         console.log(`✅ Firestore contracts 삭제 완료: ${contractId}`);
-        
-        // [하이브리드 모드] localStorage에서도 제거 (있을 경우)
-        localStorage.removeItem(`contract_${contractId}`);
-        console.log(`✅ localStorage 계약서 삭제 완료: ${contractId}`);
         
         // signedContracts Firestore에서도 제거
         await firebase.firestore().collection('signedContracts').doc(contractId).delete();

@@ -80,19 +80,7 @@ async function loadContractData() {
       return;
     }
     
-    // 3. [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
-    console.log('⚠️ Firestore에 계약서가 없습니다. localStorage 확인...');
-    const storageKey = `contract_${contractId}`;
-    const savedData = localStorage.getItem(storageKey);
-    
-    if (savedData) {
-      contractData = JSON.parse(savedData);
-      console.log('✅ localStorage에서 계약서 데이터 로드 성공:', contractData.employeeName);
-      displayContract();
-      return;
-    }
-    
-    // 4. 둘 다 없으면 오류 표시
+    // 3. 계약서를 찾을 수 없음
     console.error('❌ 계약서 데이터를 찾을 수 없습니다');
     showError(`계약서를 찾을 수 없습니다.<br><br>
       <strong>계약서 ID:</strong> ${contractId}<br><br>

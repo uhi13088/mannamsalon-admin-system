@@ -675,39 +675,7 @@ async function loadContracts() {
       }
     }
     
-    // 2. [하이브리드 모드] localStorage에서 계약서 조회 (Firestore에 없는 것만)
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('contract_C')) {
-        try {
-          const contractData = JSON.parse(localStorage.getItem(key));
-          const contractId = key.replace('contract_', '');
-          
-          // 이미 Firestore에서 가져온 계약서는 건너뛰기
-          if (contracts.some(c => c.contractId === contractId)) {
-            continue;
-          }
-          
-          // 현재 사용자의 계약서인지 확인 (이름과 생년월일로)
-          if (contractData.employeeName === currentUser.name && 
-              contractData.employeeBirth === currentUser.birth) {
-            
-            // 서명 상태 확인
-            const signedDoc = await db.collection('signedContracts').doc(contractId).get();
-            const isSigned = signedDoc.exists;
-            
-            contracts.push({
-              contractId: contractId,
-              ...contractData,
-              status: isSigned ? '서명완료' : '서명대기',
-              signedAt: isSigned ? signedDoc.data().signedAt : null
-            });
-          }
-        } catch (e) {
-          console.error('계약서 파싱 오류:', key, e);
-        }
-      }
-    }
+
     
     if (contracts.length === 0) {
       document.getElementById('contractContent').innerHTML = 
