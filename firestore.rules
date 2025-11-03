@@ -56,6 +56,21 @@ service cloud.firestore {
                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // savedContracts 컬렉션: 임시 저장된 계약서 (작성 중)
+    match /savedContracts/{contractId} {
+      // 읽기: 본인이 작성한 계약서만 읽기 가능
+      allow read: if request.auth != null && 
+                     resource.data.createdBy == request.auth.uid;
+      
+      // 생성: 인증된 사용자가 자신의 문서 생성
+      allow create: if request.auth != null && 
+                       request.resource.data.createdBy == request.auth.uid;
+      
+      // 수정/삭제: 본인이 작성한 계약서만 가능
+      allow update, delete: if request.auth != null && 
+                               resource.data.createdBy == request.auth.uid;
+    }
+    
     // signedContracts 컬렉션: 서명된 계약서
     match /signedContracts/{contractId} {
       // 읽기: 모든 인증된 사용자

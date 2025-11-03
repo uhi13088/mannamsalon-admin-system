@@ -3573,7 +3573,7 @@
       document.getElementById('contractSaveName').value = '';
     }
 
-    function saveContract() {
+    async function saveContract() {
       const contractName = document.getElementById('contractSaveName').value.trim();
       
       if (!contractName) {
@@ -3628,58 +3628,90 @@
         savedAt: new Date().toISOString()
       };
       
-      const saved = localStorage.getItem('savedContracts');
-      savedContracts = saved ? JSON.parse(saved) : [];
-      
-      const existingIndex = savedContracts.findIndex(c => c.name === contractName);
-      if (existingIndex >= 0) {
-        if (!confirm('⚠️ 같은 이름의 계약서가 이미 존재합니다.\n덮어쓰시겠습니까?')) {
-          return;
+      try {
+        // Firestore에서 같은 이름의 계약서가 있는지 확인
+        const existingSnapshot = await firebase.firestore().collection('savedContracts')
+          .where('name', '==', contractName)
+          .where('createdBy', '==', firebase.auth().currentUser.uid)
+          .limit(1)
+          .get();
+        
+        if (!existingSnapshot.empty) {
+          if (!confirm('⚠️ 같은 이름의 계약서가 이미 존재합니다.\n덮어쓰시겠습니까?')) {
+            return;
+          }
+          // 기존 문서 업데이트
+          const existingDocId = existingSnapshot.docs[0].id;
+          await firebase.firestore().collection('savedContracts').doc(existingDocId).update({
+            ...contractData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          console.log('✅ 계약서 업데이트 완료:', existingDocId);
+        } else {
+          // 새 문서 생성
+          contractData.createdBy = firebase.auth().currentUser.uid;
+          contractData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+          const docRef = await firebase.firestore().collection('savedContracts').add(contractData);
+          console.log('✅ 계약서 저장 완료:', docRef.id);
         }
-        savedContracts[existingIndex] = contractData;
-      } else {
-        savedContracts.unshift(contractData);
+        
+        closeSaveContractModal();
+        alert('✅ 계약서가 저장되었습니다.');
+      } catch (error) {
+        console.error('❌ 계약서 저장 실패:', error);
+        alert('계약서 저장에 실패했습니다.');
       }
-      
-      localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
-      
-      closeSaveContractModal();
-      alert('✅ 계약서가 저장되었습니다.');
     }
 
     // 저장된 계약서 불러오기
-    function showLoadContractModal() {
-      const saved = localStorage.getItem('savedContracts');
-      savedContracts = saved ? JSON.parse(saved) : [];
-      
+    async function showLoadContractModal() {
       const listDiv = document.getElementById('savedContractsList');
-      
-      if (savedContracts.length === 0) {
-        listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">저장된 계약서가 없습니다.</p>';
-      } else {
-        listDiv.innerHTML = savedContracts.map((contract, index) => {
-          const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
-          const savedDate = new Date(contract.savedAt).toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          
-          return `
-            <div style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.backgroundColor='var(--bg-light)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='white';" onclick="loadSavedContract(${index})">
-              <div>
-                <div style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">📄 ${displayName}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">${savedDate}</div>
-              </div>
-              <button onclick="event.stopPropagation(); deleteSavedContract(${index});" style="padding: 6px 12px; background: var(--danger-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
-            </div>
-          `;
-        }).join('');
-      }
+      listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">계약서를 불러오는 중...</p>';
       
       document.getElementById('loadContractModal').style.display = 'flex';
+      
+      try {
+        // Firestore에서 저장된 계약서 가져오기
+        const snapshot = await firebase.firestore().collection('savedContracts')
+          .where('createdBy', '==', firebase.auth().currentUser.uid)
+          .orderBy('createdAt', 'desc')
+          .get();
+        
+        savedContracts = [];
+        snapshot.forEach(doc => {
+          savedContracts.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (savedContracts.length === 0) {
+          listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">저장된 계약서가 없습니다.</p>';
+        } else {
+          listDiv.innerHTML = savedContracts.map((contract, index) => {
+            const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
+            const savedDate = contract.savedAt ? new Date(contract.savedAt).toLocaleString('ko-KR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : '날짜 미상';
+            
+            return `
+              <div style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.backgroundColor='var(--bg-light)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='white';" onclick="loadSavedContract(${index})">
+                <div>
+                  <div style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">📄 ${displayName}</div>
+                  <div style="font-size: 13px; color: var(--text-secondary);">${savedDate}</div>
+                </div>
+                <button onclick="event.stopPropagation(); deleteSavedContract('${contract.id}', ${index});" style="padding: 6px 12px; background: var(--danger-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
+              </div>
+            `;
+          }).join('');
+        }
+        
+        console.log(`✅ ${savedContracts.length}개 저장된 계약서 로드 완료`);
+      } catch (error) {
+        console.error('❌ 계약서 목록 로드 실패:', error);
+        listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--danger-color);">계약서 목록을 불러오는데 실패했습니다.</p>';
+      }
     }
 
     function closeLoadContractModal() {
@@ -3690,10 +3722,17 @@
       const contract = savedContracts[index];
       
       if (confirm('현재 작성 중인 내용이 덮어씌워집니다. 계속하시겠습니까?')) {
-        document.getElementById('employeeSelect').value = contract.employeeId;
-        loadEmployeeInfo();
-        document.getElementById('companySelect').value = contract.companyId;
-        loadCompanyInfo();
+        // 직원 선택
+        if (contract.employeeId) {
+          document.getElementById('employeeSelect').value = contract.employeeId;
+          loadEmployeeInfo();
+        }
+        
+        // 매장 선택 (storeId 사용)
+        if (contract.storeId) {
+          document.getElementById('storeSelect').value = contract.storeId;
+          loadStoreInfoToContract();
+        }
         
         document.getElementById('contractType').value = contract.contractType;
         document.getElementById('workStore').value = contract.workStore;
@@ -3715,15 +3754,23 @@
       }
     }
 
-    function deleteSavedContract(index) {
+    async function deleteSavedContract(docId, index) {
       const contract = savedContracts[index];
       const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
       
       if (confirm(`"${displayName}" 계약서를 삭제하시겠습니까?`)) {
-        savedContracts.splice(index, 1);
-        localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
-        showLoadContractModal();
-        alert('✅ 계약서가 삭제되었습니다.');
+        try {
+          // Firestore에서 삭제
+          await firebase.firestore().collection('savedContracts').doc(docId).delete();
+          console.log('✅ 계약서 삭제 완료:', docId);
+          
+          // 목록 새로고침
+          showLoadContractModal();
+          alert('✅ 계약서가 삭제되었습니다.');
+        } catch (error) {
+          console.error('❌ 계약서 삭제 실패:', error);
+          alert('계약서 삭제에 실패했습니다.');
+        }
       }
     }
 
