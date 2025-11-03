@@ -1,5 +1,5 @@
 // ===================================================================
-// 맛남살롱 직원용 시스템
+// 맛남살롱 직원용 시스템 (Firestore 연동)
 // 작성자: Employee Portal
 // 기능: 출퇴근, 급여조회, 계약서 확인, 공지사항
 // ===================================================================
@@ -9,19 +9,8 @@
 // ===================================================================
 
 let currentUser = null; // 현재 로그인한 직원 정보
-
-// ===================================================================
-// 더미 직원 데이터
-// ===================================================================
-
-const DUMMY_EMPLOYEES = {
-  '김민수': { id: 1, name: '김민수', store: '부천시청점', position: '매니저', hourlyWage: 15000 },
-  '이지은': { id: 2, name: '이지은', store: '상동점', position: '바리스타', hourlyWage: 10500 },
-  '박서준': { id: 3, name: '박서준', store: '부천역사점', position: '바리스타', hourlyWage: 10000 },
-  '최영희': { id: 4, name: '최영희', store: '부천시청점', position: '바리스타', hourlyWage: 10000 },
-  '정수민': { id: 5, name: '정수민', store: '상동점', position: '바리스타', hourlyWage: 10500 },
-  '강호동': { id: 6, name: '강호동', store: '부천역사점', position: '바리스타', hourlyWage: 10000 }
-};
+let auth = null;
+let db = null;
 
 // ===================================================================
 // 초기화 및 페이지 로드
@@ -29,6 +18,17 @@ const DUMMY_EMPLOYEES = {
 
 document.addEventListener('DOMContentLoaded', function() {
   debugLog('직원용 페이지 로드');
+  
+  // Firebase 초기화 확인
+  if (typeof firebase === 'undefined') {
+    console.error('❌ Firebase SDK가 로드되지 않았습니다.');
+    alert('시스템 오류가 발생했습니다. 페이지를 새로고침해주세요.');
+    return;
+  }
+  
+  // Firebase 인스턴스 설정
+  auth = firebase.auth();
+  db = firebase.firestore();
   
   // 현재 월 기본값 설정
   const today = new Date();
@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 로그인 상태 확인
   checkLoginStatus();
+  
+  // 드롭다운 초기화
+  initializeDateDropdowns();
 });
 
 // ===================================================================
@@ -49,50 +52,55 @@ document.addEventListener('DOMContentLoaded', function() {
  * sessionStorage에서 사용자 정보를 읽어서 자동 로그인
  */
 function checkLoginStatus() {
-  const savedUser = sessionStorage.getItem(CONFIG.STORAGE_KEYS.USER_INFO);
+  const authenticated = sessionStorage.getItem('employee_authenticated');
+  const name = sessionStorage.getItem('employee_name');
+  const uid = sessionStorage.getItem('employee_uid');
   
-  if (savedUser) {
-    try {
-      currentUser = JSON.parse(savedUser);
-      showMainScreen();
-    } catch (e) {
-      console.error('사용자 정보 파싱 오류:', e);
-      showLoginScreen();
-    }
-  } else {
-    showLoginScreen();
-  }
-}
-
-/**
- * 로그인 처리
- * 더미 데이터에서 직원 이름으로 검색
- */
-function handleLogin() {
-  const nameInput = document.getElementById('employeeName');
-  const name = nameInput.value.trim();
-  
-  if (!name) {
-    alert('⚠️ 이름을 입력해주세요.');
-    nameInput.focus();
+  if (authenticated !== 'true' || !name || !uid) {
+    alert('⚠️ 로그인이 필요합니다.');
+    window.location.href = 'employee-login.html';
     return;
   }
   
-  // 더미 데이터에서 직원 찾기
-  const employee = DUMMY_EMPLOYEES[name];
-  
-  if (employee) {
-    currentUser = employee;
+  // 사용자 정보 로드
+  loadUserInfo(uid, name);
+}
+
+/**
+ * Firestore에서 사용자 정보 로드
+ * @param {string} uid - Firebase UID
+ * @param {string} name - 직원 이름
+ */
+async function loadUserInfo(uid, name) {
+  try {
+    const userDoc = await db.collection('users').doc(uid).get();
     
-    // 세션에 저장
-    sessionStorage.setItem(CONFIG.STORAGE_KEYS.USER_INFO, JSON.stringify(currentUser));
-    sessionStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_ROLE, 'employee');
-    sessionStorage.setItem(CONFIG.STORAGE_KEYS.LAST_LOGIN, new Date().toISOString());
+    if (userDoc.exists) {
+      currentUser = {
+        uid: uid,
+        ...userDoc.data()
+      };
+    } else {
+      // Firestore에 정보가 없으면 기본값 사용
+      currentUser = {
+        uid: uid,
+        name: name,
+        store: '매장 정보 없음',
+        position: '직원'
+      };
+    }
     
     showMainScreen();
-  } else {
-    const employeeNames = Object.keys(DUMMY_EMPLOYEES).join('\n• ');
-    alert(`❌ 등록되지 않은 직원입니다.\n\n등록된 직원:\n• ${employeeNames}`);
+  } catch (error) {
+    console.error('❌ 사용자 정보 로드 오류:', error);
+    // 오류 발생 시에도 기본 정보로 진행
+    currentUser = {
+      uid: uid,
+      name: name,
+      store: '매장 정보 없음',
+      position: '직원'
+    };
+    showMainScreen();
   }
 }
 
@@ -104,8 +112,8 @@ async function handleLogout() {
   if (confirm('로그아웃 하시겠습니까?')) {
     try {
       // Firebase 로그아웃
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        await firebase.auth().signOut();
+      if (auth) {
+        await auth.signOut();
         console.log('✅ Firebase 로그아웃 성공');
       }
       
@@ -125,30 +133,20 @@ async function handleLogout() {
 }
 
 /**
- * 로그인 화면 표시
- */
-function showLoginScreen() {
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('mainScreen').classList.add('hidden');
-}
-
-/**
  * 메인 화면 표시
  * 사용자 정보를 화면에 표시하고 모든 데이터 로드
  */
 function showMainScreen() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('mainScreen').classList.remove('hidden');
-  
   // 사용자 정보 표시
   document.getElementById('displayName').textContent = currentUser.name + '님';
   document.getElementById('displayStore').textContent = currentUser.store || '매장 정보 없음';
   
   // 데이터 로드
+  updateCurrentStatus();
+  loadNotices();
   loadAttendance();
   loadContracts();
-  updateCurrentStatus();
-  loadNotice();
+  loadEmployeeDocuments();
 }
 
 // ===================================================================
@@ -156,8 +154,8 @@ function showMainScreen() {
 // ===================================================================
 
 /**
- * 탭 전환 (대시보드, 근무내역, 급여, 계약서)
- * @param {string} tabName - 탭 이름 ('dashboard', 'attendance', 'salary', 'contract')
+ * 탭 전환 (근무내역, 급여, 계약서)
+ * @param {string} tabName - 탭 이름 ('attendance', 'salary', 'contract')
  */
 function showTab(tabName) {
   // 모든 탭 비활성화
@@ -181,11 +179,12 @@ function showTab(tabName) {
     loadSalary();
   } else if (tabName === 'contract') {
     loadContracts();
+    loadEmployeeDocuments();
   }
 }
 
 // ===================================================================
-// 출퇴근 관리
+// 출퇴근 관리 (Firestore 연동)
 // ===================================================================
 
 /**
@@ -207,47 +206,67 @@ function showClockOut() {
 }
 
 /**
- * 출퇴근 기록 저장
+ * 출퇴근 기록 저장 (Firestore)
  * @param {string} type - '출근' 또는 '퇴근'
  */
-function recordAttendance(type) {
+async function recordAttendance(type) {
   try {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = formatTime(now);
     
-    // 로컬 스토리지에서 근무 기록 가져오기
-    const attendanceKey = `attendance_${currentUser.name}`;
-    const records = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
+    // 오늘 기록 확인
+    const todayDocRef = db.collection('attendance')
+      .where('uid', '==', currentUser.uid)
+      .where('date', '==', dateStr);
     
-    // 오늘 기록 찾기
-    let todayRecord = records.find(r => r.date === dateStr);
+    const snapshot = await todayDocRef.get();
     
     if (type === '출근') {
       // 출근 처리
-      if (todayRecord && todayRecord.clockIn) {
-        alert(`⚠️ 이미 출근 처리되었습니다.\n출근 시간: ${todayRecord.clockIn}`);
-        return;
+      if (!snapshot.empty) {
+        const existingRecord = snapshot.docs[0].data();
+        if (existingRecord.clockIn) {
+          alert(`⚠️ 이미 출근 처리되었습니다.\n출근 시간: ${existingRecord.clockIn}`);
+          return;
+        }
       }
       
-      if (!todayRecord) {
-        todayRecord = {
-          date: dateStr,
-          clockIn: timeStr,
-          clockOut: null,
-          workType: '정규근무',
-          status: '정상'
-        };
-        records.push(todayRecord);
+      // 출근 기록 생성/업데이트
+      const recordData = {
+        uid: currentUser.uid,
+        name: currentUser.name,
+        store: currentUser.store,
+        date: dateStr,
+        clockIn: timeStr,
+        clockOut: null,
+        workType: '정규근무',
+        status: '정상',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (snapshot.empty) {
+        await db.collection('attendance').add(recordData);
       } else {
-        todayRecord.clockIn = timeStr;
+        await snapshot.docs[0].ref.update({
+          clockIn: timeStr,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
       }
       
       alert(`✅ 출근 처리되었습니다!\n\n시간: ${timeStr}\n날짜: ${dateStr}`);
       
     } else if (type === '퇴근') {
       // 퇴근 처리
-      if (!todayRecord || !todayRecord.clockIn) {
+      if (snapshot.empty) {
+        alert('⚠️ 출근 기록이 없습니다.\n먼저 출근 처리를 해주세요.');
+        return;
+      }
+      
+      const todayRecord = snapshot.docs[0].data();
+      
+      if (!todayRecord.clockIn) {
         alert('⚠️ 출근 기록이 없습니다.\n먼저 출근 처리를 해주세요.');
         return;
       }
@@ -257,16 +276,17 @@ function recordAttendance(type) {
         return;
       }
       
-      todayRecord.clockOut = timeStr;
+      // 퇴근 시간 업데이트
+      await snapshot.docs[0].ref.update({
+        clockOut: timeStr,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       
       // 근무 시간 계산
       const workTime = calculateWorkTime(todayRecord.clockIn, timeStr);
       
       alert(`✅ 퇴근 처리되었습니다!\n\n시간: ${timeStr}\n근무 시간: ${workTime}\n\n수고하셨습니다! 😊`);
     }
-    
-    // 저장
-    localStorage.setItem(attendanceKey, JSON.stringify(records));
     
     // 현재 상태 업데이트
     updateCurrentStatus();
@@ -277,29 +297,33 @@ function recordAttendance(type) {
     }
     
   } catch (error) {
-    console.error('출퇴근 기록 오류:', error);
-    alert('❌ 기록 중 오류가 발생했습니다.');
+    console.error('❌ 출퇴근 기록 오류:', error);
+    alert('❌ 기록 중 오류가 발생했습니다.\n\n' + error.message);
   }
 }
 
 /**
  * 현재 상태 업데이트 (대시보드)
- * 오늘 출퇴근 상태를 표시
+ * 오늘 출퇴근 상태를 Firestore에서 조회하여 표시
  */
-function updateCurrentStatus() {
+async function updateCurrentStatus() {
   try {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     
-    // 로컬 스토리지에서 오늘 기록 확인
-    const attendanceKey = `attendance_${currentUser.name}`;
-    const records = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
-    const todayRecord = records.find(r => r.date === dateStr);
+    // Firestore에서 오늘 기록 확인
+    const todayDocRef = db.collection('attendance')
+      .where('uid', '==', currentUser.uid)
+      .where('date', '==', dateStr);
+    
+    const snapshot = await todayDocRef.get();
     
     const statusValueEl = document.getElementById('statusValue');
     const statusTimeEl = document.getElementById('statusTime');
     
-    if (todayRecord) {
+    if (!snapshot.empty) {
+      const todayRecord = snapshot.docs[0].data();
+      
       if (todayRecord.clockIn && !todayRecord.clockOut) {
         // 근무 중
         statusValueEl.textContent = '🟢 근무 중';
@@ -317,19 +341,19 @@ function updateCurrentStatus() {
       statusTimeEl.textContent = '좋은 하루 되세요!';
     }
   } catch (error) {
-    console.error('상태 업데이트 오류:', error);
+    console.error('❌ 상태 업데이트 오류:', error);
   }
 }
 
 // ===================================================================
-// 근무내역 조회
+// 근무내역 조회 (Firestore 연동)
 // ===================================================================
 
 /**
  * 근무내역 로드 및 표시
- * 선택한 월의 출퇴근 기록을 테이블로 표시
+ * 선택한 월의 출퇴근 기록을 Firestore에서 조회
  */
-function loadAttendance() {
+async function loadAttendance() {
   debugLog('근무내역 조회');
   
   const filterMonth = document.getElementById('filterMonth').value;
@@ -340,48 +364,57 @@ function loadAttendance() {
     return;
   }
   
-  // 로컬 스토리지에서 근무 기록 가져오기
-  const attendanceKey = `attendance_${currentUser.name}`;
-  const records = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
-  
-  // 선택한 월의 기록만 필터링
-  const filteredRecords = records.filter(r => r.date.startsWith(filterMonth));
-  
-  if (filteredRecords.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 40px;">📭 해당 월의 근무 기록이 없습니다.</td></tr>';
-    return;
-  }
-  
-  // 날짜 순으로 정렬 (최신순)
-  filteredRecords.sort((a, b) => b.date.localeCompare(a.date));
-  
-  tbody.innerHTML = filteredRecords.map(record => {
-    const statusClass = getStatusClass(record.status);
-    const workTime = record.clockIn && record.clockOut ? 
-      calculateWorkTime(record.clockIn, record.clockOut) : '-';
+  try {
+    // Firestore에서 해당 월의 근무 기록 조회
+    const startDate = filterMonth + '-01';
+    const endDate = filterMonth + '-31';
     
-    return `
-      <tr>
-        <td>${record.date}</td>
-        <td>${record.clockIn || '-'}</td>
-        <td>${record.clockOut || '-'}</td>
-        <td>${workTime}</td>
-        <td>${record.workType || '정규근무'}</td>
-        <td><span class="badge badge-${statusClass}">${record.status || '정상'}</span></td>
-      </tr>
-    `;
-  }).join('');
+    const snapshot = await db.collection('attendance')
+      .where('uid', '==', currentUser.uid)
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .orderBy('date', 'desc')
+      .get();
+    
+    if (snapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 40px;">📭 해당 월의 근무 기록이 없습니다.</td></tr>';
+      return;
+    }
+    
+    const records = snapshot.docs.map(doc => doc.data());
+    
+    tbody.innerHTML = records.map(record => {
+      const statusClass = getStatusClass(record.status);
+      const workTime = record.clockIn && record.clockOut ? 
+        calculateWorkTime(record.clockIn, record.clockOut) : '-';
+      
+      return `
+        <tr>
+          <td>${record.date}</td>
+          <td>${record.workType || '정규근무'}</td>
+          <td>${record.clockIn || '-'}</td>
+          <td>${record.clockOut || '-'}</td>
+          <td>${workTime}</td>
+          <td><span class="badge badge-${statusClass}">${record.status || '정상'}</span></td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('❌ 근무내역 조회 오류:', error);
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--danger-color);">❌ 데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
+  }
 }
 
 // ===================================================================
-// 급여 조회 및 계산
+// 급여 조회 및 계산 (Firestore 연동)
 // ===================================================================
 
 /**
  * 급여 조회 및 계산
- * 선택한 월의 근무 기록을 바탕으로 급여 자동 계산
+ * 선택한 월의 Firestore 근무 기록을 바탕으로 급여 자동 계산
  */
-function loadSalary() {
+async function loadSalary() {
   debugLog('급여 조회');
   
   const filterMonth = document.getElementById('salaryFilterMonth').value;
@@ -393,28 +426,36 @@ function loadSalary() {
   }
   
   try {
-    // 로컬 스토리지에서 근무 기록 가져오기
-    const attendanceKey = `attendance_${currentUser.name}`;
-    const records = JSON.parse(localStorage.getItem(attendanceKey) || '[]');
+    // Firestore에서 해당 월의 완료된 근무 기록 조회
+    const startDate = filterMonth + '-01';
+    const endDate = filterMonth + '-31';
     
-    // 선택한 월의 완료된 기록만 필터링 (출근+퇴근 모두 있는 경우)
-    const filteredRecords = records.filter(r => 
-      r.date.startsWith(filterMonth) && r.clockIn && r.clockOut
-    );
+    const snapshot = await db.collection('attendance')
+      .where('uid', '==', currentUser.uid)
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .get();
     
-    if (filteredRecords.length === 0) {
+    const records = snapshot.docs
+      .map(doc => doc.data())
+      .filter(r => r.clockIn && r.clockOut); // 출근+퇴근 모두 있는 경우만
+    
+    if (records.length === 0) {
       document.getElementById('salaryContent').innerHTML = 
         '<div class="alert alert-info">📭 해당 월의 근무 기록이 없습니다.<br><br>출퇴근 기록이 있어야 급여가 계산됩니다.</div>';
       return;
     }
     
+    // 사용자 시급 가져오기 (Firestore users 컬렉션에서)
+    const hourlyWage = currentUser.hourlyWage || 10000;
+    
     // 급여 계산
-    const salaryData = calculateSalary(filteredRecords, currentUser.hourlyWage);
+    const salaryData = calculateSalary(records, hourlyWage);
     
     renderSalaryInfo(salaryData);
     
   } catch (error) {
-    console.error('급여 조회 오류:', error);
+    console.error('❌ 급여 조회 오류:', error);
     document.getElementById('salaryContent').innerHTML = 
       '<div class="alert alert-danger">❌ 데이터를 불러오는 중 오류가 발생했습니다</div>';
   }
@@ -472,8 +513,8 @@ function renderSalaryInfo(data) {
       </div>
       
       <div class="card" style="text-align: center;">
-        <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: var(--spacing-xs);">추가수당</div>
-        <div style="font-size: 28px; font-weight: 700; color: var(--success-color);">${formatCurrency(data.overtime || 0)}</div>
+        <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: var(--spacing-xs);">주휴수당</div>
+        <div style="font-size: 28px; font-weight: 700; color: var(--success-color);">${formatCurrency(data.weeklyHolidayPay || 0)}</div>
       </div>
       
       <div class="card" style="text-align: center;">
@@ -512,12 +553,6 @@ function renderSalaryInfo(data) {
           <td style="text-align: right; font-weight: 600; color: var(--success-color);">+${formatCurrency(data.weeklyHolidayPay)}</td>
         </tr>
         ` : ''}
-        ${data.overtime && data.overtime > 0 ? `
-        <tr>
-          <td>추가 근무수당</td>
-          <td style="text-align: right; font-weight: 600; color: var(--success-color);">+${formatCurrency(data.overtime)}</td>
-        </tr>
-        ` : ''}
         ${data.insurance && data.insurance > 0 ? `
         <tr style="border-top: 2px solid var(--border-color);">
           <td>4대보험</td>
@@ -542,59 +577,51 @@ function renderSalaryInfo(data) {
 }
 
 // ===================================================================
-// 계약서 조회
+// 계약서 조회 (Firestore 연동)
 // ===================================================================
 
 /**
  * 계약서 목록 로드
- * 현재 사용자의 계약서만 필터링하여 표시
+ * Firestore에서 현재 사용자의 계약서 조회
  */
-function loadContracts() {
+async function loadContracts() {
   debugLog('계약서 조회');
   
   try {
-    // localStorage에서 현재 사용자의 모든 계약서 찾기
-    const contracts = [];
+    // Firestore에서 현재 사용자의 계약서 조회
+    const snapshot = await db.collection('contracts')
+      .where('employeeUid', '==', currentUser.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
     
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('contract_C')) {
-        const contractData = JSON.parse(localStorage.getItem(key));
-        if (contractData.employeeName === currentUser.name) {
-          const contractId = key.replace('contract_', '');
-          
-          // 서명 상태 확인
-          const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
-          const signedContract = signedContracts.find(sc => sc.id === contractId);
-          const isSigned = !!signedContract;
-          
-          contracts.push({
-            contractId: contractId,
-            ...contractData,
-            status: isSigned ? '서명완료' : '서명대기',
-            signedAt: signedContract ? signedContract.signedAt : null
-          });
-        }
-      }
-    }
-    
-    if (contracts.length === 0) {
+    if (snapshot.empty) {
       document.getElementById('contractContent').innerHTML = 
         '<div class="alert alert-info">📄 아직 작성된 계약서가 없습니다.<br><br>관리자가 계약서를 작성하면 여기에서 확인하고 서명할 수 있습니다.</div>';
       return;
     }
     
-    // 최신순 정렬
-    contracts.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-      return dateB - dateA;
-    });
+    const contracts = [];
+    
+    for (const doc of snapshot.docs) {
+      const contractData = doc.data();
+      const contractId = doc.id;
+      
+      // 서명 상태 확인
+      const signedDoc = await db.collection('signedContracts').doc(contractId).get();
+      const isSigned = signedDoc.exists;
+      
+      contracts.push({
+        contractId: contractId,
+        ...contractData,
+        status: isSigned ? '서명완료' : '서명대기',
+        signedAt: isSigned ? signedDoc.data().signedAt : null
+      });
+    }
     
     renderContracts(contracts);
     
   } catch (error) {
-    console.error('계약서 조회 오류:', error);
+    console.error('❌ 계약서 조회 오류:', error);
     document.getElementById('contractContent').innerHTML = 
       '<div class="alert alert-danger">❌ 데이터를 불러오는 중 오류가 발생했습니다</div>';
   }
@@ -624,9 +651,9 @@ function renderContracts(contracts) {
     
     // 날짜 포맷팅
     const createdDate = contract.createdAt ? 
-      new Date(contract.createdAt).toLocaleDateString('ko-KR') : '-';
+      formatFirestoreTimestamp(contract.createdAt) : '-';
     const signedDate = contract.signedAt ? 
-      new Date(contract.signedAt).toLocaleDateString('ko-KR') : null;
+      formatFirestoreTimestamp(contract.signedAt) : null;
     
     return `
       <div class="card">
@@ -682,7 +709,6 @@ function renderContracts(contracts) {
  * @param {string} contractId - 계약서 ID
  */
 function viewEmployeeContract(contractId) {
-  // 서명 완료된 계약서를 보기 위해 서명 페이지로 이동
   if (confirm('📄 계약서 원본을 확인하시겠습니까?\n\n서명 페이지에서 확인하실 수 있습니다.')) {
     window.location.href = `contract-sign.html?id=${contractId}`;
   }
@@ -699,47 +725,394 @@ function signContract(contractId) {
 }
 
 // ===================================================================
-// 공지사항 조회
+// 공지사항 조회 (Firestore 연동)
 // ===================================================================
 
 /**
  * 공지사항 불러오기
- * localStorage에서 companyNotice 읽어서 표시
+ * Firestore notices 컬렉션에서 읽어서 표시
  */
-function loadNotice() {
+async function loadNotices() {
   try {
-    const notice = JSON.parse(localStorage.getItem('companyNotice') || 'null');
+    // Firestore에서 공지사항 조회 (최신순)
+    const snapshot = await db.collection('notices')
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
     
-    // 공지사항 섹션 항상 표시
+    if (snapshot.empty) {
+      document.getElementById('noticeSection').style.display = 'none';
+      return;
+    }
+    
+    const notices = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // 공지사항 영역 표시
     document.getElementById('noticeSection').style.display = 'block';
     
-    if (notice && notice.content) {
-      // 내용 표시
-      document.getElementById('noticeContent').textContent = notice.content;
-      document.getElementById('noticeContent').style.color = 'var(--text-primary)';
-      document.getElementById('noticeContent').style.fontStyle = 'normal';
+    // 중요/일반 공지사항 분리
+    const importantNotices = notices.filter(n => n.important);
+    const normalNotices = notices.filter(n => !n.important);
+    
+    // 중요 공지사항 표시
+    if (importantNotices.length > 0) {
+      const importantArea = document.getElementById('importantNoticeArea');
+      const importantList = document.getElementById('importantNoticeList');
       
-      // 날짜 표시
-      if (notice.updatedAt) {
-        const date = new Date(notice.updatedAt);
-        document.getElementById('noticeDate').textContent = 
-          `📅 ${date.toLocaleDateString('ko-KR')} ${date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})}`;
+      importantArea.style.display = 'block';
+      importantList.innerHTML = importantNotices.map(notice => {
+        const dateStr = formatFirestoreTimestamp(notice.createdAt);
+        
+        return `
+          <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--border-radius); border: 1px solid #fecaca;">
+            <h4 style="margin: 0 0 var(--spacing-xs) 0; font-size: 16px; color: #dc2626;">
+              ⭐ ${notice.title}
+            </h4>
+            <p style="white-space: pre-wrap; line-height: 1.7; color: var(--text-primary); margin: var(--spacing-sm) 0;">
+              ${notice.content}
+            </p>
+            <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
+              ${dateStr}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      document.getElementById('importantNoticeArea').style.display = 'none';
+    }
+    
+    // 일반 공지사항 표시 (최신 3개만)
+    if (normalNotices.length > 0) {
+      const normalArea = document.getElementById('normalNoticeArea');
+      const normalList = document.getElementById('normalNoticeList');
+      
+      normalArea.style.display = 'block';
+      
+      const displayNotices = normalNotices.slice(0, 3);
+      
+      normalList.innerHTML = displayNotices.map(notice => {
+        const dateStr = formatFirestoreTimestamp(notice.createdAt);
+        
+        return `
+          <div style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); background: white; border-radius: var(--border-radius); border: 1px solid #fde68a;">
+            <h4 style="margin: 0 0 var(--spacing-xs) 0; font-size: 16px; color: var(--text-primary);">
+              ${notice.title}
+            </h4>
+            <p style="white-space: pre-wrap; line-height: 1.7; color: var(--text-primary); margin: var(--spacing-sm) 0;">
+              ${notice.content}
+            </p>
+            <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
+              ${dateStr}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // 더 많은 공지사항이 있을 때 안내 메시지
+      if (normalNotices.length > 3) {
+        normalList.innerHTML += `
+          <div style="text-align: center; padding: var(--spacing-sm); color: var(--text-secondary); font-size: 13px;">
+            외 ${normalNotices.length - 3}개의 공지사항이 더 있습니다.
+          </div>
+        `;
       }
     } else {
-      // 공지사항이 없으면 안내 메시지
-      document.getElementById('noticeContent').textContent = '현재 등록된 공지사항이 없습니다.';
-      document.getElementById('noticeContent').style.color = 'var(--text-secondary)';
-      document.getElementById('noticeContent').style.fontStyle = 'italic';
-      document.getElementById('noticeDate').textContent = '';
+      document.getElementById('normalNoticeArea').style.display = 'none';
+    }
+    
+    // 공지사항이 하나도 없을 때
+    if (importantNotices.length === 0 && normalNotices.length === 0) {
+      document.getElementById('noNoticeMessage').style.display = 'block';
+    } else {
+      document.getElementById('noNoticeMessage').style.display = 'none';
+    }
+    
+  } catch (error) {
+    console.error('❌ 공지사항 불러오기 오류:', error);
+    document.getElementById('noticeSection').style.display = 'none';
+  }
+}
+
+// ===================================================================
+// 서류 관리 (통장사본, 보건증) - Firestore 연동
+// ===================================================================
+
+/**
+ * 년/월/일 드롭다운 초기화
+ */
+function initializeDateDropdowns() {
+  // 년도 드롭다운 (현재년도 ~ 현재+5년)
+  const yearSelect = document.getElementById('healthCertYear');
+  if (yearSelect) {
+    const currentYear = new Date().getFullYear();
+    for (let i = 0; i <= 5; i++) {
+      const year = currentYear + i;
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year + '년';
+      yearSelect.appendChild(option);
+    }
+  }
+  
+  // 일 드롭다운 (1일 ~ 31일)
+  const daySelect = document.getElementById('healthCertDay');
+  if (daySelect) {
+    for (let i = 1; i <= 31; i++) {
+      const option = document.createElement('option');
+      option.value = String(i).padStart(2, '0');
+      option.textContent = i + '일';
+      daySelect.appendChild(option);
+    }
+  }
+}
+
+/**
+ * 직원 서류 정보 불러오기 (Firestore)
+ */
+async function loadEmployeeDocuments() {
+  if (!currentUser) return;
+  
+  try {
+    const docRef = db.collection('employee_docs').doc(currentUser.uid);
+    const doc = await docRef.get();
+    
+    if (doc.exists) {
+      const docs = doc.data();
+      
+      // 통장사본 정보 로드
+      if (docs.bankAccount) {
+        document.getElementById('bankName').value = docs.bankAccount.bankName || '';
+        document.getElementById('accountNumber').value = docs.bankAccount.accountNumber || '';
+        document.getElementById('accountHolder').value = docs.bankAccount.accountHolder || '';
+      }
+      
+      // 보건증 정보 로드
+      if (docs.healthCert) {
+        // 이미지 미리보기
+        if (docs.healthCert.imageData) {
+          document.getElementById('healthCertImg').src = docs.healthCert.imageData;
+          document.getElementById('healthCertPreview').style.display = 'block';
+        }
+        
+        // 유효기간
+        if (docs.healthCert.expiryDate) {
+          const [year, month, day] = docs.healthCert.expiryDate.split('-');
+          document.getElementById('healthCertYear').value = year;
+          document.getElementById('healthCertMonth').value = month;
+          document.getElementById('healthCertDay').value = day;
+        }
+      }
     }
   } catch (error) {
-    console.error('공지사항 불러오기 오류:', error);
-    // 오류 발생 시에도 표시
-    document.getElementById('noticeSection').style.display = 'block';
-    document.getElementById('noticeContent').textContent = '공지사항을 불러오는 중 오류가 발생했습니다.';
-    document.getElementById('noticeContent').style.color = 'var(--danger-color)';
-    document.getElementById('noticeDate').textContent = '';
+    console.error('❌ 서류 정보 불러오기 오류:', error);
   }
+}
+
+/**
+ * 통장사본 정보 저장 (Firestore)
+ */
+async function saveBankAccount() {
+  if (!currentUser) {
+    alert('⚠️ 로그인 정보가 없습니다.');
+    return;
+  }
+  
+  const bankName = document.getElementById('bankName').value.trim();
+  const accountNumber = document.getElementById('accountNumber').value.trim();
+  const accountHolder = document.getElementById('accountHolder').value.trim();
+  
+  if (!bankName || !accountNumber || !accountHolder) {
+    alert('⚠️ 모든 항목을 입력해주세요.');
+    return;
+  }
+  
+  try {
+    const docRef = db.collection('employee_docs').doc(currentUser.uid);
+    
+    await docRef.set({
+      uid: currentUser.uid,
+      name: currentUser.name,
+      bankAccount: {
+        bankName: bankName,
+        accountNumber: accountNumber,
+        accountHolder: accountHolder,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }
+    }, { merge: true });
+    
+    // 저장 완료 메시지
+    const statusEl = document.getElementById('bankSaveStatus');
+    statusEl.textContent = '✅ 저장되었습니다!';
+    statusEl.style.display = 'inline-flex';
+    
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 3000);
+  } catch (error) {
+    console.error('❌ 통장사본 저장 오류:', error);
+    alert('❌ 저장 중 오류가 발생했습니다.');
+  }
+}
+
+/**
+ * 보건증 이미지 미리보기 및 자동 압축
+ */
+function previewHealthCert(event) {
+  const file = event.target.files[0];
+  
+  if (!file) return;
+  
+  // 이미지 파일 검증
+  if (!file.type.startsWith('image/')) {
+    alert('⚠️ 이미지 파일만 업로드 가능합니다.');
+    event.target.value = '';
+    return;
+  }
+  
+  // 원본 파일 크기 표시
+  const originalSize = (file.size / 1024).toFixed(0);
+  console.log(`원본 파일 크기: ${originalSize}KB`);
+  
+  // 파일 읽기 및 압축
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const img = new Image();
+    
+    img.onload = function() {
+      // Canvas를 사용해 이미지 압축
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // 최대 크기 설정 (폭 기준 1200px)
+      const maxWidth = 1200;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // 이미지 그리기
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Base64로 변환 (품질 0.7 = 70%)
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      
+      // 압축된 크기 계산
+      const compressedSize = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
+      
+      console.log(`압축 후 크기: ${compressedSize}KB`);
+      
+      // 미리보기 표시
+      const previewImg = document.getElementById('healthCertImg');
+      previewImg.src = compressedDataUrl;
+      document.getElementById('healthCertPreview').style.display = 'block';
+      
+      // 크기 정보 표시
+      const sizeInfo = document.getElementById('imageSizeInfo');
+      sizeInfo.textContent = `원본: ${originalSize}KB → 압축: ${compressedSize}KB`;
+      
+      // 압축된 데이터를 임시 저장
+      window.compressedHealthCertData = compressedDataUrl;
+    };
+    
+    img.onerror = function() {
+      alert('❌ 이미지를 불러오는 중 오류가 발생했습니다.');
+      event.target.value = '';
+    };
+    
+    img.src = e.target.result;
+  };
+  
+  reader.onerror = function() {
+    alert('❌ 파일을 읽는 중 오류가 발생했습니다.');
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+/**
+ * 보건증 정보 저장 (Firestore)
+ */
+async function saveHealthCert() {
+  if (!currentUser) {
+    alert('⚠️ 로그인 정보가 없습니다.');
+    return;
+  }
+  
+  const fileInput = document.getElementById('healthCertImage');
+  const year = document.getElementById('healthCertYear').value;
+  const month = document.getElementById('healthCertMonth').value;
+  const day = document.getElementById('healthCertDay').value;
+  
+  // 유효기간 검증
+  if (!year || !month || !day) {
+    alert('⚠️ 유효기간을 모두 선택해주세요.');
+    return;
+  }
+  
+  // 이미지 필수 검증
+  if (!fileInput.files[0] && !document.getElementById('healthCertImg').src) {
+    alert('⚠️ 보건증 이미지를 업로드해주세요.');
+    return;
+  }
+  
+  const expiryDate = `${year}-${month}-${day}`;
+  
+  try {
+    const docRef = db.collection('employee_docs').doc(currentUser.uid);
+    
+    // 기존 문서 가져오기
+    const doc = await docRef.get();
+    const existingData = doc.exists ? doc.data() : {};
+    
+    const healthCertData = {
+      expiryDate: expiryDate,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // 이미지가 새로 업로드된 경우
+    if (window.compressedHealthCertData) {
+      healthCertData.imageData = window.compressedHealthCertData;
+      delete window.compressedHealthCertData;
+    } else if (existingData.healthCert && existingData.healthCert.imageData) {
+      // 기존 이미지 유지
+      healthCertData.imageData = existingData.healthCert.imageData;
+    }
+    
+    await docRef.set({
+      uid: currentUser.uid,
+      name: currentUser.name,
+      healthCert: healthCertData
+    }, { merge: true });
+    
+    // 저장 완료 메시지
+    showHealthSaveSuccess();
+  } catch (error) {
+    console.error('❌ 보건증 저장 오류:', error);
+    alert('❌ 저장 중 오류가 발생했습니다.');
+  }
+}
+
+/**
+ * 보건증 저장 완료 메시지 표시
+ */
+function showHealthSaveSuccess() {
+  const statusEl = document.getElementById('healthSaveStatus');
+  statusEl.textContent = '✅ 저장되었습니다!';
+  statusEl.style.display = 'inline-flex';
+  
+  setTimeout(() => {
+    statusEl.style.display = 'none';
+  }, 3000);
 }
 
 // ===================================================================
@@ -807,327 +1180,33 @@ function getStatusClass(status) {
 }
 
 /**
- * 근무 형태 이름 반환 (CONFIG 사용)
- * @param {string} type - 근무 형태 ID
- * @returns {string} 근무 형태 이름
+ * Firestore Timestamp를 한국 시간 문자열로 변환
+ * @param {Object} timestamp - Firestore Timestamp
+ * @returns {string} 포맷된 날짜 문자열
  */
-function getWorkTypeName(type) {
-  const workType = CONFIG.WORK_TYPES.find(t => t.id === type);
-  return workType ? workType.name : type || '-';
-}
-
-/**
- * 상태 배지 HTML 반환 (CONFIG 사용)
- * @param {string} status - 출근 상태 ID
- * @returns {string} 배지 HTML
- */
-function getStatusBadge(status) {
-  const statusConfig = CONFIG.ATTENDANCE_STATUS.find(s => s.id === status);
+function formatFirestoreTimestamp(timestamp) {
+  if (!timestamp) return '-';
   
-  if (!statusConfig) {
-    return '<span class="badge badge-gray">-</span>';
-  }
-  
-  const badgeClassMap = {
-    'normal': 'badge-success',
-    'late': 'badge-warning',
-    'early': 'badge-warning',
-    'absent': 'badge-danger'
-  };
-  
-  const badgeClass = badgeClassMap[status] || 'badge-gray';
-  
-  return `<span class="badge ${badgeClass}">${statusConfig.name}</span>`;
-}
-
-// ===================================================================
-// 서류 관리 (통장사본, 보건증)
-// ===================================================================
-
-/**
- * 페이지 로드 시 서류 정보 불러오기
- */
-document.addEventListener('DOMContentLoaded', function() {
-  // 드롭다운 초기화
-  initializeDateDropdowns();
-  
-  // 계약서 탭 활성화 시 서류 불러오기
-  const contractTab = document.querySelector('.tab[data-tab="contract"]');
-  if (contractTab) {
-    contractTab.addEventListener('click', loadEmployeeDocuments);
-  }
-});
-
-/**
- * 년/월/일 드롭다운 초기화
- */
-function initializeDateDropdowns() {
-  // 년도 드롭다운 (현재년도 ~ 현재+5년)
-  const yearSelect = document.getElementById('healthCertYear');
-  if (yearSelect) {
-    const currentYear = new Date().getFullYear();
-    for (let i = 0; i <= 5; i++) {
-      const year = currentYear + i;
-      const option = document.createElement('option');
-      option.value = year;
-      option.textContent = year + '년';
-      yearSelect.appendChild(option);
-    }
-  }
-  
-  // 일 드롭다운 (1일 ~ 31일)
-  const daySelect = document.getElementById('healthCertDay');
-  if (daySelect) {
-    for (let i = 1; i <= 31; i++) {
-      const option = document.createElement('option');
-      option.value = String(i).padStart(2, '0');
-      option.textContent = i + '일';
-      daySelect.appendChild(option);
-    }
-  }
-}
-
-/**
- * 직원 서류 정보 불러오기
- */
-function loadEmployeeDocuments() {
-  if (!currentUser) return;
-  
-  const docKey = `employee_docs_${currentUser.name}_${currentUser.id}`;
-  const savedDocs = localStorage.getItem(docKey);
-  
-  if (savedDocs) {
-    try {
-      const docs = JSON.parse(savedDocs);
-      
-      // 통장사본 정보 로드
-      if (docs.bankAccount) {
-        document.getElementById('bankName').value = docs.bankAccount.bankName || '';
-        document.getElementById('accountNumber').value = docs.bankAccount.accountNumber || '';
-        document.getElementById('accountHolder').value = docs.bankAccount.accountHolder || '';
-      }
-      
-      // 보건증 정보 로드
-      if (docs.healthCert) {
-        // 이미지 미리보기
-        if (docs.healthCert.imageData) {
-          document.getElementById('healthCertImg').src = docs.healthCert.imageData;
-          document.getElementById('healthCertPreview').style.display = 'block';
-        }
-        
-        // 유효기간
-        if (docs.healthCert.expiryDate) {
-          const [year, month, day] = docs.healthCert.expiryDate.split('-');
-          document.getElementById('healthCertYear').value = year;
-          document.getElementById('healthCertMonth').value = month;
-          document.getElementById('healthCertDay').value = day;
-        }
-      }
-    } catch (e) {
-      console.error('서류 정보 불러오기 오류:', e);
-    }
-  }
-}
-
-/**
- * 통장사본 정보 저장
- */
-function saveBankAccount() {
-  if (!currentUser) {
-    alert('⚠️ 로그인 정보가 없습니다.');
-    return;
-  }
-  
-  const bankName = document.getElementById('bankName').value.trim();
-  const accountNumber = document.getElementById('accountNumber').value.trim();
-  const accountHolder = document.getElementById('accountHolder').value.trim();
-  
-  if (!bankName || !accountNumber || !accountHolder) {
-    alert('⚠️ 모든 항목을 입력해주세요.');
-    return;
-  }
-  
-  // 기존 서류 정보 가져오기
-  const docKey = `employee_docs_${currentUser.name}_${currentUser.id}`;
-  const savedDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
-  
-  // 통장사본 정보 업데이트
-  savedDocs.bankAccount = {
-    bankName: bankName,
-    accountNumber: accountNumber,
-    accountHolder: accountHolder,
-    updatedAt: new Date().toISOString()
-  };
-  
-  // 저장
-  localStorage.setItem(docKey, JSON.stringify(savedDocs));
-  
-  // 저장 완료 메시지
-  const statusEl = document.getElementById('bankSaveStatus');
-  statusEl.textContent = '✅ 저장되었습니다!';
-  statusEl.style.display = 'inline-flex';
-  
-  setTimeout(() => {
-    statusEl.style.display = 'none';
-  }, 3000);
-}
-
-/**
- * 보건증 이미지 미리보기 및 자동 압축
- */
-function previewHealthCert(event) {
-  const file = event.target.files[0];
-  
-  if (!file) return;
-  
-  // 이미지 파일 검증
-  if (!file.type.startsWith('image/')) {
-    alert('⚠️ 이미지 파일만 업로드 가능합니다.');
-    event.target.value = '';
-    return;
-  }
-  
-  // 원본 파일 크기 표시
-  const originalSize = (file.size / 1024).toFixed(0);
-  console.log(`원본 파일 크기: ${originalSize}KB`);
-  
-  // 파일 읽기 및 압축
-  const reader = new FileReader();
-  
-  reader.onload = function(e) {
-    const img = new Image();
-    
-    img.onload = function() {
-      // Canvas를 사용해 이미지 압축
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // 최대 크기 설정 (폭 기준 1200px)
-      const maxWidth = 1200;
-      let width = img.width;
-      let height = img.height;
-      
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      // 이미지 그리기
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Base64로 변환 (품질 0.7 = 70%)
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      
-      // 압축된 크기 계산
-      const compressedSize = Math.round((compressedDataUrl.length * 3) / 4 / 1024);
-      
-      console.log(`압축 후 크기: ${compressedSize}KB`);
-      
-      // 미리보기 표시
-      const previewImg = document.getElementById('healthCertImg');
-      previewImg.src = compressedDataUrl;
-      document.getElementById('healthCertPreview').style.display = 'block';
-      
-      // 크기 정보 표시
-      const sizeInfo = document.getElementById('imageSizeInfo');
-      sizeInfo.textContent = `원본: ${originalSize}KB → 압축: ${compressedSize}KB`;
-      
-      // 압축된 데이터를 임시 저장 (저장 버튼 클릭 시 사용)
-      window.compressedHealthCertData = compressedDataUrl;
-    };
-    
-    img.onerror = function() {
-      alert('❌ 이미지를 불러오는 중 오류가 발생했습니다.');
-      event.target.value = '';
-    };
-    
-    img.src = e.target.result;
-  };
-  
-  reader.onerror = function() {
-    alert('❌ 파일을 읽는 중 오류가 발생했습니다.');
-  };
-  
-  reader.readAsDataURL(file);
-}
-
-/**
- * 보건증 정보 저장
- */
-function saveHealthCert() {
-  if (!currentUser) {
-    alert('⚠️ 로그인 정보가 없습니다.');
-    return;
-  }
-  
-  const fileInput = document.getElementById('healthCertImage');
-  const year = document.getElementById('healthCertYear').value;
-  const month = document.getElementById('healthCertMonth').value;
-  const day = document.getElementById('healthCertDay').value;
-  
-  // 유효기간 검증
-  if (!year || !month || !day) {
-    alert('⚠️ 유효기간을 모두 선택해주세요.');
-    return;
-  }
-  
-  // 이미지 필수 검증
-  if (!fileInput.files[0] && !document.getElementById('healthCertImg').src) {
-    alert('⚠️ 보건증 이미지를 업로드해주세요.');
-    return;
-  }
-  
-  const expiryDate = `${year}-${month}-${day}`;
-  
-  // 기존 서류 정보 가져오기
-  const docKey = `employee_docs_${currentUser.name}_${currentUser.id}`;
-  const savedDocs = JSON.parse(localStorage.getItem(docKey) || '{}');
-  
-  // 이미지가 새로 업로드된 경우 (압축된 데이터 사용)
-  if (window.compressedHealthCertData) {
-    // 보건증 정보 업데이트 (압축된 이미지 사용)
-    savedDocs.healthCert = {
-      imageData: window.compressedHealthCertData,
-      expiryDate: expiryDate,
-      updatedAt: new Date().toISOString()
-    };
-    
-    // 저장
-    localStorage.setItem(docKey, JSON.stringify(savedDocs));
-    
-    // 임시 데이터 삭제
-    delete window.compressedHealthCertData;
-    
-    // 저장 완료 메시지
-    showHealthSaveSuccess();
+  let date;
+  if (timestamp.toDate) {
+    date = timestamp.toDate();
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
   } else {
-    // 이미지는 그대로 유지하고 유효기간만 업데이트
-    if (!savedDocs.healthCert) {
-      savedDocs.healthCert = {};
-    }
-    savedDocs.healthCert.expiryDate = expiryDate;
-    savedDocs.healthCert.updatedAt = new Date().toISOString();
-    
-    // 저장
-    localStorage.setItem(docKey, JSON.stringify(savedDocs));
-    
-    // 저장 완료 메시지
-    showHealthSaveSuccess();
+    return '-';
   }
+  
+  const dateStr = date.toLocaleDateString('ko-KR');
+  const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  return `${dateStr} ${timeStr}`;
 }
 
 /**
- * 보건증 저장 완료 메시지 표시
+ * 디버그 로그 출력
+ * @param {string} message - 로그 메시지
  */
-function showHealthSaveSuccess() {
-  const statusEl = document.getElementById('healthSaveStatus');
-  statusEl.textContent = '✅ 저장되었습니다!';
-  statusEl.style.display = 'inline-flex';
-  
-  setTimeout(() => {
-    statusEl.style.display = 'none';
-  }, 3000);
+function debugLog(message) {
+  if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG_MODE) {
+    console.log(`[Employee] ${message}`);
+  }
 }
