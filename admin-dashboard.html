@@ -2830,7 +2830,12 @@
     }
 
     function loadStoreInfoToContract() {
-      const storeId = document.getElementById('storeSelect').value;
+      const storeSelect = document.getElementById('storeSelect');
+      if (!storeSelect) {
+        console.log('ℹ️ storeSelect 요소를 찾을 수 없음');
+        return;
+      }
+      const storeId = storeSelect.value;
       
       if (!storeId) {
         document.getElementById('companyCEO').value = '';
@@ -3240,11 +3245,18 @@
     function updatePreview() {
       console.log('🔍 미리보기 업데이트');
       
+      // 필수 요소 체크
+      const employeeNameEl = document.getElementById('employeeName');
+      if (!employeeNameEl) {
+        console.log('ℹ️ 폼 요소가 아직 로드되지 않음');
+        return;
+      }
+      
       // 직원(근로자) 정보
-      const employeeName = document.getElementById('employeeName').value;
-      const employeeBirth = document.getElementById('employeeBirth').value;
-      const employeeAddress = document.getElementById('employeeAddress').value;
-      const employeePhone = document.getElementById('employeePhone').value;
+      const employeeName = employeeNameEl.value;
+      const employeeBirth = document.getElementById('employeeBirth')?.value || '';
+      const employeeAddress = document.getElementById('employeeAddress')?.value || '';
+      const employeePhone = document.getElementById('employeePhone')?.value || '';
       
       document.getElementById('previewName').textContent = employeeName || '_______';
       document.getElementById('previewEmployeeName').textContent = employeeName || '_______';
