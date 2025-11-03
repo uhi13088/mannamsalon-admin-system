@@ -223,7 +223,7 @@ function clearSignature() {
 // 서명 제출
 // ===================================================================
 
-function submitSignature() {
+async function submitSignature() {
   // 동의 체크 확인
   const agreeCheck = document.getElementById('agreeCheck');
   if (!agreeCheck.checked) {
@@ -248,13 +248,17 @@ function submitSignature() {
     status: 'signed'
   };
   
-  // localStorage에 저장 (임시)
-  const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
-  signedContracts.push(signedContract);
-  localStorage.setItem('signedContracts', JSON.stringify(signedContracts));
-  
-  // 성공 메시지 표시
-  showSuccess();
+  // Firestore에 저장
+  try {
+    await db.collection('signedContracts').doc(contractId).set(signedContract);
+    console.log('✅ 서명된 계약서 Firestore 저장 완료:', contractId);
+    
+    // 성공 메시지 표시
+    showSuccess();
+  } catch (error) {
+    console.error('❌ 서명 저장 실패:', error);
+    alert('서명 저장에 실패했습니다. 다시 시도해주세요.');
+  }
 }
 
 function showSuccess() {
