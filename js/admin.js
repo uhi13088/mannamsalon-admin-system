@@ -256,6 +256,7 @@ function showTab(tabName) {
  * @param {string} tabName - 탭 이름
  */
 function switchTab(tabName) {
+  console.log('🔄 탭 전환:', tabName);
   currentTab = tabName;
   
   // 모든 탭 버튼 비활성화
