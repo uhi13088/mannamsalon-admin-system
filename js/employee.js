@@ -137,6 +137,13 @@ async function handleLogout() {
  * 사용자 정보를 화면에 표시하고 모든 데이터 로드
  */
 function showMainScreen() {
+  if (!currentUser) {
+    console.error('❌ currentUser is null in showMainScreen');
+    return;
+  }
+  
+  console.log('✅ showMainScreen 실행, currentUser:', currentUser.name);
+  
   // 사용자 정보 표시
   document.getElementById('displayName').textContent = currentUser.name + '님';
   document.getElementById('displayStore').textContent = currentUser.store || '매장 정보 없음';
@@ -210,10 +217,19 @@ function showClockOut() {
  * @param {string} type - '출근' 또는 '퇴근'
  */
 async function recordAttendance(type) {
+  // currentUser 체크
+  if (!currentUser) {
+    console.error('❌ currentUser is null in recordAttendance');
+    alert('❌ 로그인 정보가 없습니다. 페이지를 새로고침해주세요.');
+    return;
+  }
+  
   try {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = formatTime(now);
+    
+    console.log('🕐 출퇴근 기록:', { type, uid: currentUser.uid, name: currentUser.name, dateStr, timeStr });
     
     // 오늘 기록 확인
     const todayDocRef = db.collection('attendance')
@@ -307,9 +323,17 @@ async function recordAttendance(type) {
  * 오늘 출퇴근 상태를 Firestore에서 조회하여 표시
  */
 async function updateCurrentStatus() {
+  // currentUser 체크
+  if (!currentUser) {
+    console.error('❌ currentUser is null in updateCurrentStatus');
+    return;
+  }
+  
   try {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
+    
+    console.log('📊 현재 상태 업데이트:', { uid: currentUser.uid, dateStr });
     
     // Firestore에서 오늘 기록 확인
     const todayDocRef = db.collection('attendance')
@@ -356,8 +380,16 @@ async function updateCurrentStatus() {
 async function loadAttendance() {
   debugLog('근무내역 조회');
   
-  const filterMonth = document.getElementById('filterMonth').value;
   const tbody = document.getElementById('attendanceTableBody');
+  
+  // currentUser 체크
+  if (!currentUser) {
+    console.error('❌ currentUser is null in loadAttendance');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 40px; color: var(--danger-color);">❌ 로그인 정보가 없습니다. 페이지를 새로고침해주세요.</td></tr>';
+    return;
+  }
+  
+  const filterMonth = document.getElementById('filterMonth').value;
   
   if (!filterMonth) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 40px;">조회할 월을 선택하세요</td></tr>';
@@ -368,6 +400,8 @@ async function loadAttendance() {
     // Firestore에서 해당 월의 근무 기록 조회
     const startDate = filterMonth + '-01';
     const endDate = filterMonth + '-31';
+    
+    console.log('📊 근무내역 조회:', { uid: currentUser.uid, filterMonth });
     
     const snapshot = await db.collection('attendance')
       .where('uid', '==', currentUser.uid)
@@ -417,6 +451,14 @@ async function loadAttendance() {
 async function loadSalary() {
   debugLog('급여 조회');
   
+  // currentUser 체크
+  if (!currentUser) {
+    console.error('❌ currentUser is null in loadSalary');
+    document.getElementById('salaryContent').innerHTML = 
+      '<div class="alert alert-danger">❌ 로그인 정보가 없습니다. 페이지를 새로고침해주세요.</div>';
+    return;
+  }
+  
   const filterMonth = document.getElementById('salaryFilterMonth').value;
   
   if (!filterMonth) {
@@ -429,6 +471,8 @@ async function loadSalary() {
     // Firestore에서 해당 월의 완료된 근무 기록 조회
     const startDate = filterMonth + '-01';
     const endDate = filterMonth + '-31';
+    
+    console.log('💰 급여 조회:', { uid: currentUser.uid, filterMonth });
     
     const snapshot = await db.collection('attendance')
       .where('uid', '==', currentUser.uid)
@@ -587,7 +631,17 @@ function renderSalaryInfo(data) {
 async function loadContracts() {
   debugLog('계약서 조회');
   
+  // currentUser 체크
+  if (!currentUser) {
+    console.error('❌ currentUser is null in loadContracts');
+    document.getElementById('contractContent').innerHTML = 
+      '<div class="alert alert-danger">❌ 로그인 정보가 없습니다. 페이지를 새로고침해주세요.</div>';
+    return;
+  }
+  
   try {
+    console.log('📝 계약서 조회:', { uid: currentUser.uid });
+    
     // Firestore에서 현재 사용자의 계약서 조회
     const snapshot = await db.collection('contracts')
       .where('employeeUid', '==', currentUser.uid)
