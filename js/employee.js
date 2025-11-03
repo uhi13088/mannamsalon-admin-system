@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
  * 로그인 상태 확인
  * sessionStorage에서 사용자 정보를 읽어서 자동 로그인
  */
-function checkLoginStatus() {
+async function checkLoginStatus() {
   const authenticated = sessionStorage.getItem('employee_authenticated');
   const name = sessionStorage.getItem('employee_name');
   const uid = sessionStorage.getItem('employee_uid');
@@ -62,8 +62,8 @@ function checkLoginStatus() {
     return;
   }
   
-  // 사용자 정보 로드
-  loadUserInfo(uid, name);
+  // 사용자 정보 로드 (비동기 완료까지 대기)
+  await loadUserInfo(uid, name);
 }
 
 /**
