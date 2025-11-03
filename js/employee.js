@@ -72,22 +72,30 @@ async function checkLoginStatus() {
  * @param {string} name - 직원 이름
  */
 async function loadUserInfo(uid, name) {
+  console.log('🔍 loadUserInfo 시작:', { uid, name });
+  
   try {
     const userDoc = await db.collection('users').doc(uid).get();
     
+    console.log('📄 Firestore 조회 결과:', { exists: userDoc.exists });
+    
     if (userDoc.exists) {
+      const userData = userDoc.data();
       currentUser = {
         uid: uid,
-        ...userDoc.data()
+        ...userData
       };
+      console.log('✅ currentUser 설정 완료 (Firestore):', currentUser);
     } else {
       // Firestore에 정보가 없으면 기본값 사용
       currentUser = {
         uid: uid,
         name: name,
         store: '매장 정보 없음',
-        position: '직원'
+        position: '직원',
+        email: sessionStorage.getItem('employee_email') || ''
       };
+      console.log('⚠️ currentUser 설정 완료 (기본값):', currentUser);
     }
     
     showMainScreen();
@@ -98,8 +106,10 @@ async function loadUserInfo(uid, name) {
       uid: uid,
       name: name,
       store: '매장 정보 없음',
-      position: '직원'
+      position: '직원',
+      email: sessionStorage.getItem('employee_email') || ''
     };
+    console.log('⚠️ currentUser 설정 완료 (오류 후 기본값):', currentUser);
     showMainScreen();
   }
 }
