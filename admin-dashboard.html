@@ -3295,7 +3295,7 @@
         { id: 'employeeBirth', name: '생년월일' },
         { id: 'employeeAddress', name: '주소' },
         { id: 'employeePhone', name: '연락처' },
-        { id: 'companySelect', name: '회사' },
+        { id: 'storeSelect', name: '매장' },
         { id: 'contractType', name: '계약 유형' },
         { id: 'workStore', name: '근무 매장' },
         { id: 'startDate', name: '계약 시작일' },
@@ -3361,20 +3361,19 @@
       const previewSSN = document.getElementById('previewSSN');
       if (previewSSN) previewSSN.textContent = birthFormatted;
       
-      // 회사(사용자) 정보
-      const companySelectEl = document.getElementById('companySelect');
-      if (!companySelectEl) {
-        console.log('ℹ️ companySelect 요소를 찾을 수 없음');
+      // 회사(사용자) 정보 - storeSelect에서 가져오기
+      const storeSelectEl = document.getElementById('storeSelect');
+      if (!storeSelectEl) {
+        console.log('ℹ️ storeSelect 요소를 찾을 수 없음');
         return;
       }
-      const companyId = companySelectEl.value;
-      const company = companies.find(c => c.id === companyId);
       
-      const companyName = document.getElementById('companyName')?.value || (company ? company.name : '(주)ABC디저트센터');
-      const companyCEO = document.getElementById('companyCEO').value || (company ? company.ceo : '_______');
-      const companyBusinessNumber = document.getElementById('companyBusinessNumber').value || (company ? company.businessNumber : '_______');
-      const companyPhone = document.getElementById('companyPhone').value || (company ? company.phone : '_______');
-      const companyAddress = document.getElementById('companyAddress').value || (company ? company.address : '_______');
+      // 폼에서 직접 읽어온 값 사용 (이미 loadStoreInfoToContract에서 채워짐)
+      const companyName = document.getElementById('workStore')?.value || '(주)ABC디저트센터';
+      const companyCEO = document.getElementById('companyCEO')?.value || '_______';
+      const companyBusinessNumber = document.getElementById('companyBusinessNumber')?.value || '_______';
+      const companyPhone = document.getElementById('companyPhone')?.value || '_______';
+      const companyAddress = document.getElementById('companyAddress')?.value || '_______';
       
       document.getElementById('previewCompanyName').textContent = companyName;
       document.getElementById('previewCompanyName2').textContent = companyName;
