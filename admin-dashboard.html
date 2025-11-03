@@ -2018,45 +2018,71 @@
     }
 
     // 공지사항 관리
-    function loadNotices() {
-      const notices = JSON.parse(localStorage.getItem('notices') || '[]');
+    async function loadNotices() {
       const tbody = document.getElementById('noticeTableBody');
       
-      if (notices.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-              <p style="margin-bottom: 16px;">등록된 공지사항이 없습니다.</p>
-              <button class="btn btn-primary" onclick="showAddNoticeModal()">+ 공지사항 작성</button>
-            </td>
-          </tr>
-        `;
+      if (!tbody) {
+        console.error('❌ noticeTableBody 요소를 찾을 수 없음');
         return;
       }
       
-      // 최신순 정렬
-      notices.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">공지사항을 불러오는 중...</td></tr>';
       
-      tbody.innerHTML = notices.map(notice => {
-        const date = new Date(notice.createdAt);
-        const dateStr = date.toLocaleDateString('ko-KR');
-        const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      try {
+        // Firestore에서 공지사항 가져오기
+        const snapshot = await firebase.firestore().collection('notices').get();
         
-        return `
-          <tr>
-            <td>
-              ${notice.important ? '<span style="color: #ff6b6b; font-weight: bold;">⭐</span> ' : ''}
-              ${notice.title}
-            </td>
-            <td>${dateStr} ${timeStr}</td>
-            <td>${notice.important ? '<span style="color: #ff6b6b;">중요</span>' : '-'}</td>
-            <td>
-              <button class="btn btn-sm" onclick="showEditNoticeModal('${notice.id}')">수정</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteNoticeConfirm('${notice.id}')">삭제</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+        const notices = [];
+        snapshot.forEach(doc => {
+          notices.push({ id: doc.id, ...doc.data() });
+        });
+        
+        if (notices.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p style="margin-bottom: 16px;">등록된 공지사항이 없습니다.</p>
+                <button class="btn btn-primary" onclick="showAddNoticeModal()">+ 공지사항 작성</button>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        // 클라이언트에서 최신순 정렬
+        notices.sort((a, b) => {
+          const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+          const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+          return dateB - dateA;
+        });
+        
+        tbody.innerHTML = notices.map(notice => {
+          // Firestore Timestamp 또는 ISO 문자열 처리
+          const date = notice.createdAt ? (notice.createdAt.toDate ? notice.createdAt.toDate() : new Date(notice.createdAt)) : new Date();
+          const dateStr = date.toLocaleDateString('ko-KR');
+          const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          
+          return `
+            <tr>
+              <td>
+                ${notice.important ? '<span style="color: #ff6b6b; font-weight: bold;">⭐</span> ' : ''}
+                ${notice.title}
+              </td>
+              <td>${dateStr} ${timeStr}</td>
+              <td>${notice.important ? '<span style="color: #ff6b6b;">중요</span>' : '-'}</td>
+              <td>
+                <button class="btn btn-sm" onclick="showEditNoticeModal('${notice.id}')">수정</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteNoticeConfirm('${notice.id}')">삭제</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+        console.log(`✅ ${notices.length}개 공지사항 로드 완료`);
+      } catch (error) {
+        console.error('❌ 공지사항 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger-color);">공지사항을 불러오는데 실패했습니다.</td></tr>';
+      }
     }
 
     function showAddNoticeModal() {
