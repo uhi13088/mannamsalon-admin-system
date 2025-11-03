@@ -16,6 +16,81 @@ let currentTab = 'dashboard'; // 현재 활성 탭
 // ===================================================================
 
 // ===================================================================
+// 데이터 마이그레이션 유틸리티
+// ===================================================================
+
+/**
+ * attendance 컬렉션의 기존 문서에 date 필드 추가
+ * createdAt 또는 clockIn에서 날짜 추출
+ */
+async function migrateAttendanceData() {
+  console.log('🔄 근태 데이터 마이그레이션 시작...');
+  
+  try {
+    const snapshot = await firebase.firestore().collection('attendance').get();
+    
+    if (snapshot.empty) {
+      console.log('⚠️ 마이그레이션할 데이터가 없습니다.');
+      return;
+    }
+    
+    let migratedCount = 0;
+    const batch = firebase.firestore().batch();
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      
+      // date 필드가 이미 있으면 스킵
+      if (data.date) {
+        return;
+      }
+      
+      // date 필드 생성
+      let dateValue = null;
+      
+      if (data.createdAt) {
+        // createdAt이 문자열인 경우 (ISO 형식)
+        if (typeof data.createdAt === 'string') {
+          dateValue = data.createdAt.split('T')[0]; // "2025-10-31"
+        }
+      } else if (data.clockIn) {
+        // clockIn에서 날짜 추출
+        if (typeof data.clockIn === 'string') {
+          // ISO 형식인 경우
+          if (data.clockIn.includes('T')) {
+            dateValue = data.clockIn.split('T')[0];
+          } else {
+            // 시간만 있는 경우 오늘 날짜 사용
+            const today = new Date();
+            dateValue = today.toISOString().split('T')[0];
+          }
+        }
+      }
+      
+      if (dateValue) {
+        console.log(`📝 마이그레이션: ${doc.id} → date: ${dateValue}`);
+        batch.update(doc.ref, { date: dateValue });
+        migratedCount++;
+      }
+    });
+    
+    if (migratedCount > 0) {
+      await batch.commit();
+      console.log(`✅ ${migratedCount}개 문서 마이그레이션 완료!`);
+      alert(`✅ ${migratedCount}개의 근태 기록에 날짜 필드를 추가했습니다.\n페이지를 새로고침해주세요.`);
+    } else {
+      console.log('✅ 모든 문서에 date 필드가 이미 존재합니다.');
+    }
+  } catch (error) {
+    console.error('❌ 마이그레이션 실패:', error);
+    alert('❌ 데이터 마이그레이션에 실패했습니다: ' + error.message);
+  }
+}
+
+// 개발자 콘솔에서 호출 가능하도록 전역으로 노출
+window.migrateAttendanceData = migrateAttendanceData;
+
+// ===================================================================
 // 초기화 및 페이지 로드
 // ===================================================================
 
