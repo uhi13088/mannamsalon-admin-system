@@ -380,21 +380,34 @@ async function loadAttendanceList() {
   tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보를 불러오는 중...</td></tr>';
   
   try {
+    console.log('🔍 Firestore 쿼리 시작: attendance 컬렉션');
+    
     // Firestore에서 근태 데이터 가져오기
     const attendanceSnapshot = await firebase.firestore().collection('attendance')
       .orderBy('date', 'desc')
       .limit(100)
       .get();
     
+    console.log('📊 조회 결과:', {
+      empty: attendanceSnapshot.empty,
+      size: attendanceSnapshot.size,
+      docs: attendanceSnapshot.docs.length
+    });
+    
     if (attendanceSnapshot.empty) {
+      console.warn('⚠️ attendance 컬렉션이 비어있습니다');
       tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
       return;
     }
     
     const attendanceList = [];
     attendanceSnapshot.forEach(doc => {
-      attendanceList.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      console.log('📄 문서 데이터:', { id: doc.id, data });
+      attendanceList.push({ id: doc.id, ...data });
     });
+    
+    console.log('✅ 총 근태 기록:', attendanceList.length);
     
     tbody.innerHTML = attendanceList.map(att => {
       const statusClass = getStatusBadgeClass(att.status || '정상');
@@ -414,7 +427,7 @@ async function loadAttendanceList() {
       `;
     }).join('');
   } catch (error) {
-    console.error('근태 목록 로드 실패:', error);
+    console.error('❌ 근태 목록 로드 실패:', error);
     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger-color);">❌ 근태 정보를 불러오는데 실패했습니다.</td></tr>';
   }
 }
