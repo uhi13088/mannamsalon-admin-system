@@ -1816,44 +1816,71 @@
     }
 
     // 매장 관리 함수들
-    function loadStores() {
+    async function loadStores() {
       const tbody = document.getElementById('storesTableBody');
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
       
-      // 기본 매장이 없으면 추가
-      if (stores.length === 0) {
-        stores.push(
-          { id: '1', name: '부천시청점', address: '경기도 부천시 원미구', phone: '032-123-4567' },
-          { id: '2', name: '상동점', address: '경기도 부천시 상동', phone: '032-123-4568' },
-          { id: '3', name: '부천역사점', address: '경기도 부천시 부천역 인근', phone: '032-123-4569' }
-        );
-        localStorage.setItem('stores', JSON.stringify(stores));
-      }
+      if (!tbody) return;
       
-      if (stores.length === 0) {
-        tbody.innerHTML = `
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">매장 정보를 불러오는 중...</td></tr>';
+      
+      try {
+        // Firestore에서 매장 정보 로드
+        const storesSnapshot = await firebase.firestore().collection('stores').get();
+        
+        let stores = [];
+        storesSnapshot.forEach(doc => {
+          stores.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // 기본 매장이 없으면 Firestore에 추가
+        if (stores.length === 0) {
+          console.log('📋 기본 매장 생성 중...');
+          const defaultStores = [
+            { name: '맛남살롱 부천시청점', address: '경기도 부천시 원미구', phone: '032-123-4567', ceo: '홍길동', businessNumber: '123-45-67890' },
+            { name: '맛남살롱 상동점', address: '경기도 부천시 상동', phone: '032-123-4568', ceo: '홍길동', businessNumber: '123-45-67890' },
+            { name: '맛남살롱 부천역사점', address: '경기도 부천시 부천역 인근', phone: '032-123-4569', ceo: '홍길동', businessNumber: '123-45-67890' }
+          ];
+          
+          for (const store of defaultStores) {
+            const docRef = await firebase.firestore().collection('stores').add({
+              ...store,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            stores.push({ id: docRef.id, ...store });
+          }
+          console.log('✅ 기본 매장 3개 생성 완료');
+        }
+        
+        if (stores.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p style="margin-bottom: 16px;">등록된 매장이 없습니다.</p>
+                <button class="btn btn-primary" onclick="showAddStoreModal()">+ 첫 매장 추가하기</button>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        tbody.innerHTML = stores.map(store => `
           <tr>
-            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-              <p style="margin-bottom: 16px;">등록된 매장이 없습니다.</p>
-              <button class="btn btn-primary" onclick="showAddStoreModal()">+ 첫 매장 추가하기</button>
+            <td>${store.name}</td>
+            <td>${store.address || '-'}</td>
+            <td>${store.phone || '-'}</td>
+            <td>${store.ceo || '-'}</td>
+            <td>${store.businessNumber || '-'}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="showEditStoreModal('${store.id}')">✏️ 수정</button>
             </td>
           </tr>
-        `;
-        return;
+        `).join('');
+        
+        console.log(`✅ ${stores.length}개 매장 로드 완료`);
+      } catch (error) {
+        console.error('❌ 매장 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger-color);">매장 정보를 불러오는데 실패했습니다.</td></tr>';
       }
-      
-      tbody.innerHTML = stores.map(store => `
-        <tr>
-          <td>${store.name}</td>
-          <td>${store.address || '-'}</td>
-          <td>${store.phone || '-'}</td>
-          <td>${store.ceo || '-'}</td>
-          <td>${store.businessNumber || '-'}</td>
-          <td>
-            <button class="btn btn-sm btn-secondary" onclick="showEditStoreModal('${store.id}')">✏️ 수정</button>
-          </td>
-        </tr>
-      `).join('');
     }
 
     let storeCeoSignatureData = null;
