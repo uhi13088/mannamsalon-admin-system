@@ -2042,21 +2042,27 @@
         const dateStr = date.toLocaleDateString('ko-KR');
         const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         
-        return `
-          <tr>
-            <td>
-              ${notice.important ? '<span style="color: #ff6b6b; font-weight: bold;">⭐</span> ' : ''}
-              ${notice.title}
-            </td>
-            <td>${dateStr} ${timeStr}</td>
-            <td>${notice.important ? '<span style="color: #ff6b6b;">중요</span>' : '-'}</td>
-            <td>
-              <button class="btn btn-sm" onclick="showEditNoticeModal('${notice.id}')">수정</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteNoticeConfirm('${notice.id}')">삭제</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+          return `
+            <tr>
+              <td>
+                ${notice.important ? '<span style="color: #ff6b6b; font-weight: bold;">⭐</span> ' : ''}
+                ${notice.title}
+              </td>
+              <td>${dateStr} ${timeStr}</td>
+              <td>${notice.important ? '<span style="color: #ff6b6b;">중요</span>' : '-'}</td>
+              <td>
+                <button class="btn btn-sm" onclick="showEditNoticeModal('${notice.id}')">수정</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteNoticeConfirm('${notice.id}')">삭제</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+        console.log(`✅ ${notices.length}개 공지사항 로드 완료`);
+      } catch (error) {
+        console.error('❌ 공지사항 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger-color);">공지사항을 불러오는데 실패했습니다.</td></tr>';
+      }
     }
 
     function showAddNoticeModal() {
