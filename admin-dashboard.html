@@ -1902,41 +1902,48 @@
       document.getElementById('storeModal').style.display = 'flex';
     }
 
-    function showEditStoreModal(storeId) {
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
-      const store = stores.find(s => s.id === storeId);
-      
-      if (!store) {
-        alert('매장 정보를 찾을 수 없습니다.');
-        return;
+    async function showEditStoreModal(storeId) {
+      try {
+        // Firestore에서 매장 정보 가져오기
+        const storeDoc = await firebase.firestore().collection('stores').doc(storeId).get();
+        
+        if (!storeDoc.exists) {
+          alert('매장 정보를 찾을 수 없습니다.');
+          return;
+        }
+        
+        const store = { id: storeDoc.id, ...storeDoc.data() };
+        
+        document.getElementById('storeModalTitle').textContent = '🏪 매장 수정';
+        document.getElementById('editStoreId').value = store.id;
+        document.getElementById('storeName').value = store.name;
+        document.getElementById('storeAddress').value = store.address || '';
+        document.getElementById('storePhone').value = store.phone || '';
+        document.getElementById('storeCEO').value = store.ceo || '';
+        document.getElementById('storeBusinessNumber').value = store.businessNumber || '';
+        document.getElementById('deleteStoreBtn').style.display = 'block';
+        
+        // 서명 불러오기
+        if (store.ceoSignature) {
+          storeCeoSignatureData = store.ceoSignature;
+          document.getElementById('storeCeoSignaturePreview').innerHTML = `<img src="${store.ceoSignature}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
+        } else {
+          storeCeoSignatureData = null;
+          document.getElementById('storeCeoSignaturePreview').innerHTML = '<span style="color: #999;">서명 이미지 선택 (선택사항)</span>';
+        }
+        
+        document.getElementById('storeModal').style.display = 'flex';
+      } catch (error) {
+        console.error('❌ 매장 정보 로드 실패:', error);
+        alert('매장 정보를 불러오는데 실패했습니다.');
       }
-      
-      document.getElementById('storeModalTitle').textContent = '🏪 매장 수정';
-      document.getElementById('editStoreId').value = store.id;
-      document.getElementById('storeName').value = store.name;
-      document.getElementById('storeAddress').value = store.address || '';
-      document.getElementById('storePhone').value = store.phone || '';
-      document.getElementById('storeCEO').value = store.ceo || '';
-      document.getElementById('storeBusinessNumber').value = store.businessNumber || '';
-      document.getElementById('deleteStoreBtn').style.display = 'block';
-      
-      // 서명 불러오기
-      if (store.ceoSignature) {
-        storeCeoSignatureData = store.ceoSignature;
-        document.getElementById('storeCeoSignaturePreview').innerHTML = `<img src="${store.ceoSignature}" style="max-width: 100%; max-height: 100px; object-fit: contain;">`;
-      } else {
-        storeCeoSignatureData = null;
-        document.getElementById('storeCeoSignaturePreview').innerHTML = '<span style="color: #999;">서명 이미지 선택 (선택사항)</span>';
-      }
-      
-      document.getElementById('storeModal').style.display = 'flex';
     }
 
     function closeStoreModal() {
       document.getElementById('storeModal').style.display = 'none';
     }
 
-    function saveStore() {
+    async function saveStore() {
       const storeId = document.getElementById('editStoreId').value;
       const name = document.getElementById('storeName').value.trim();
       const address = document.getElementById('storeAddress').value.trim();
@@ -1949,60 +1956,65 @@
         return;
       }
       
-      let stores = JSON.parse(localStorage.getItem('stores') || '[]');
-      
-      if (storeId) {
-        // 수정
-        const index = stores.findIndex(s => s.id === storeId);
-        if (index >= 0) {
-          stores[index] = { 
-            ...stores[index], 
-            name, 
-            address, 
-            phone, 
-            ceo, 
-            businessNumber,
-            ceoSignature: storeCeoSignatureData || stores[index].ceoSignature || null
-          };
-        }
-      } else {
-        // 추가
-        const newId = String(Date.now());
-        stores.push({ 
-          id: newId, 
-          name, 
-          address, 
-          phone, 
-          ceo, 
+      try {
+        const storeData = {
+          name,
+          address,
+          phone,
+          ceo,
           businessNumber,
-          ceoSignature: storeCeoSignatureData || null
-        });
+          ceoSignature: storeCeoSignatureData || null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (storeId) {
+          // 수정 - Firestore 업데이트
+          await firebase.firestore().collection('stores').doc(storeId).update(storeData);
+          console.log('✅ 매장 수정 완료:', storeId);
+        } else {
+          // 추가 - Firestore 신규 생성
+          storeData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+          const docRef = await firebase.firestore().collection('stores').add(storeData);
+          console.log('✅ 매장 추가 완료:', docRef.id);
+        }
+        
+        closeStoreModal();
+        loadStores();
+        
+        // 서명 초기화
+        storeCeoSignatureData = null;
+        
+        alert('✅ 매장 정보가 저장되었습니다.');
+      } catch (error) {
+        console.error('❌ 매장 저장 실패:', error);
+        alert('매장 정보 저장에 실패했습니다.');
       }
-      
-      localStorage.setItem('stores', JSON.stringify(stores));
-      closeStoreModal();
-      loadStores();
-      
-      // 서명 초기화
-      storeCeoSignatureData = null;
-      
-      alert('✅ 매장 정보가 저장되었습니다.');
     }
 
-    function deleteStore() {
+    async function deleteStore() {
       if (!confirm('⚠️ 정말 이 매장을 삭제하시겠습니까?')) {
         return;
       }
       
       const storeId = document.getElementById('editStoreId').value;
-      let stores = JSON.parse(localStorage.getItem('stores') || '[]');
       
-      stores = stores.filter(s => s.id !== storeId);
+      if (!storeId) {
+        alert('삭제할 매장을 선택해주세요.');
+        return;
+      }
       
-      localStorage.setItem('stores', JSON.stringify(stores));
-      closeStoreModal();
-      loadStores();
-      alert('✅ 매장이 삭제되었습니다.');
+      try {
+        // Firestore에서 매장 삭제
+        await firebase.firestore().collection('stores').doc(storeId).delete();
+        console.log('✅ 매장 삭제 완료:', storeId);
+        
+        closeStoreModal();
+        loadStores();
+        alert('✅ 매장이 삭제되었습니다.');
+      } catch (error) {
+        console.error('❌ 매장 삭제 실패:', error);
+        alert('매장 삭제에 실패했습니다.');
+      }
     }
 
     // 공지사항 관리
@@ -2368,28 +2380,47 @@
               address: '경기도 부천시 부천역'
             }
           ];
-          localStorage.setItem('stores', JSON.stringify(stores));
-          console.log('✅ 기본 매장 정보 생성 완료');
+          localStorage.setItem('companies', JSON.stringify(stores));
+          console.log('✅ 기본 회사 정보 생성 완료');
         }
         
-        storeSelect.innerHTML = '<option value="">선택하세요</option>';
-        stores.forEach(store => {
-          storeSelect.innerHTML += `<option value="${store.id}">${store.name}</option>`;
-        });
+        storeSelect.innerHTML = '<option value="">매장을 선택하세요</option>';
         
-        if (stores.length > 0) {
-          storeSelect.value = stores[0].id;
-          // 매장 정보 자동 입력
-          const store = stores[0];
-          document.getElementById('companyCEO').value = store.ceo || '';
-          document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
-          document.getElementById('companyPhone').value = store.phone || '';
-          document.getElementById('companyAddress').value = store.address || '';
-          document.getElementById('workStore').value = store.name || '';
-          console.log('✅ 매장 정보 자동 입력 완료:', store.name);
-        }
-        
-        console.log('✅ 매장 목록 로드 완료');
+        // Firestore에서 매장 목록 가져오기
+        firebase.firestore().collection('stores')
+          .get()
+          .then(snapshot => {
+            if (!snapshot.empty) {
+              const stores = [];
+              snapshot.forEach(doc => {
+                const store = { id: doc.id, ...doc.data() };
+                stores.push(store);
+                storeSelect.innerHTML += `<option value="${doc.id}">${store.name}</option>`;
+              });
+              
+              // 첫 번째 매장 자동 선택
+              if (stores.length > 0) {
+                storeSelect.value = stores[0].id;
+                // 매장 정보 자동 입력
+                const store = stores[0];
+                document.getElementById('companyCEO').value = store.ceo || '';
+                document.getElementById('companyBusinessNumber').value = store.businessNumber || '';
+                document.getElementById('companyPhone').value = store.phone || '';
+                document.getElementById('companyAddress').value = store.address || '';
+                document.getElementById('workStore').value = store.name || '';
+                console.log('✅ 매장 정보 자동 입력 완료:', store.name);
+              }
+              
+              console.log(`✅ ${stores.length}개 매장 목록 로드 완료 (계약서 폼)`);
+            } else {
+              console.log('📋 등록된 매장이 없습니다');
+              storeSelect.innerHTML += '<option value="" disabled>등록된 매장이 없습니다</option>';
+            }
+          })
+          .catch(error => {
+            console.error('❌ 매장 목록 로드 실패:', error);
+            storeSelect.innerHTML += '<option value="" disabled>매장 목록 로드 실패</option>';
+          });
       }
       
       // 기본 템플릿
@@ -3331,7 +3362,12 @@
       if (previewSSN) previewSSN.textContent = birthFormatted;
       
       // 회사(사용자) 정보
-      const companyId = document.getElementById('companySelect').value;
+      const companySelectEl = document.getElementById('companySelect');
+      if (!companySelectEl) {
+        console.log('ℹ️ companySelect 요소를 찾을 수 없음');
+        return;
+      }
+      const companyId = companySelectEl.value;
       const company = companies.find(c => c.id === companyId);
       
       const companyName = document.getElementById('companyName')?.value || (company ? company.name : '(주)ABC디저트센터');
