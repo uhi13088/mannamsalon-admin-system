@@ -604,10 +604,27 @@
       }
     }
 
-    function showMainScreen() {
+    async function showMainScreen() {
       document.getElementById('mainScreen').classList.remove('hidden');
+      // signedContracts 캐시 로드
+      await loadSignedContractsCache();
       loadDashboard();
       switchTab('employees');
+    }
+    
+    // signedContracts Firestore 캐시 로드
+    async function loadSignedContractsCache() {
+      try {
+        const snapshot = await firebase.firestore().collection('signedContracts').get();
+        signedContractsCache = [];
+        snapshot.forEach(doc => {
+          signedContractsCache.push({ id: doc.id, ...doc.data() });
+        });
+        console.log(`✅ ${signedContractsCache.length}개 서명된 계약서 캐시 로드 완료`);
+      } catch (error) {
+        console.error('❌ signedContracts 로드 실패:', error);
+        signedContractsCache = [];
+      }
     }
 
     function switchTab(tabName) {
@@ -664,7 +681,7 @@
           try {
             const contractData = JSON.parse(localStorage.getItem(key));
             const contractId = key.replace('contract_', '');
-            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const signedContracts = signedContractsCache;
             const isSigned = signedContracts.some(sc => sc.id === contractId);
             
             const empKey = contractData.employeeName + '_' + contractData.employeeBirth;
@@ -882,7 +899,7 @@
           if (contractData.employeeName === employeeName) {
             const contractId = key.replace('contract_', '');
             if (!employeeId) employeeId = getEmployeeIdFromContract(contractData);
-            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const signedContracts = signedContractsCache;
             const isSigned = signedContracts.some(sc => sc.id === contractId);
             contracts.push({
               id: contractId,
@@ -1136,7 +1153,7 @@
       modal.id = 'contractViewModal';
       
       // 서명 정보 확인
-      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const signedContracts = signedContractsCache;
       const signedContract = signedContracts.find(sc => sc.id === contract.id);
       const isSigned = !!signedContract;
       
@@ -1372,7 +1389,7 @@
       console.log('🔍 element HTML 길이:', element.innerHTML.length);
       
       // 🔥 서명 데이터를 localStorage에서 직접 가져와서 다시 주입
-      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const signedContracts = signedContractsCache;
       const signedContract = signedContracts.find(sc => sc.id === contract.id);
       
       console.log('🔍 서명 데이터 존재:', !!signedContract);
@@ -1665,7 +1682,7 @@
           try {
             const contractData = JSON.parse(localStorage.getItem(key));
             const contractId = key.replace('contract_', '');
-            const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+            const signedContracts = signedContractsCache;
             const isSigned = signedContracts.some(sc => sc.id === contractId);
             
             allContracts.push({
@@ -1756,7 +1773,7 @@
     window.updateContractButtons = function(selectId, contractId) {
       // 선택된 계약서 정보 가져오기
       const contractData = JSON.parse(localStorage.getItem(`contract_${contractId}`) || '{}');
-      const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
+      const signedContracts = signedContractsCache;
       const isSigned = signedContracts.some(sc => sc.id === contractId);
       const status = isSigned ? '서명완료' : '서명대기';
       const statusClass = status === '서명완료' ? 'badge-success' : 'badge-warning';
@@ -1790,10 +1807,16 @@
         // localStorage에서 계약서 삭제
         localStorage.removeItem(`contract_${contractId}`);
         
-        // signedContracts 배열에서도 제거
-        const signedContracts = JSON.parse(localStorage.getItem('signedContracts') || '[]');
-        const updatedSignedContracts = signedContracts.filter(sc => sc.id !== contractId);
-        localStorage.setItem('signedContracts', JSON.stringify(updatedSignedContracts));
+        // signedContracts Firestore에서도 제거
+        firebase.firestore().collection('signedContracts').doc(contractId).delete()
+          .then(() => {
+            console.log('✅ signedContracts에서도 삭제 완료');
+            // 캐시 업데이트
+            signedContractsCache = signedContractsCache.filter(sc => sc.id !== contractId);
+          })
+          .catch(error => {
+            console.error('⚠️ signedContracts 삭제 실패:', error);
+          });
         
         console.log(`✅ 계약서 삭제 완료: ${contractId}`);
         alert(`✅ "${employeeName}"님의 계약서가 삭제되었습니다.`);
@@ -2721,6 +2744,7 @@
     // 전역 변수
     let companies = [];
     let savedContracts = [];
+    let signedContractsCache = []; // Firestore signedContracts 캐시
 
     // 더미 직원 데이터 (contract.js용 - 기존 DUMMY_EMPLOYEES와 동일인물)
     const CONTRACT_DUMMY_EMPLOYEES = [
