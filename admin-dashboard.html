@@ -1532,6 +1532,10 @@
       loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">서명 이미지 처리 중...</p>';
       document.body.appendChild(loadingDiv);
       
+      // PDF 생성 전 padding 제거 (margin으로 대체)
+      const originalPadding = element.style.padding;
+      element.style.padding = '0';
+      
       // 500ms 대기
       await new Promise(resolve => setTimeout(resolve, 500));
       
@@ -1564,10 +1568,14 @@
       };
       
       html2pdf().set(opt).from(element).save().then(() => {
+        // padding 복원
+        element.style.padding = originalPadding;
         document.body.removeChild(loadingDiv);
         console.log('✅ PDF 생성 완료:', fileName);
         alert('✅ PDF 다운로드 완료!');
       }).catch(err => {
+        // padding 복원
+        element.style.padding = originalPadding;
         document.body.removeChild(loadingDiv);
         console.error('❌ PDF 생성 실패:', err);
         alert('❌ PDF 생성에 실패했습니다:\n' + err.message);

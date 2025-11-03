@@ -253,6 +253,10 @@ async function downloadEmployeeContractPDF(contractId) {
     loadingDiv.innerHTML = '<p style="margin: 0; font-size: 16px; font-weight: 600;">📄 PDF 생성 중...</p><p style="margin-top: 8px; font-size: 14px; color: #666;">잠시만 기다려주세요...</p>';
     document.body.appendChild(loadingDiv);
     
+    // PDF 생성 전 padding 제거 (margin으로 대체)
+    const originalPadding = contractArea.style.padding;
+    contractArea.style.padding = '0';
+    
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const opt = {
@@ -281,10 +285,14 @@ async function downloadEmployeeContractPDF(contractId) {
     };
     
     html2pdf().set(opt).from(contractArea).save().then(() => {
+      // padding 복원
+      contractArea.style.padding = originalPadding;
       document.body.removeChild(loadingDiv);
       console.log('✅ PDF 생성 완료:', fileName);
       alert('✅ PDF 다운로드 완료!');
     }).catch(err => {
+      // padding 복원
+      contractArea.style.padding = originalPadding;
       document.body.removeChild(loadingDiv);
       console.error('❌ PDF 생성 실패:', err);
       alert('❌ PDF 생성에 실패했습니다:\n' + err.message);
