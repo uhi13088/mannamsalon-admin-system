@@ -2747,6 +2747,13 @@
 
     async function loadEmployeeInfo() {
       const employeeSelect = document.getElementById('employeeSelect');
+      
+      // employeeSelect가 없으면 조용히 리턴
+      if (!employeeSelect) {
+        console.log('ℹ️ employeeSelect 요소를 찾을 수 없음 (아직 모달이 열리지 않음)');
+        return;
+      }
+      
       const employeeId = employeeSelect.value;
       
       if (!employeeId) {
