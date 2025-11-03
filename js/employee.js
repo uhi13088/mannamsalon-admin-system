@@ -795,8 +795,11 @@ function signContract(contractId) {
  */
 async function loadNotices() {
   try {
-    // Firestore에서 공지사항 조회
-    const snapshot = await db.collection('notices').get();
+    // Firestore에서 공지사항 조회 (최신순)
+    const snapshot = await db.collection('notices')
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
     
     if (snapshot.empty) {
       document.getElementById('noticeSection').style.display = 'none';
@@ -807,13 +810,6 @@ async function loadNotices() {
       id: doc.id,
       ...doc.data()
     }));
-    
-    // 클라이언트에서 최신순 정렬
-    notices.sort((a, b) => {
-      const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
-      const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
-      return dateB - dateA;
-    });
     
     // 공지사항 영역 표시
     document.getElementById('noticeSection').style.display = 'block';
