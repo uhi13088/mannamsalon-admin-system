@@ -3558,12 +3558,10 @@
 
     // 계약서 저장
     function showSaveContractModal() {
-      if (!validateForm()) {
-        return;
-      }
+      // 임시 저장은 validation 없이 가능
       document.getElementById('saveContractModal').style.display = 'flex';
-      const employeeName = document.getElementById('employeeName').value;
-      const position = document.getElementById('position').value;
+      const employeeName = document.getElementById('employeeName').value || '직원미정';
+      const position = document.getElementById('position').value || '직책미정';
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('contractSaveName').value = `${employeeName}_${position}_${today}`;
     }
@@ -3581,11 +3579,7 @@
         return;
       }
       
-      if (!validateForm()) {
-        closeSaveContractModal();
-        return;
-      }
-      
+      // 임시 저장은 validation 없이 진행 (작성 중인 내용 그대로 저장)
       const schedules = collectScheduleData();
       
       const breakTimeData = {
@@ -3599,32 +3593,32 @@
       
       const contractData = {
         name: contractName,
-        employeeId: document.getElementById('employeeSelect').value,
-        employeeName: document.getElementById('employeeName').value,
-        employeeBirth: document.getElementById('employeeBirth').value,
-        employeeAddress: document.getElementById('employeeAddress').value,
-        employeePhone: document.getElementById('employeePhone').value,
-        storeId: document.getElementById('storeSelect').value,
-        companyName: document.getElementById('workStore').value,
-        companyCEO: document.getElementById('companyCEO').value,
-        companyBusinessNumber: document.getElementById('companyBusinessNumber').value,
-        companyPhone: document.getElementById('companyPhone').value,
-        companyAddress: document.getElementById('companyAddress').value,
-        contractType: document.getElementById('contractType').value,
-        workStore: document.getElementById('workStore').value,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        position: document.getElementById('position').value,
-        workDays: document.getElementById('workDays').value,
-        workTime: document.getElementById('workTime').value,
-        breakTime: document.getElementById('breakTime').value,
-        wageType: document.getElementById('wageType').value,
-        wageAmount: document.getElementById('wageAmount').value,
-        paymentDay: document.getElementById('paymentDay').value,
-        paymentMethod: document.getElementById('paymentMethod').value,
-        contractContent: document.getElementById('contractContent').value,
-        schedules: schedules,
-        breakTimeData: breakTimeData,
+        employeeId: document.getElementById('employeeSelect')?.value || '',
+        employeeName: document.getElementById('employeeName')?.value || '',
+        employeeBirth: document.getElementById('employeeBirth')?.value || '',
+        employeeAddress: document.getElementById('employeeAddress')?.value || '',
+        employeePhone: document.getElementById('employeePhone')?.value || '',
+        storeId: document.getElementById('storeSelect')?.value || '',
+        companyName: document.getElementById('workStore')?.value || '',
+        companyCEO: document.getElementById('companyCEO')?.value || '',
+        companyBusinessNumber: document.getElementById('companyBusinessNumber')?.value || '',
+        companyPhone: document.getElementById('companyPhone')?.value || '',
+        companyAddress: document.getElementById('companyAddress')?.value || '',
+        contractType: document.getElementById('contractType')?.value || '',
+        workStore: document.getElementById('workStore')?.value || '',
+        startDate: document.getElementById('startDate')?.value || '',
+        endDate: document.getElementById('endDate')?.value || '',
+        position: document.getElementById('position')?.value || '',
+        workDays: document.getElementById('workDays')?.value || '',
+        workTime: document.getElementById('workTime')?.value || '',
+        breakTime: document.getElementById('breakTime')?.value || '',
+        wageType: document.getElementById('wageType')?.value || '',
+        wageAmount: document.getElementById('wageAmount')?.value || '',
+        paymentDay: document.getElementById('paymentDay')?.value || '',
+        paymentMethod: document.getElementById('paymentMethod')?.value || '',
+        contractContent: document.getElementById('contractContent')?.value || '',
+        schedules: schedules || [],
+        breakTimeData: breakTimeData || {},
         savedAt: new Date().toISOString()
       };
       
