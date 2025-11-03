@@ -9,8 +9,7 @@
 // ===================================================================
 
 let currentUser = null; // 현재 로그인한 직원 정보
-let auth = null;
-let db = null;
+// auth, db는 firebase-config.js에서 전역으로 선언됨
 
 // ===================================================================
 // 초기화 및 페이지 로드
@@ -26,9 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
   
-  // Firebase 인스턴스 설정
-  auth = firebase.auth();
-  db = firebase.firestore();
+  // Firebase 인스턴스는 firebase-config.js에서 이미 초기화됨
   
   // 현재 월 기본값 설정
   const today = new Date();

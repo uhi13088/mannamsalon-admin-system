@@ -40,7 +40,7 @@ try {
   // Firebase 서비스 초기화
   auth = firebase.auth();
   db = firebase.firestore();
-  storage = firebase.storage();
+  // storage = firebase.storage(); // Storage SDK 미사용
   
   console.log('✅ Firebase 초기화 성공');
   
