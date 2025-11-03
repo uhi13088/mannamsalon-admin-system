@@ -18,12 +18,14 @@
 
 ## 🌐 배포 URL
 
-**Production URL**: [Genspark에서 Publish 후 자동 생성]
+**Production URL**: https://mannamsalon-admin.pages.dev
 
 ### 페이지 구조
 ```
 /                          → index.html (메인 랜딩 페이지)
+/admin-login.html          → 관리자 로그인
 /admin-dashboard.html      → 관리자 대시보드
+/employee-login.html       → 직원 로그인
 /employee.html             → 직원 페이지
 /employee-register.html    → 직원 가입 페이지
 /contract-sign.html        → 계약서 서명 페이지
@@ -72,12 +74,15 @@
 - ✅ 더미 데이터 (김민수 직원)
 - ✅ 메인으로 돌아가기 링크
 
-### 3️⃣ **직원 페이지** (`employee.html`)
-- ✅ 이름 기반 간편 로그인
-- ✅ 출근/퇴근 버튼 (개발 중)
-- ✅ 근무내역 조회 탭
-- ✅ 급여조회 탭
-- ✅ 계약서 조회 탭
+### 3️⃣ **직원 페이지** (`employee.html`) ⭐ **NEW! 완전 리팩토링**
+- ✅ Firebase Authentication 로그인 연동
+- ✅ **출근/퇴근 기능 실제 작동** (Firestore `attendance` 컬렉션)
+- ✅ **근무내역 실시간 조회** (Firestore 연동)
+- ✅ **급여 자동 계산** (근무 기록 기반, 주휴수당/4대보험/소득세 자동 계산)
+- ✅ **계약서 조회 및 서명** (Firestore `contracts` 컬렉션)
+- ✅ **공지사항 실시간 조회** (Firestore `notices` 컬렉션)
+- ✅ **서류 관리** (통장사본, 보건증 - Firestore `employee_docs` 컬렉션)
+- ✅ localStorage 완전 제거, Firestore 영구 저장
 - ✅ 메인으로 돌아가기 링크
 
 ### 4️⃣ **직원 가입 페이지** (`employee-register.html`)
@@ -91,9 +96,9 @@
 
 ### 5️⃣ **계약서 서명 페이지** (`contract-sign.html`)
 - ✅ URL 파라미터로 계약서 ID 전달
-- ✅ localStorage에서 계약서 데이터 로드
+- ✅ Firestore에서 계약서 데이터 로드
 - ✅ Canvas 기반 서명 기능
-- ✅ 서명 완료 시 localStorage 업데이트
+- ✅ 서명 완료 시 Firestore 업데이트
 
 ---
 
@@ -227,23 +232,18 @@
 ## 🚧 개발 중인 기능
 
 ### 우선순위 높음
-- ⏳ 계약서 모달 완전 통합 (admin-dashboard.html)
-- ⏳ 직원 페이지 실제 기능 구현
-  - 출근/퇴근 버튼 작동
-  - 근무내역 Firestore 연동
-  - 급여조회 API 연동
-  - 계약서 조회 기능
+- ⏳ 관리자 대시보드 근태 관리 기능 강화
+- ⏳ 관리자 대시보드 급여 관리 기능 강화
+- ⏳ 승인 관리 워크플로우
 
 ### 우선순위 중간
-- ⏳ 근태 관리 시스템
-- ⏳ 급여 계산 및 관리
-- ⏳ 승인 관리 워크플로우
-- ⏳ 공지사항 기능
+- ⏳ 관리자 계약서 작성 Firestore 연동
+- ⏳ 매장 관리 Firestore 연동
 
 ### 우선순위 낮음
 - ⏳ Google Apps Script 백엔드 연동
 - ⏳ 스프레드시트 동기화
-- ⏳ 알림 시스템
+- ⏳ 알림 시스템 (이메일/SMS)
 
 ---
 
@@ -350,6 +350,25 @@ users/              → 관리자: 모든 권한, 직원: 본인 정보만
 ---
 
 ## 🧹 업데이트 이력
+
+### 2025-02-01 ⭐ **직원 페이지 완전 리팩토링**
+- ✅ **employee.html 리팩토링**
+  - Firebase SDK 중복 제거 (HTML 내부 스크립트 → 외부 JS 파일)
+  - 코드 일관성 개선
+  
+- ✅ **employee.js 완전 재작성 (Firestore 완전 연동)**
+  - localStorage 완전 제거, Firestore 영구 저장으로 전환
+  - 출퇴근 기능: Firestore `attendance` 컬렉션 실시간 연동
+  - 근무내역 조회: Firestore에서 실시간 조회
+  - 급여 자동 계산: 근무 기록 기반 (기본급, 주휴수당, 4대보험, 소득세)
+  - 계약서 조회: Firestore `contracts`/`signedContracts` 컬렉션
+  - 공지사항: Firestore `notices` 컬렉션 (중요/일반 분리)
+  - 서류 관리: Firestore `employee_docs` 컬렉션 (통장사본, 보건증)
+  
+- ✅ **데이터 영구 저장 및 실시간 동기화**
+  - 모든 데이터가 Firestore에 영구 저장됨
+  - 브라우저 캐시 삭제해도 데이터 유지
+  - 모든 기기에서 동일한 데이터 조회 가능
 
 ### 2025-01-31 (Firebase 영구 저장 + 자동 정리)
 - ✅ **Firestore 기반 영구 저장 구현**
