@@ -58,7 +58,7 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
       const signatureSection = document.querySelector('#employeeContractModal .signature-section');
       if (signatureSection) {
         signatureSection.innerHTML = `
-          <div class="avoid-page-break" style="margin-top: 60px; page-break-inside: avoid;">
+          <div style="margin-top: 50px;">
             <p style="margin-bottom: 20px; font-size: 16px; text-align: center;"><strong>서명일: ${signDate.toLocaleDateString('ko-KR')}</strong></p>
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
               <!-- 사용자(대표) 서명 -->
@@ -87,7 +87,7 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
     signatureHtml = '<div class="signature-section"></div>';
   } else {
     signatureHtml = `
-      <div class="avoid-page-break" style="margin-top: 60px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
+      <div style="margin-top: 50px; text-align: right; padding: 20px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
         <p style="color: #856404; font-weight: 600;">⚠️ 아직 서명되지 않은 계약서입니다.</p>
       </div>
     `;
@@ -109,18 +109,18 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
       <div id="employeeContractPrintArea" style="width: 210mm; margin: 0 auto; padding: 20mm; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
         
         <!-- 계약서 제목 -->
-        <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 40px 0;">근 로 계 약 서</h1>
+        <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 30px 0;">근 로 계 약 서</h1>
         
         <!-- 서문 -->
-        <p style="line-height: 1.8; margin-bottom: 30px; font-size: 14px;">
+        <p style="line-height: 1.8; margin-bottom: 25px; font-size: 14px;">
           <strong>${contract.companyName}</strong> (이하 "사용자"라 함)와 <strong>${contract.employeeName}</strong> (이하 "근로자"라 함)는 다음과 같이 근로계약을 체결한다.
         </p>
         
         <!-- 계약 내용 테이블 -->
-        <table class="avoid-page-break" style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; page-break-inside: avoid;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 13px;">
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left;">근로자 정보</th>
-            <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; width: 25%; text-align: left;">근로자 정보</th>
+            <td style="border: 1px solid #333; padding: 10px; line-height: 1.8;">
               <div>성명: ${contract.employeeName}</div>
               <div>주민등록번호: ${contract.employeeBirth}</div>
               <div>주소: ${contract.employeeAddress}</div>
@@ -128,8 +128,8 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
             </td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">사용자 정보</th>
-            <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">사용자 정보</th>
+            <td style="border: 1px solid #333; padding: 10px; line-height: 1.8;">
               <div>회사명: ${contract.companyName}</div>
               <div>대표자: ${contract.companyCEO || '-'}</div>
               <div>사업자등록번호: ${contract.companyBusinessNumber || '-'}</div>
@@ -138,28 +138,28 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
             </td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">계약 기간</th>
-            <td style="border: 1px solid #333; padding: 12px;">${contract.startDate} ~ ${contract.endDate}</td>
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">계약 기간</th>
+            <td style="border: 1px solid #333; padding: 10px;">${contract.startDate} ~ ${contract.endDate}</td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 장소</th>
-            <td style="border: 1px solid #333; padding: 12px;">${contract.workStore}</td>
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 장소</th>
+            <td style="border: 1px solid #333; padding: 10px;">${contract.workStore}</td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">업무 내용</th>
-            <td style="border: 1px solid #333; padding: 12px;">${contract.position}</td>
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">업무 내용</th>
+            <td style="border: 1px solid #333; padding: 10px;">${contract.position}</td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 일시</th>
-            <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">근무 일시</th>
+            <td style="border: 1px solid #333; padding: 10px; line-height: 1.8;">
               <div>근무일: ${contract.workDays}</div>
               <div>근무시간: ${contract.workTime}</div>
               <div>휴게시간: ${contract.breakTime || '근로기준법 준수'}</div>
             </td>
           </tr>
           <tr>
-            <th style="border: 1px solid #333; padding: 12px; background: #f5f5f5; font-weight: 600; text-align: left;">급여 조건</th>
-            <td style="border: 1px solid #333; padding: 12px; line-height: 1.8;">
+            <th style="border: 1px solid #333; padding: 10px; background: #f5f5f5; font-weight: 600; text-align: left;">급여 조건</th>
+            <td style="border: 1px solid #333; padding: 10px; line-height: 1.8;">
               <div>${contract.wageType}: ${contract.wageAmount}원</div>
               <div>지급일: ${contract.paymentDay || '매월 말일'}</div>
               <div>지급방법: ${contract.paymentMethod || '계좌이체'}</div>
@@ -169,13 +169,13 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
         
         <!-- 계약서 본문 -->
         ${(contract.contractContent || contract.contractBody) ? `
-          <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 30px; font-size: 13px; border: 1px solid #ddd; padding: 20px; background: #fafafa; page-break-inside: avoid;">
+          <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 25px; font-size: 13px; border: 1px solid #ddd; padding: 15px; background: #fafafa;">
             ${contract.contractContent || contract.contractBody}
           </div>
         ` : ''}
         
         <!-- 계약 일자 -->
-        <p class="avoid-page-break" style="text-align: center; margin-top: 50px; margin-bottom: 60px; font-size: 16px; font-weight: 600; page-break-inside: avoid;">
+        <p style="text-align: center; margin-top: 40px; margin-bottom: 50px; font-size: 16px; font-weight: 600;">
           ${contract.contractDate || new Date(contract.createdAt).toLocaleDateString('ko-KR')}
         </p>
         
@@ -279,8 +279,9 @@ async function downloadEmployeeContractPDF(contractId) {
         compress: true
       },
       pagebreak: { 
-        mode: ['avoid-all', 'css', 'legacy'],
-        avoid: ['table', 'tr', 'img', '.avoid-page-break']
+        mode: 'css',  // CSS 모드만 사용 (자연스러운 페이지 나누기)
+        before: '.page-break-before',
+        after: '.page-break-after'
       }
     };
     
