@@ -1586,7 +1586,7 @@
           return;
         }
         
-        const attendanceList = [];
+        let attendanceList = [];
         attendanceSnapshot.forEach(doc => {
           const data = doc.data();
           console.log('📄 문서 데이터:', { id: doc.id, data });
@@ -1594,6 +1594,27 @@
         });
         
         console.log('✅ 총 근태 기록:', attendanceList.length);
+        
+        // 클라이언트 사이드 필터링
+        const monthFilter = document.getElementById('attendanceMonth').value;
+        const storeFilter = document.getElementById('attendanceStoreFilter').value;
+        
+        if (monthFilter) {
+          attendanceList = attendanceList.filter(att => {
+            return att.date && att.date.startsWith(monthFilter);
+          });
+          console.log(`📅 월 필터 적용 (${monthFilter}):`, attendanceList.length);
+        }
+        
+        if (storeFilter) {
+          attendanceList = attendanceList.filter(att => att.store === storeFilter);
+          console.log(`🏪 매장 필터 적용 (${storeFilter}):`, attendanceList.length);
+        }
+        
+        if (attendanceList.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">조건에 맞는 근태 정보가 없습니다.</td></tr>';
+          return;
+        }
         
         tbody.innerHTML = attendanceList.map(att => {
           const statusClass = att.status === '정상' ? 'success' : 
