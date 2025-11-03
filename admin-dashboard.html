@@ -1566,55 +1566,34 @@
       tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보를 불러오는 중...</td></tr>';
       
       try {
-        // 월 필터와 매장 필터 가져오기
-        const monthFilter = document.getElementById('attendanceMonth').value;
-        const storeFilter = document.getElementById('attendanceStoreFilter').value;
+        console.log('🔍 Firestore 쿼리 시작: attendance 컬렉션');
         
-        console.log('🔍 Firestore 쿼리 시작:', { monthFilter, storeFilter });
-        
-        // 쿼리 시작
-        let query = firebase.firestore().collection('attendance');
-        
-        // 월 필터 적용
-        if (monthFilter) {
-          const startDate = monthFilter + '-01';
-          const endDate = monthFilter + '-31';
-          query = query.where('date', '>=', startDate).where('date', '<=', endDate);
-        }
-        
-        // 날짜로 정렬
-        query = query.orderBy('date', 'desc').limit(100);
-        
-        const attendanceSnapshot = await query.get();
+        // Firestore에서 근태 데이터 가져오기
+        const attendanceSnapshot = await firebase.firestore().collection('attendance')
+          .orderBy('date', 'desc')
+          .limit(100)
+          .get();
         
         console.log('📊 조회 결과:', {
           empty: attendanceSnapshot.empty,
-          size: attendanceSnapshot.size
+          size: attendanceSnapshot.size,
+          docs: attendanceSnapshot.docs.length
         });
         
         if (attendanceSnapshot.empty) {
-          console.warn('⚠️ 조회 결과가 없습니다');
+          console.warn('⚠️ attendance 컬렉션이 비어있습니다');
           tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">근태 정보가 없습니다.</td></tr>';
           return;
         }
         
-        let attendanceList = [];
+        const attendanceList = [];
         attendanceSnapshot.forEach(doc => {
           const data = doc.data();
+          console.log('📄 문서 데이터:', { id: doc.id, data });
           attendanceList.push({ id: doc.id, ...data });
         });
         
-        // 매장 필터 적용 (클라이언트 사이드)
-        if (storeFilter) {
-          attendanceList = attendanceList.filter(att => att.store === storeFilter);
-        }
-        
-        console.log('✅ 필터링된 근태 기록:', attendanceList.length);
-        
-        if (attendanceList.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">조건에 맞는 근태 정보가 없습니다.</td></tr>';
-          return;
-        }
+        console.log('✅ 총 근태 기록:', attendanceList.length);
         
         tbody.innerHTML = attendanceList.map(att => {
           const statusClass = att.status === '정상' ? 'success' : 
@@ -1641,49 +1620,10 @@
       }
     }
 
-    async function loadSalaryList() {
+    function loadSalaryList() {
       const tbody = document.getElementById('salaryTableBody');
       if (!tbody) return;
-      
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">급여 정보를 불러오는 중...</td></tr>';
-      
-      try {
-        // 급여 데이터는 Firestore salaries 컬렉션에서 조회
-        const salarySnapshot = await firebase.firestore().collection('salaries')
-          .orderBy('month', 'desc')
-          .limit(50)
-          .get();
-        
-        if (salarySnapshot.empty) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.<br><br>급여는 관리자가 직접 등록하거나 자동 계산하여 저장해야 합니다.</td></tr>';
-          return;
-        }
-        
-        const salaries = [];
-        salarySnapshot.forEach(doc => {
-          salaries.push({ id: doc.id, ...doc.data() });
-        });
-        
-        tbody.innerHTML = salaries.map(sal => {
-          const statusClass = sal.status === '지급완료' ? 'success' : 'warning';
-          return `
-            <tr>
-              <td>${sal.month || '-'}</td>
-              <td>${sal.employeeName || sal.name || '-'}</td>
-              <td>${sal.store || '-'}</td>
-              <td>${(sal.totalSalary || 0).toLocaleString()}원</td>
-              <td>${sal.workDays || 0}일</td>
-              <td><span class="badge badge-${statusClass}">${sal.status || '지급대기'}</span></td>
-              <td>
-                <button class="btn btn-sm btn-secondary" onclick="alert('급여 ${sal.id} 상세 기능은 추후 구현 예정')">상세</button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (error) {
-        console.error('❌ 급여 목록 로드 실패:', error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">❌ 급여 정보를 불러오는데 실패했습니다.</td></tr>';
-      }
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
     }
 
     function loadApprovals() {
@@ -2786,26 +2726,14 @@
 
     async function loadEmployeeInfo() {
       const employeeSelect = document.getElementById('employeeSelect');
-      
-      // employeeSelect가 null인 경우 조용히 리턴
-      if (!employeeSelect) {
-        console.log('ℹ️ employeeSelect 요소가 아직 로드되지 않음');
-        return;
-      }
-      
       const employeeId = employeeSelect.value;
       
       if (!employeeId) {
-        const employeeName = document.getElementById('employeeName');
-        const employeeBirth = document.getElementById('employeeBirth');
-        const employeeAddress = document.getElementById('employeeAddress');
-        const employeePhone = document.getElementById('employeePhone');
-        
-        if (employeeName) employeeName.value = '';
-        if (employeeBirth) employeeBirth.value = '';
-        if (employeeAddress) employeeAddress.value = '';
-        if (employeePhone) employeePhone.value = '';
-        if (employeeName) employeeName.readOnly = false;
+        document.getElementById('employeeName').value = '';
+        document.getElementById('employeeBirth').value = '';
+        document.getElementById('employeeAddress').value = '';
+        document.getElementById('employeePhone').value = '';
+        document.getElementById('employeeName').readOnly = false;
         return;
       }
       
@@ -2818,35 +2746,26 @@
         if (doc.exists) {
           const employee = doc.data();
           
-          const employeeName = document.getElementById('employeeName');
-          const employeeAddress = document.getElementById('employeeAddress');
-          const employeePhone = document.getElementById('employeePhone');
-          const employeeBirth = document.getElementById('employeeBirth');
-          
-          if (employeeName) {
-            employeeName.value = employee.name || '';
-            employeeName.readOnly = true;
-          }
-          if (employeeAddress) employeeAddress.value = employee.address || '';
-          if (employeePhone) employeePhone.value = employee.phone || '';
+          document.getElementById('employeeName').value = employee.name || '';
+          document.getElementById('employeeAddress').value = employee.address || '';
+          document.getElementById('employeePhone').value = employee.phone || '';
+          document.getElementById('employeeName').readOnly = true;
           
           // 주민번호 자동 입력
-          if (employee.birth && employeeBirth) {
-            employeeBirth.value = employee.birth;
+          if (employee.birth) {
+            document.getElementById('employeeBirth').value = employee.birth;
             console.log('✅ 주민번호 자동 입력:', employee.birth);
           }
           
           console.log('✅ 직원 정보 로드 완료:', employee.name);
-          
-          // updatePreview 함수가 존재하는 경우에만 호출
-          if (typeof updatePreview === 'function') {
-            updatePreview();
-          }
+          updatePreview(); // 미리보기 업데이트
         } else {
           console.error('❌ 직원 정보를 찾을 수 없음');
+          alert('직원 정보를 찾을 수 없습니다.');
         }
       } catch (error) {
         console.error('❌ 직원 정보 로드 실패:', error);
+        alert('직원 정보를 불러오는데 실패했습니다: ' + error.message);
       }
     }
 
@@ -3248,12 +3167,12 @@
 
     // 유효성 검사
     function validateForm() {
-      // 기본 필수 필드들 (회사 정보 제외)
-      const basicFields = [
+      const requiredFields = [
         { id: 'employeeName', name: '이름' },
         { id: 'employeeBirth', name: '생년월일' },
         { id: 'employeeAddress', name: '주소' },
         { id: 'employeePhone', name: '연락처' },
+        { id: 'companySelect', name: '회사' },
         { id: 'contractType', name: '계약 유형' },
         { id: 'workStore', name: '근무 매장' },
         { id: 'startDate', name: '계약 시작일' },
@@ -3264,7 +3183,7 @@
         { id: 'paymentMethod', name: '급여 지급 방법' }
       ];
       
-      for (const field of basicFields) {
+      for (const field of requiredFields) {
         const element = document.getElementById(field.id);
         if (!element || !element.value || element.value.trim() === '') {
           alert(`⚠️ ${field.name}을(를) 입력해주세요.`);
@@ -3283,17 +3202,6 @@
       
       if (!workTime || workTime.trim() === '') {
         alert('⚠️ 근무시간을 설정해주세요.');
-        return false;
-      }
-      
-      // 회사 정보 검증 - companySelect 선택 또는 직접 입력된 회사명 확인
-      const companySelect = document.getElementById('companySelect');
-      const companyName = document.getElementById('companyName');
-      
-      // companySelect가 선택되지 않았고, companyName도 비어있으면
-      if ((!companySelect || !companySelect.value) && (!companyName || !companyName.value || !companyName.value.trim())) {
-        alert('⚠️ 회사 정보를 선택하거나 입력해주세요.');
-        if (companySelect) companySelect.focus();
         return false;
       }
       
