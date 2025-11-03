@@ -46,21 +46,28 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===================================================================
 
 async function loadContractData() {
-  console.log('📥 계약서 데이터 로드 시작...');
+  console.log('📥 계약서 데이터 로드 시작... [v2]');
+  console.log('🔍 계약서 ID:', contractId);
   
   try {
     // 1. 서명 완료 여부 먼저 확인
+    console.log('🔍 signedContracts 확인 중...');
     const signedDocRef = db.collection('signedContracts').doc(contractId);
     const signedDocSnap = await signedDocRef.get();
+    
+    console.log('🔍 signedDocSnap.exists:', signedDocSnap.exists);
     
     if (signedDocSnap.exists) {
       // 서명 완료된 계약서 - 읽기 전용 모드
       const signedData = signedDocSnap.data();
       contractData = signedData;
       console.log('✅ 서명 완료된 계약서:', contractData.employeeName);
+      console.log('✅ displaySignedContract() 호출');
       displaySignedContract(signedData);
       return;
     }
+    
+    console.log('⚠️ 서명되지 않은 계약서 - 서명 페이지 표시');
     
     // 2. 서명되지 않은 계약서 - Firestore에서 원본 가져오기
     const docRef = db.collection('contracts').doc(contractId);
@@ -149,7 +156,8 @@ function displayContract() {
 
 function displaySignedContract(signedData) {
   try {
-    console.log('📄 서명 완료된 계약서 표시 시작');
+    console.log('📄 서명 완료된 계약서 표시 시작 [v2]');
+    console.log('📄 signedData:', signedData);
     
     // 로딩 숨기기
     document.getElementById('loadingSection').style.display = 'none';
