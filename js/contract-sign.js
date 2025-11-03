@@ -49,7 +49,20 @@ async function loadContractData() {
   console.log('📥 계약서 데이터 로드 시작...');
   
   try {
-    // Firestore에서 계약서 데이터 가져오기
+    // 1. 서명 완료 여부 먼저 확인
+    const signedDocRef = db.collection('signedContracts').doc(contractId);
+    const signedDocSnap = await signedDocRef.get();
+    
+    if (signedDocSnap.exists) {
+      // 서명 완료된 계약서 - 읽기 전용 모드
+      const signedData = signedDocSnap.data();
+      contractData = signedData;
+      console.log('✅ 서명 완료된 계약서:', contractData.employeeName);
+      displaySignedContract(signedData);
+      return;
+    }
+    
+    // 2. 서명되지 않은 계약서 - Firestore에서 원본 가져오기
     const docRef = db.collection('contracts').doc(contractId);
     const docSnap = await docRef.get();
     
@@ -60,7 +73,7 @@ async function loadContractData() {
       return;
     }
     
-    // [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
+    // 3. [하이브리드 모드] Firestore에 없으면 localStorage에서 찾기
     console.log('⚠️ Firestore에 계약서가 없습니다. localStorage 확인...');
     const storageKey = `contract_${contractId}`;
     const savedData = localStorage.getItem(storageKey);
@@ -72,7 +85,7 @@ async function loadContractData() {
       return;
     }
     
-    // 둘 다 없으면 오류 표시
+    // 4. 둘 다 없으면 오류 표시
     console.error('❌ 계약서 데이터를 찾을 수 없습니다');
     showError(`계약서를 찾을 수 없습니다.<br><br>
       <strong>계약서 ID:</strong> ${contractId}<br><br>
@@ -126,6 +139,81 @@ function displayContract() {
     console.log('✅ 계약서 화면 표시 완료');
   } catch (error) {
     console.error('❌ 계약서 화면 표시 오류:', error);
+    showError('계약서를 화면에 표시하는 중 오류가 발생했습니다: ' + error.message);
+  }
+}
+
+// ===================================================================
+// 서명 완료된 계약서 표시 (읽기 전용)
+// ===================================================================
+
+function displaySignedContract(signedData) {
+  try {
+    console.log('📄 서명 완료된 계약서 표시 시작');
+    
+    // 로딩 숨기기
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    
+    // 계약서 내용 채우기
+    document.getElementById('previewCompanyName').textContent = signedData.companyName || '-';
+    document.getElementById('previewEmployeeName').textContent = signedData.employeeName || '-';
+    document.getElementById('previewName').textContent = signedData.employeeName || '-';
+    document.getElementById('previewBirth').textContent = signedData.employeeBirth || '-';
+    document.getElementById('previewAddress').textContent = signedData.employeeAddress || '-';
+    document.getElementById('previewPhone').textContent = signedData.employeePhone || '-';
+    
+    document.getElementById('previewCompany').textContent = signedData.companyName || '-';
+    document.getElementById('previewCEO').textContent = signedData.companyCEO || '-';
+    document.getElementById('previewBusinessNumber').textContent = signedData.companyBusinessNumber || '-';
+    document.getElementById('previewCompanyPhone').textContent = signedData.companyPhone || '-';
+    document.getElementById('previewCompanyAddress').textContent = signedData.companyAddress || '-';
+    
+    document.getElementById('previewStartDate').textContent = signedData.startDate || '-';
+    document.getElementById('previewEndDate').textContent = signedData.endDate || '기간의 정함이 없음';
+    document.getElementById('previewStore').textContent = signedData.workStore || '-';
+    document.getElementById('previewPosition').textContent = signedData.position || '-';
+    document.getElementById('previewWorkDays').textContent = signedData.workDays || '-';
+    document.getElementById('previewWorkTime').textContent = signedData.workTime || '-';
+    document.getElementById('previewBreakTime').textContent = signedData.breakTime || '-';
+    document.getElementById('previewWageType').textContent = signedData.wageType || '-';
+    document.getElementById('previewWageAmount').textContent = signedData.wageAmount || '-';
+    document.getElementById('previewPaymentDay').textContent = signedData.paymentDay || '-';
+    document.getElementById('previewPaymentMethod').textContent = signedData.paymentMethod || '-';
+    document.getElementById('previewContractBody').textContent = signedData.contractContent || '';
+    document.getElementById('previewContractDate').textContent = signedData.contractDate || '';
+    
+    // 서명자 정보
+    document.getElementById('signerName').textContent = signedData.employeeName || '-';
+    document.getElementById('signerBirth').textContent = signedData.employeeBirth || '-';
+    
+    // 서명 섹션 숨기고 완료된 서명 표시
+    const signatureSection = document.getElementById('signatureSection');
+    if (signatureSection) {
+      signatureSection.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px;">
+          <h3 style="color: #16a34a; margin-bottom: 16px;">✅ 서명 완료</h3>
+          <p style="color: #15803d; margin-bottom: 24px;">
+            이 계약서는 <strong>${new Date(signedData.signedAt).toLocaleString('ko-KR')}</strong>에 서명이 완료되었습니다.
+          </p>
+          ${signedData.signature ? `
+            <div style="margin-top: 24px;">
+              <p style="font-weight: 600; margin-bottom: 12px; color: #15803d;">직원 서명:</p>
+              <img src="${signedData.signature}" alt="서명" style="max-width: 300px; border: 2px solid #86efac; border-radius: 4px; background: white; padding: 8px;">
+            </div>
+          ` : ''}
+          <div style="margin-top: 32px;">
+            <button class="btn btn-secondary" onclick="window.history.back()" style="padding: 12px 32px;">
+              ← 돌아가기
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    console.log('✅ 서명 완료 계약서 표시 완료');
+  } catch (error) {
+    console.error('❌ 서명 완료 계약서 표시 오류:', error);
     showError('계약서를 화면에 표시하는 중 오류가 발생했습니다: ' + error.message);
   }
 }
