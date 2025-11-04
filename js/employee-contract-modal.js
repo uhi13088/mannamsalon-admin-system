@@ -106,10 +106,10 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
       </div>
       
       <!-- A4 계약서 본문 -->
-      <div id="employeeContractPrintArea" style="width: 210mm; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+      <div id="employeeContractPrintArea" style="width: 170mm; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
         
         <!-- 1페이지: 계약서 테이블 -->
-        <div style="padding: 20mm; box-sizing: border-box;">
+        <div>
           <!-- 계약서 제목 -->
           <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 30px 0;">근 로 계 약 서</h1>
           
@@ -171,7 +171,7 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
         </div>
         
         <!-- 2페이지부터: 계약 본문 + 서명란 -->
-        <div class="page-break-before" style="padding: 20mm; box-sizing: border-box;">
+        <div class="page-break-before">
           <!-- 계약서 본문 -->
           ${(contract.contractContent || contract.contractBody) ? `
             <div style="white-space: pre-line; line-height: 1.8; margin-bottom: 25px; font-size: 13px; border: 1px solid #ddd; padding: 15px; background: #fafafa;">
