@@ -106,12 +106,12 @@ function showEmployeeContractModal(contract, contractId, signedContract) {
       </div>
       
       <!-- A4 계약서 본문 -->
-      <div id="employeeContractPrintArea" style="width: 170mm; margin: 0 auto; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+      <div id="employeeContractPrintArea" style="width: 190mm; margin: 0 auto; background: white;">
         
         <!-- 1페이지: 계약서 테이블 -->
         <div>
           <!-- 계약서 제목 -->
-          <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 30px 0;">근 로 계 약 서</h1>
+          <h1 style="text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 12px; margin: 0 0 30px 0;">근 로 계 약 서</h1>
           
           <!-- 서문 -->
           <p style="line-height: 1.8; margin-bottom: 25px; font-size: 14px;">
@@ -266,7 +266,7 @@ async function downloadEmployeeContractPDF(contractId) {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     const opt = {
-      margin: 20, // 상하좌우 2cm (20mm)
+      margin: 10, // 상하좌우 1cm (10mm)
       filename: fileName,
       image: { 
         type: 'jpeg', 
