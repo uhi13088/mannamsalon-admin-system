@@ -161,6 +161,7 @@
 
       <div class="tabs">
         <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 대시보드</button>
+        <button class="tab" data-tab="admins" onclick="switchTab('admins')">👑 관리자 목록</button>
         <button class="tab" data-tab="employees" onclick="switchTab('employees')">👥 직원 관리</button>
         <button class="tab" data-tab="attendance" onclick="switchTab('attendance')">📋 근무기록</button>
         <button class="tab" data-tab="salary" onclick="switchTab('salary')">💰 급여 관리</button>
@@ -174,6 +175,36 @@
         <div class="card">
           <div class="card-header"><h3>📊 현황 요약</h3></div>
           <div class="card-body"><p style="color: var(--text-secondary);">관리자 페이지에 오신 것을 환영합니다.</p></div>
+        </div>
+      </div>
+
+      <div id="tabAdmins" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>👑 관리자 목록</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>이메일</th>
+                  <th>연락처</th>
+                  <th>직책</th>
+                  <th>상태</th>
+                  <th>가입일</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="adminsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p style="margin-bottom: 16px;">관리자 정보를 불러오는 중...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -312,57 +343,50 @@
       </div>
 
       <div id="tabApprovals" class="tab-content">
-        <!-- 승인 요청 버튼 -->
-        <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-          <button class="btn btn-primary" onclick="showNewApprovalModal('purchase')">💳 구매 승인 요청</button>
-          <button class="btn btn-primary" onclick="showNewApprovalModal('disposal')">🗑️ 폐기 승인 요청</button>
-          <button class="btn btn-primary" onclick="showNewApprovalModal('resignation')">📄 퇴직서 승인 요청</button>
-        </div>
-
-        <!-- 필터 -->
-        <div class="filters">
-          <div class="filter-group">
-            <label>승인 유형</label>
-            <select id="approvalTypeFilter">
-              <option value="">전체</option>
-              <option value="purchase">💳 구매</option>
-              <option value="disposal">🗑️ 폐기</option>
-              <option value="resignation">📄 퇴직서</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>상태</label>
-            <select id="approvalStatusFilter">
-              <option value="">전체</option>
-              <option value="pending">대기중</option>
-              <option value="approved">승인됨</option>
-              <option value="rejected">거부됨</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>&nbsp;</label>
-            <button class="btn btn-primary" onclick="loadApprovals()">조회</button>
-          </div>
-        </div>
-
+        <!-- 승인 대기 목록 (구매/폐기/퇴직서) -->
         <div class="card">
-          <div class="card-header"><h3>✔️ 승인 대기 목록</h3></div>
+          <div class="card-header">
+            <h3>✔️ 승인 대기 목록</h3>
+          </div>
           <div class="card-body">
+            <div class="filters">
+              <div class="filter-group">
+                <label>승인 유형</label>
+                <select id="approvalTypeFilter">
+                  <option value="">전체</option>
+                  <option value="purchase">💳 구매</option>
+                  <option value="disposal">🗑️ 폐기</option>
+                  <option value="resignation">📄 퇴직서</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>상태</label>
+                <select id="approvalStatusFilter">
+                  <option value="">전체</option>
+                  <option value="pending">대기중</option>
+                  <option value="approved">승인됨</option>
+                  <option value="rejected">거부됨</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" onclick="loadApprovals()">조회</button>
+              </div>
+            </div>
             <table>
               <thead>
                 <tr>
-                  <th>이름</th>
-                  <th>이메일</th>
-                  <th>생년월일</th>
-                  <th>전화번호</th>
-                  <th>매장</th>
-                  <th>직급</th>
+                  <th>신청자</th>
+                  <th>유형</th>
+                  <th>제목/내용</th>
+                  <th>신청일</th>
+                  <th>상태</th>
                   <th>처리</th>
                 </tr>
               </thead>
               <tbody id="approvalsTableBody">
                 <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 중인 직원을 불러오는 중...</td>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 목록을 불러오는 중...</td>
                 </tr>
               </tbody>
             </table>
@@ -607,12 +631,60 @@
 
     async function showMainScreen() {
       document.getElementById('mainScreen').classList.remove('hidden');
+      
+      // 역할 체크 및 UI 제한
+      const userRole = sessionStorage.getItem('admin_role');
+      if (userRole === 'manager') {
+        applyManagerRestrictions();
+      }
+      
       // signedContracts 캐시 로드
       await loadSignedContractsCache();
       // localStorage contracts 자동 마이그레이션
       await migrateLocalStorageContracts();
       loadDashboard();
       switchTab('employees');
+    }
+    
+    // 매니저 권한 제한 적용
+    function applyManagerRestrictions() {
+      console.log('🔒 매니저 권한 제한 적용 중...');
+      
+      // 관리자 배지 변경
+      const adminBadge = document.querySelector('.admin-badge');
+      if (adminBadge) {
+        adminBadge.textContent = '매니저 (읽기 전용)';
+        adminBadge.style.background = 'var(--text-secondary)';
+      }
+      
+      // 모든 쓰기 버튼 숨기기 (공통 클래스 사용)
+      const writeButtons = [
+        // 직원 관리 - 삭제 버튼 숨기기는 동적으로 생성되므로 loadEmployees에서 처리
+        
+        // 계약서 관리 - 새 계약서 작성 버튼
+        'document.querySelector("#tabContracts .btn-primary")',
+        
+        // 공지사항 - 작성 버튼
+        'document.querySelector("#tabNotice .btn-primary")',
+        
+        // 매장 관리 - 추가 버튼
+        'document.querySelector("#tabStores .btn-primary")'
+      ];
+      
+      writeButtons.forEach(selector => {
+        try {
+          const btn = eval(selector);
+          if (btn) {
+            btn.style.display = 'none';
+          }
+        } catch (e) {
+          // 버튼이 없으면 무시
+        }
+      });
+      
+      // 승인 관리 탭의 승인/거부 버튼은 동적으로 생성되므로 loadApprovals에서 처리
+      
+      console.log('✅ 매니저 권한 제한 적용 완료');
     }
     
     // signedContracts Firestore 캐시 로드
@@ -730,6 +802,7 @@
       }
       switch(tabName) {
         case 'dashboard': loadDashboard(); break;
+        case 'admins': loadAdmins(); break;
         case 'employees': loadEmployees(); break;
         case 'attendance': loadAttendanceList(); break;
         case 'salary': loadSalaryList(); break;
@@ -908,10 +981,22 @@
             }
           }
           
+          // 매니저 권한 체크
+          const userRole = sessionStorage.getItem('admin_role');
+          const isManager = userRole === 'manager';
+          
           // 계약서 작성 완료 여부에 따라 버튼 텍스트와 스타일 변경
-          const contractButton = hasContract 
-            ? `<button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="switchTab('contracts')">✅ 계약서 ${contractCount}건</button>`
-            : `<button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>`;
+          let contractButton = '';
+          if (!isManager) {
+            contractButton = hasContract 
+              ? `<button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="switchTab('contracts')">✅ 계약서 ${contractCount}건</button>`
+              : `<button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>`;
+          } else {
+            // 매니저는 계약서 조회만 가능
+            contractButton = hasContract 
+              ? `<button class="btn btn-sm" style="background: var(--text-secondary); color: white;" onclick="switchTab('contracts')">📄 계약서 ${contractCount}건 조회</button>`
+              : '<span style="font-size: 12px; color: var(--text-secondary);">계약서 없음</span>';
+          }
           
           // 상태 배지 결정
           let statusBadge = '';
@@ -926,6 +1011,13 @@
             statusBadge = '<span class="badge badge-success">재직</span>';
           }
           
+          // 삭제 버튼 (매니저는 표시 안 함)
+          const deleteButton = !isManager 
+            ? `<button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="deleteEmployee('${emp.uid}', '${emp.name}')">
+                🗑️ 삭제
+              </button>`
+            : '';
+          
           return `
             <tr>
               <td>${emp.name}</td>
@@ -938,9 +1030,7 @@
               <td>
                 <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                   ${contractButton}
-                  <button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="deleteEmployee('${emp.uid}', '${emp.name}')">
-                    🗑️ 삭제
-                  </button>
+                  ${deleteButton}
                 </div>
               </td>
             </tr>
@@ -1811,63 +1901,229 @@
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
     }
 
-    async function loadApprovals() {
-      const tbody = document.getElementById('approvalsTableBody');
+    // 관리자 목록 로드
+    async function loadAdmins() {
+      const tbody = document.getElementById('adminsTableBody');
       if (!tbody) return;
       
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">승인 대기 목록을 불러오는 중...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">관리자 목록을 불러오는 중...</td></tr>';
       
       try {
-        // Firestore에서 승인 대기 중인 직원 조회
+        // Firestore에서 관리자/매니저 조회
         const snapshot = await db.collection('users')
-          .where('role', '==', 'employee')
-          .where('status', '==', 'pending')
+          .where('userType', '==', 'admin')
           .get();
         
         if (snapshot.empty) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 중인 직원이 없습니다.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">등록된 관리자가 없습니다.</td></tr>';
           return;
         }
         
-        const pendingUsers = [];
+        const admins = [];
         snapshot.forEach(doc => {
-          pendingUsers.push({
+          admins.push({
             uid: doc.id,
             ...doc.data()
           });
         });
         
         // 최신순 정렬
-        pendingUsers.sort((a, b) => {
+        admins.sort((a, b) => {
           const aTime = a.createdAt?.toDate?.() || new Date(0);
           const bTime = b.createdAt?.toDate?.() || new Date(0);
           return bTime - aTime;
         });
         
-        tbody.innerHTML = pendingUsers.map(user => `
-          <tr>
-            <td>${user.name || '-'}</td>
-            <td>${user.email || '-'}</td>
-            <td>${user.birth || '-'}</td>
-            <td>${user.phone || '-'}</td>
-            <td>${user.store || '-'}</td>
-            <td>${user.position || '-'}</td>
-            <td>
-              <div style="display: flex; gap: 8px; justify-content: center;">
-                <button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="approveEmployee('${user.uid}', '${user.name}')">
+        // 매니저 권한 체크
+        const userRole = sessionStorage.getItem('admin_role');
+        const isManager = userRole === 'manager';
+        
+        tbody.innerHTML = admins.map(user => {
+          const roleText = user.role === 'admin' ? '관리자' : '매니저';
+          const roleDesc = user.role === 'admin' ? '(전체 권한)' : '(읽기 전용)';
+          const createdDate = user.createdAt?.toDate?.() ? user.createdAt.toDate().toLocaleDateString('ko-KR') : '-';
+          
+          // 상태 배지
+          let statusBadge = '';
+          if (user.status === 'approved') {
+            statusBadge = '<span class="badge badge-success">활성</span>';
+          } else if (user.status === 'pending') {
+            statusBadge = '<span class="badge badge-warning" style="background: #ffc107; color: #000;">승인대기</span>';
+          } else if (user.status === 'rejected') {
+            statusBadge = '<span class="badge badge-danger">거부됨</span>';
+          } else {
+            statusBadge = '<span class="badge badge-success">활성</span>';
+          }
+          
+          // 매니저는 삭제 버튼 표시 안 함
+          const deleteButton = !isManager 
+            ? `<button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="deleteAdmin('${user.uid}', '${user.name}')">
+                🗑️ 삭제
+              </button>`
+            : '<span style="font-size: 12px; color: var(--text-secondary);">-</span>';
+          
+          return `
+            <tr>
+              <td>${user.name || '-'}</td>
+              <td style="font-size: 12px; color: var(--text-secondary);">${user.email || '-'}</td>
+              <td>${user.phone || '-'}</td>
+              <td>
+                <span class="badge ${user.role === 'admin' ? 'badge-primary' : 'badge-info'}">
+                  ${roleText} ${roleDesc}
+                </span>
+              </td>
+              <td>${statusBadge}</td>
+              <td>${createdDate}</td>
+              <td>
+                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                  ${deleteButton}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('❌ 관리자 목록 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">목록을 불러오는데 실패했습니다.</td></tr>';
+      }
+    }
+
+    // 승인 관리 로드 (구매/폐기/퇴직서)
+    async function loadApprovals() {
+      const tbody = document.getElementById('approvalsTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">승인 대기 목록을 불러오는 중...</td></tr>';
+      
+      try {
+        // Firestore에서 승인 대기 문서 조회
+        const typeFilter = document.getElementById('approvalTypeFilter')?.value || '';
+        const statusFilter = document.getElementById('approvalStatusFilter')?.value || '';
+        
+        let query = db.collection('approvals');
+        
+        if (typeFilter) {
+          query = query.where('type', '==', typeFilter);
+        }
+        
+        if (statusFilter) {
+          query = query.where('status', '==', statusFilter);
+        } else {
+          // 기본적으로 대기중만 표시
+          query = query.where('status', '==', 'pending');
+        }
+        
+        const snapshot = await query.get();
+        
+        if (snapshot.empty) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px;">
+                <div style="color: var(--text-secondary);">
+                  <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+                  <p>승인 대기 중인 문서가 없습니다.</p>
+                  <p style="font-size: 13px; margin-top: 8px;">직원이 문서를 신청하면 여기에 표시됩니다.</p>
+                </div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+        
+        const approvals = [];
+        snapshot.forEach(doc => {
+          approvals.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        // 최신순 정렬
+        approvals.sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.() || new Date(0);
+          const bTime = b.createdAt?.toDate?.() || new Date(0);
+          return bTime - aTime;
+        });
+        
+        // 매니저 권한 체크
+        const userRole = sessionStorage.getItem('admin_role');
+        const isManager = userRole === 'manager';
+        
+        tbody.innerHTML = approvals.map(approval => {
+          const typeEmoji = {
+            'purchase': '💳',
+            'disposal': '🗑️',
+            'resignation': '📄'
+          };
+          
+          const typeText = {
+            'purchase': '구매',
+            'disposal': '폐기',
+            'resignation': '퇴직서'
+          };
+          
+          const statusBadge = {
+            'pending': '<span class="badge badge-warning" style="background: #ffc107; color: #000;">대기중</span>',
+            'approved': '<span class="badge badge-success">승인됨</span>',
+            'rejected': '<span class="badge badge-danger">거부됨</span>'
+          };
+          
+          const createdDate = approval.createdAt?.toDate?.() ? approval.createdAt.toDate().toLocaleString('ko-KR') : '-';
+          
+          // 요약 정보
+          let summary = '';
+          if (approval.type === 'purchase') {
+            summary = `${approval.data?.item || '-'} (${approval.data?.quantity || '-'}개)`;
+          } else if (approval.type === 'disposal') {
+            summary = `${approval.data?.category || '-'}`;
+          } else if (approval.type === 'resignation') {
+            summary = `희망 퇴직일: ${approval.data?.resignationDate || '-'}`;
+          }
+          
+          // 매니저는 승인/거부 버튼 표시 안 함
+          const actionButtons = !isManager && approval.status === 'pending'
+            ? `<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-sm" style="background: var(--primary-color); color: white;" onclick="viewApprovalDetail('${approval.id}')">
+                  📄 상세
+                </button>
+                <button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="approveDocument('${approval.id}', '${approval.type}')">
                   ✅ 승인
                 </button>
-                <button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="rejectEmployee('${user.uid}', '${user.name}')">
+                <button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="rejectDocument('${approval.id}')">
                   ❌ 거부
                 </button>
-              </div>
-            </td>
-          </tr>
-        `).join('');
+              </div>`
+            : `<button class="btn btn-sm" style="background: var(--text-secondary); color: white;" onclick="viewApprovalDetail('${approval.id}')">
+                📄 상세보기
+              </button>`;
+          
+          return `
+            <tr>
+              <td>${approval.applicantName || '-'}</td>
+              <td>${typeEmoji[approval.type] || ''} ${typeText[approval.type] || '-'}</td>
+              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${summary}</td>
+              <td style="font-size: 12px;">${createdDate}</td>
+              <td>${statusBadge[approval.status] || '-'}</td>
+              <td>${actionButtons}</td>
+            </tr>
+          `;
+        }).join('');
         
       } catch (error) {
         console.error('❌ 승인 목록 로드 실패:', error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">목록을 불러오는데 실패했습니다.</td></tr>';
+        console.error('Error details:', error.message);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px;">
+              <div style="color: var(--text-secondary);">
+                <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+                <p>승인 대기 중인 문서가 없습니다.</p>
+                <p style="font-size: 13px; margin-top: 8px; color: var(--text-secondary);">직원이 문서를 신청하면 여기에 표시됩니다.</p>
+              </div>
+            </td>
+          </tr>
+        `;
       }
     }
     
@@ -1917,6 +2173,159 @@
         });
         
         alert(`❌ ${name} 직원의 가입이 거부되었습니다.`);
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 거부 실패:', error);
+        alert('❌ 거부 처리에 실패했습니다.');
+      }
+    }
+
+    // 관리자 승인 함수
+    async function approveAdmin(uid, name, role) {
+      const roleText = role === 'admin' ? '관리자' : '매니저';
+      if (!confirm(`${name} ${roleText}의 가입을 승인하시겠습니까?`)) {
+        return;
+      }
+      
+      try {
+        // users 컬렉션 업데이트
+        await db.collection('users').doc(uid).update({
+          status: 'approved',
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`✅ ${name} ${roleText}의 가입이 승인되었습니다.`);
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 관리자 승인 실패:', error);
+        alert('❌ 승인 처리에 실패했습니다.');
+      }
+    }
+    
+    // 관리자 거부 함수
+    async function rejectAdmin(uid, name) {
+      if (!confirm(`${name} 관리자의 가입을 거부하시겠습니까?\n거부된 계정은 로그인할 수 없습니다.`)) {
+        return;
+      }
+      
+      try {
+        // users 컬렉션 업데이트
+        await db.collection('users').doc(uid).update({
+          status: 'rejected',
+          rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`❌ ${name} 관리자의 가입이 거부되었습니다.`);
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 관리자 거부 실패:', error);
+        alert('❌ 거부 처리에 실패했습니다.');
+      }
+    }
+
+    // 관리자 삭제 함수
+    async function deleteAdmin(uid, name) {
+      if (!confirm(`${name} 관리자를 삭제하시겠습니까?\n⚠️ 이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+      }
+      
+      try {
+        // users 컬렉션에서 삭제
+        await db.collection('users').doc(uid).delete();
+        
+        alert(`✅ ${name} 관리자가 삭제되었습니다.`);
+        loadAdmins(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 관리자 삭제 실패:', error);
+        alert('❌ 삭제 처리에 실패했습니다.');
+      }
+    }
+
+    // 승인 문서 상세보기
+    async function viewApprovalDetail(approvalId) {
+      try {
+        const doc = await db.collection('approvals').doc(approvalId).get();
+        
+        if (!doc.exists) {
+          alert('❌ 문서를 찾을 수 없습니다.');
+          return;
+        }
+        
+        const approval = doc.data();
+        
+        // 타입에 따라 다른 모달 표시
+        if (approval.type === 'purchase') {
+          showPurchaseDetailModal(approvalId, approval);
+        } else if (approval.type === 'disposal') {
+          showDisposalDetailModal(approvalId, approval);
+        } else if (approval.type === 'resignation') {
+          showResignationDetailModal(approvalId, approval);
+        }
+        
+      } catch (error) {
+        console.error('❌ 문서 로드 실패:', error);
+        alert('❌ 문서를 불러오는데 실패했습니다.');
+      }
+    }
+
+    // 문서 승인
+    async function approveDocument(approvalId, type) {
+      if (!confirm('이 문서를 승인하시겠습니까?')) {
+        return;
+      }
+      
+      try {
+        await db.collection('approvals').doc(approvalId).update({
+          status: 'approved',
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          approvedBy: sessionStorage.getItem('admin_email')
+        });
+        
+        // 퇴직서인 경우 계정 삭제
+        if (type === 'resignation') {
+          const doc = await db.collection('approvals').doc(approvalId).get();
+          const approval = doc.data();
+          
+          if (approval.applicantUid) {
+            // users 컬렉션에서 삭제
+            await db.collection('users').doc(approval.applicantUid).delete();
+            // employees 컬렉션에서 삭제
+            await db.collection('employees').doc(approval.applicantUid).delete();
+            
+            console.log(`✅ 퇴직서 승인으로 ${approval.applicantName} 직원 계정 삭제 완료`);
+          }
+        }
+        
+        alert('✅ 문서가 승인되었습니다.');
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 승인 실패:', error);
+        alert('❌ 승인 처리에 실패했습니다.');
+      }
+    }
+
+    // 문서 거부
+    async function rejectDocument(approvalId) {
+      const reason = prompt('거부 사유를 입력하세요:');
+      
+      if (reason === null) {
+        return; // 취소
+      }
+      
+      try {
+        await db.collection('approvals').doc(approvalId).update({
+          status: 'rejected',
+          rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          rejectedBy: sessionStorage.getItem('admin_email'),
+          rejectReason: reason
+        });
+        
+        alert('❌ 문서가 거부되었습니다.');
         loadApprovals(); // 목록 새로고침
         
       } catch (error) {

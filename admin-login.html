@@ -146,7 +146,12 @@
     
     <p id="loginError" style="color: #c67b7b; font-size: 13px; margin-top: 12px; display: none;"></p>
     
-    <div style="text-align: center; margin-top: var(--spacing-lg);">
+    <div style="text-align: center; margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--border-color);">
+      <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">계정이 없으신가요?</p>
+      <a href="admin-register.html" style="color: var(--primary-color); font-size: 14px; font-weight: 600; text-decoration: none;">관리자 가입 신청 →</a>
+    </div>
+    
+    <div style="text-align: center; margin-top: var(--spacing-md);">
       <a href="index.html" style="color: var(--text-secondary); font-size: 14px; text-decoration: none;">← 메인으로 돌아가기</a>
     </div>
   </div>
@@ -211,25 +216,46 @@
         
         if (userDoc.exists) {
           const userData = userDoc.data();
-          if (userData.role === 'admin' || userData.role === 'manager') {
-            // 기억하기 체크 시 저장, 아니면 삭제
-            if (rememberMe) {
-              localStorage.setItem('admin_saved_email', email);
-              localStorage.setItem('admin_saved_password', password);
-            } else {
-              localStorage.removeItem('admin_saved_email');
-              localStorage.removeItem('admin_saved_password');
-            }
-            
-            // 인증 성공 - 세션 저장 후 대시보드로 이동
-            sessionStorage.setItem('admin_authenticated', 'true');
-            sessionStorage.setItem('admin_email', email);
-            window.location.href = 'admin-dashboard.html';
-          } else {
+          
+          // 권한 체크
+          if (userData.role !== 'admin' && userData.role !== 'manager') {
             errorEl.textContent = '관리자 권한이 없습니다.';
             errorEl.style.display = 'block';
             await auth.signOut();
+            return;
           }
+          
+          // 상태 체크
+          const status = userData.status || 'pending';
+          
+          if (status === 'pending') {
+            errorEl.textContent = '⏳ 관리자 승인을 기다리고 있습니다.\n승인 후 로그인이 가능합니다.';
+            errorEl.style.display = 'block';
+            await auth.signOut();
+            return;
+          }
+          
+          if (status === 'rejected') {
+            errorEl.textContent = '❌ 가입이 거부되었습니다.\n시스템 관리자에게 문의하세요.';
+            errorEl.style.display = 'block';
+            await auth.signOut();
+            return;
+          }
+          
+          // 승인 완료 - 로그인 처리
+          if (rememberMe) {
+            localStorage.setItem('admin_saved_email', email);
+            localStorage.setItem('admin_saved_password', password);
+          } else {
+            localStorage.removeItem('admin_saved_email');
+            localStorage.removeItem('admin_saved_password');
+          }
+          
+          // 인증 성공 - 세션 저장 후 대시보드로 이동
+          sessionStorage.setItem('admin_authenticated', 'true');
+          sessionStorage.setItem('admin_email', email);
+          sessionStorage.setItem('admin_role', userData.role);
+          window.location.href = 'admin-dashboard.html';
         } else {
           errorEl.textContent = '사용자 정보를 찾을 수 없습니다.';
           errorEl.style.display = 'block';

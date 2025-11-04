@@ -232,6 +232,8 @@ function showTab(tabName) {
     loadAttendance();
   } else if (tabName === 'salary') {
     loadSalary();
+  } else if (tabName === 'approvals') {
+    loadMyApprovals();
   } else if (tabName === 'contract') {
     loadContracts();
     loadEmployeeDocuments();
@@ -1322,4 +1324,472 @@ function debugLog(message) {
   if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG_MODE) {
     console.log(`[Employee] ${message}`);
   }
+}
+
+// ===================================================================
+// 문서 승인 관련 함수 (구매/폐기/퇴직서)
+// ===================================================================
+
+/**
+ * 내 승인 신청 목록 로드
+ */
+async function loadMyApprovals() {
+  const tbody = document.getElementById('myApprovalsTableBody');
+  if (!tbody || !currentUser) return;
+  
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">신청 내역을 불러오는 중...</td></tr>';
+  
+  try {
+    const snapshot = await db.collection('approvals')
+      .where('applicantUid', '==', currentUser.uid)
+      .get();
+    
+    if (snapshot.empty) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);"><div style="font-size: 48px; margin-bottom: 16px;">📝</div><p>아직 신청한 문서가 없습니다.</p><p style="font-size: 13px; margin-top: 8px;">상단의 버튼을 눌러 문서를 신청해보세요!</p></td></tr>';
+      return;
+    }
+    
+    const approvals = [];
+    snapshot.forEach(doc => {
+      approvals.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // 클라이언트 측에서 날짜순 정렬 (최신순)
+    approvals.sort((a, b) => {
+      const aTime = a.createdAt?.toDate?.() || new Date(0);
+      const bTime = b.createdAt?.toDate?.() || new Date(0);
+      return bTime - aTime;
+    });
+    
+    const typeEmoji = {
+      'purchase': '💳',
+      'disposal': '🗑️',
+      'resignation': '📄'
+    };
+    
+    const typeText = {
+      'purchase': '구매',
+      'disposal': '폐기',
+      'resignation': '퇴직서'
+    };
+    
+    const statusBadge = {
+      'pending': '<span class="badge badge-warning" style="background: #ffc107; color: #000;">대기중</span>',
+      'approved': '<span class="badge badge-success">승인됨</span>',
+      'rejected': '<span class="badge badge-danger">거부됨</span>'
+    };
+    
+    tbody.innerHTML = approvals.map(approval => {
+      const createdDate = approval.createdAt?.toDate?.() ? approval.createdAt.toDate().toLocaleString('ko-KR') : '-';
+      
+      // 요약 정보
+      let summary = '';
+      if (approval.type === 'purchase') {
+        const items = approval.data?.items || [];
+        summary = items.length > 0 ? `${items[0].item} 외 ${items.length - 1}건` : '-';
+      } else if (approval.type === 'disposal') {
+        summary = `${approval.data?.category || '-'}`;
+      } else if (approval.type === 'resignation') {
+        summary = `희망일: ${approval.data?.resignationDate || '-'}`;
+      }
+      
+      const detailButton = `<button class="btn btn-sm" style="background: var(--primary-color); color: white;" onclick="viewMyApprovalDetail('${approval.id}')">
+        📄 상세보기
+      </button>`;
+      
+      // 거부 사유 표시
+      const rejectInfo = approval.status === 'rejected' && approval.rejectReason 
+        ? `<br><small style="color: var(--danger-color);">거부 사유: ${approval.rejectReason}</small>`
+        : '';
+      
+      return `
+        <tr>
+          <td>${typeEmoji[approval.type] || ''} ${typeText[approval.type] || '-'}</td>
+          <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${summary}</td>
+          <td style="font-size: 12px;">${createdDate}</td>
+          <td>${statusBadge[approval.status] || '-'}${rejectInfo}</td>
+          <td>${detailButton}</td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('❌ 신청 내역 로드 실패:', error);
+    console.error('Error details:', error.message);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 40px;">
+          <div style="color: var(--text-secondary);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+            <p>아직 신청한 문서가 없습니다.</p>
+            <p style="font-size: 13px; margin-top: 8px; color: var(--text-secondary);">상단의 버튼을 눌러 문서를 신청해보세요!</p>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+// 구매 신청 모달 열기
+function showPurchaseRequestModal() {
+  document.getElementById('purchaseRequestModal').style.display = 'flex';
+  // 초기화
+  document.getElementById('purchaseItems').innerHTML = `
+    <div class="purchase-item" data-index="0">
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label>구매 물품 <span style="color: var(--danger-color);">*</span></label>
+          <input type="text" class="purchase-item-name" placeholder="예: 커피원두">
+        </div>
+        <div class="form-group">
+          <label>구매처 <span style="color: var(--danger-color);">*</span></label>
+          <input type="text" class="purchase-item-vendor" placeholder="예: ABC 무역">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>구매 금액 (원) <span style="color: var(--danger-color);">*</span></label>
+          <input type="number" class="purchase-item-price" placeholder="50000" min="0">
+        </div>
+        <div class="form-group">
+          <label>수량 <span style="color: var(--danger-color);">*</span></label>
+          <input type="number" class="purchase-item-quantity" placeholder="10" min="1" value="1">
+        </div>
+      </div>
+      <hr style="margin: var(--spacing-md) 0; border: none; border-top: 1px dashed var(--border-color);">
+    </div>
+  `;
+}
+
+function closePurchaseRequestModal() {
+  document.getElementById('purchaseRequestModal').style.display = 'none';
+}
+
+// 구매 항목 추가
+function addPurchaseItem() {
+  const container = document.getElementById('purchaseItems');
+  const index = container.children.length;
+  
+  const itemHtml = `
+    <div class="purchase-item" data-index="${index}">
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label>구매 물품 <span style="color: var(--danger-color);">*</span></label>
+          <input type="text" class="purchase-item-name" placeholder="예: 커피원두">
+        </div>
+        <div class="form-group">
+          <label>구매처 <span style="color: var(--danger-color);">*</span></label>
+          <input type="text" class="purchase-item-vendor" placeholder="예: ABC 무역">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>구매 금액 (원) <span style="color: var(--danger-color);">*</span></label>
+          <input type="number" class="purchase-item-price" placeholder="50000" min="0">
+        </div>
+        <div class="form-group">
+          <label>수량 <span style="color: var(--danger-color);">*</span></label>
+          <input type="number" class="purchase-item-quantity" placeholder="10" min="1" value="1">
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removePurchaseItem(${index})" style="margin-bottom: var(--spacing-md);">삭제</button>
+      <hr style="margin: var(--spacing-md) 0; border: none; border-top: 1px dashed var(--border-color);">
+    </div>
+  `;
+  
+  container.insertAdjacentHTML('beforeend', itemHtml);
+}
+
+// 구매 항목 삭제
+function removePurchaseItem(index) {
+  const item = document.querySelector(`.purchase-item[data-index="${index}"]`);
+  if (item) {
+    item.remove();
+  }
+}
+
+// 구매 신청 제출
+async function submitPurchaseRequest() {
+  if (!currentUser) {
+    alert('❌ 로그인이 필요합니다.');
+    return;
+  }
+  
+  const items = [];
+  const purchaseItems = document.querySelectorAll('.purchase-item');
+  
+  for (const item of purchaseItems) {
+    const name = item.querySelector('.purchase-item-name').value.trim();
+    const vendor = item.querySelector('.purchase-item-vendor').value.trim();
+    const price = item.querySelector('.purchase-item-price').value;
+    const quantity = item.querySelector('.purchase-item-quantity').value;
+    
+    if (!name || !vendor || !price || !quantity) {
+      alert('⚠️ 모든 항목을 입력해주세요.');
+      return;
+    }
+    
+    items.push({
+      item: name,
+      vendor: vendor,
+      price: parseInt(price),
+      quantity: parseInt(quantity)
+    });
+  }
+  
+  if (items.length === 0) {
+    alert('⚠️ 최소 1개 이상의 구매 항목을 입력해주세요.');
+    return;
+  }
+  
+  try {
+    await db.collection('approvals').add({
+      type: 'purchase',
+      applicantUid: currentUser.uid,
+      applicantName: currentUser.name,
+      applicantEmail: currentUser.email,
+      status: 'pending',
+      data: {
+        items: items
+      },
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert('✅ 구매 신청이 완료되었습니다.');
+    closePurchaseRequestModal();
+    loadMyApprovals();
+    
+  } catch (error) {
+    console.error('❌ 구매 신청 실패:', error);
+    alert('❌ 신청에 실패했습니다.');
+  }
+}
+
+// 폐기 신청 모달 열기
+function showDisposalRequestModal() {
+  document.getElementById('disposalRequestModal').style.display = 'flex';
+  document.getElementById('disposalCategory').value = '';
+  document.getElementById('disposalDetails').value = '';
+}
+
+function closeDisposalRequestModal() {
+  document.getElementById('disposalRequestModal').style.display = 'none';
+}
+
+// 폐기 신청 제출
+async function submitDisposalRequest() {
+  if (!currentUser) {
+    alert('❌ 로그인이 필요합니다.');
+    return;
+  }
+  
+  const category = document.getElementById('disposalCategory').value;
+  const details = document.getElementById('disposalDetails').value.trim();
+  
+  if (!category || !details) {
+    alert('⚠️ 모든 항목을 입력해주세요.');
+    return;
+  }
+  
+  try {
+    await db.collection('approvals').add({
+      type: 'disposal',
+      applicantUid: currentUser.uid,
+      applicantName: currentUser.name,
+      applicantEmail: currentUser.email,
+      status: 'pending',
+      data: {
+        category: category,
+        details: details
+      },
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert('✅ 폐기 신청이 완료되었습니다.');
+    closeDisposalRequestModal();
+    loadMyApprovals();
+    
+  } catch (error) {
+    console.error('❌ 폐기 신청 실패:', error);
+    alert('❌ 신청에 실패했습니다.');
+  }
+}
+
+// 퇴직서 신청 모달 열기
+let resignationCanvas;
+let resignationCtx;
+let isDrawing = false;
+let resignationSignatureData = null;
+
+function showResignationRequestModal() {
+  document.getElementById('resignationRequestModal').style.display = 'flex';
+  
+  // 사용자 이름 자동 입력
+  document.getElementById('resignationName').value = currentUser?.name || '';
+  
+  // 년도 드롭다운 초기화
+  const yearSelect = document.getElementById('resignationYear');
+  yearSelect.innerHTML = '<option value="">년</option>';
+  const currentYear = new Date().getFullYear();
+  for (let i = currentYear; i <= currentYear + 2; i++) {
+    yearSelect.innerHTML += `<option value="${i}">${i}년</option>`;
+  }
+  
+  // 일 드롭다운 초기화
+  const daySelect = document.getElementById('resignationDay');
+  daySelect.innerHTML = '<option value="">일</option>';
+  for (let i = 1; i <= 31; i++) {
+    daySelect.innerHTML += `<option value="${String(i).padStart(2, '0')}">${i}일</option>`;
+  }
+  
+  // 서명 패드 초기화
+  setTimeout(() => {
+    initResignationSignaturePad();
+  }, 100);
+}
+
+function closeResignationRequestModal() {
+  document.getElementById('resignationRequestModal').style.display = 'none';
+}
+
+// 서명 패드 초기화
+function initResignationSignaturePad() {
+  resignationCanvas = document.getElementById('resignationSignaturePad');
+  resignationCtx = resignationCanvas.getContext('2d');
+  
+  // 캔버스 크기 설정
+  resignationCanvas.width = 400;
+  resignationCanvas.height = 150;
+  
+  // 배경 흰색으로 설정
+  resignationCtx.fillStyle = 'white';
+  resignationCtx.fillRect(0, 0, resignationCanvas.width, resignationCanvas.height);
+  
+  // 서명 스타일
+  resignationCtx.strokeStyle = '#000';
+  resignationCtx.lineWidth = 2;
+  resignationCtx.lineCap = 'round';
+  
+  // 이벤트 리스너
+  resignationCanvas.addEventListener('mousedown', startDrawing);
+  resignationCanvas.addEventListener('mousemove', draw);
+  resignationCanvas.addEventListener('mouseup', stopDrawing);
+  resignationCanvas.addEventListener('mouseout', stopDrawing);
+  
+  // 터치 이벤트
+  resignationCanvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = resignationCanvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    isDrawing = true;
+    resignationCtx.beginPath();
+    resignationCtx.moveTo(x, y);
+  });
+  
+  resignationCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    const touch = e.touches[0];
+    const rect = resignationCanvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    resignationCtx.lineTo(x, y);
+    resignationCtx.stroke();
+  });
+  
+  resignationCanvas.addEventListener('touchend', () => {
+    isDrawing = false;
+  });
+}
+
+function startDrawing(e) {
+  isDrawing = true;
+  const rect = resignationCanvas.getBoundingClientRect();
+  resignationCtx.beginPath();
+  resignationCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  const rect = resignationCanvas.getBoundingClientRect();
+  resignationCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  resignationCtx.stroke();
+}
+
+function stopDrawing() {
+  isDrawing = false;
+}
+
+function clearResignationSignature() {
+  resignationCtx.fillStyle = 'white';
+  resignationCtx.fillRect(0, 0, resignationCanvas.width, resignationCanvas.height);
+  resignationSignatureData = null;
+}
+
+// 퇴직서 신청 제출
+async function submitResignationRequest() {
+  if (!currentUser) {
+    alert('❌ 로그인이 필요합니다.');
+    return;
+  }
+  
+  const name = document.getElementById('resignationName').value.trim();
+  const year = document.getElementById('resignationYear').value;
+  const month = document.getElementById('resignationMonth').value;
+  const day = document.getElementById('resignationDay').value;
+  const reason = document.getElementById('resignationReason').value.trim() || '개인사정';
+  
+  if (!name || !year || !month || !day) {
+    alert('⚠️ 모든 필수 항목을 입력해주세요.');
+    return;
+  }
+  
+  // 서명 확인
+  const signatureDataURL = resignationCanvas.toDataURL();
+  if (!signatureDataURL || signatureDataURL === 'data:,') {
+    alert('⚠️ 서명을 해주세요.');
+    return;
+  }
+  
+  const resignationDate = `${year}-${month}-${day}`;
+  
+  if (!confirm(`퇴직서를 신청하시겠습니까?\n\n희망 퇴직일: ${resignationDate}\n\n⚠️ 퇴직서가 승인되면 계정이 자동으로 삭제됩니다.`)) {
+    return;
+  }
+  
+  try {
+    await db.collection('approvals').add({
+      type: 'resignation',
+      applicantUid: currentUser.uid,
+      applicantName: currentUser.name,
+      applicantEmail: currentUser.email,
+      status: 'pending',
+      data: {
+        name: name,
+        resignationDate: resignationDate,
+        reason: reason,
+        employeeSignature: signatureDataURL
+      },
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert('✅ 퇴직서 신청이 완료되었습니다.\n관리자 승인 후 처리됩니다.');
+    closeResignationRequestModal();
+    loadMyApprovals();
+    
+  } catch (error) {
+    console.error('❌ 퇴직서 신청 실패:', error);
+    alert('❌ 신청에 실패했습니다.');
+  }
+}
+
+// 내 승인 상세보기
+async function viewMyApprovalDetail(approvalId) {
+  alert('📄 상세보기 기능은 곧 추가됩니다.');
+  // TODO: 상세보기 모달 구현
 }

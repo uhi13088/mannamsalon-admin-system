@@ -310,6 +310,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="attendance" onclick="showTab('attendance')">📋 근무내역</button>
         <button class="tab" data-tab="salary" onclick="showTab('salary')">💰 급여조회</button>
+        <button class="tab" data-tab="approvals" onclick="showTab('approvals')">✔️ 문서승인</button>
         <button class="tab" data-tab="contract" onclick="showTab('contract')">📝 계약서</button>
       </div>
 
@@ -379,6 +380,41 @@
             <div class="alert alert-info">
               조회할 월을 선택하고 조회 버튼을 클릭하세요.
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 컨텐츠: 문서 승인 -->
+      <div id="tabApprovals" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>✔️ 문서 승인 신청</h3>
+            <div style="display: flex; gap: var(--spacing-sm);">
+              <button class="btn btn-primary btn-sm" onclick="showPurchaseRequestModal()">💳 구매 신청</button>
+              <button class="btn btn-primary btn-sm" onclick="showDisposalRequestModal()">🗑️ 폐기 신청</button>
+              <button class="btn btn-primary btn-sm" onclick="showResignationRequestModal()">📄 퇴직서 신청</button>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>유형</th>
+                  <th>제목/내용</th>
+                  <th>신청일</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="myApprovalsTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    신청 내역을 불러오는 중...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -486,6 +522,138 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 구매 신청 모달 -->
+  <div id="purchaseRequestModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💳 구매 신청</h3>
+        <button class="modal-close" onclick="closePurchaseRequestModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="purchaseItems">
+          <div class="purchase-item" data-index="0">
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label>구매 물품 <span style="color: var(--danger-color);">*</span></label>
+                <input type="text" class="purchase-item-name" placeholder="예: 커피원두">
+              </div>
+              <div class="form-group">
+                <label>구매처 <span style="color: var(--danger-color);">*</span></label>
+                <input type="text" class="purchase-item-vendor" placeholder="예: ABC 무역">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>구매 금액 (원) <span style="color: var(--danger-color);">*</span></label>
+                <input type="number" class="purchase-item-price" placeholder="50000" min="0">
+              </div>
+              <div class="form-group">
+                <label>수량 <span style="color: var(--danger-color);">*</span></label>
+                <input type="number" class="purchase-item-quantity" placeholder="10" min="1" value="1">
+              </div>
+            </div>
+            <hr style="margin: var(--spacing-md) 0; border: none; border-top: 1px dashed var(--border-color);">
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addPurchaseItem()" style="margin-top: var(--spacing-sm);">+ 항목 추가</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePurchaseRequestModal()">취소</button>
+        <button class="btn btn-primary" onclick="submitPurchaseRequest()">신청하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 폐기 신청 모달 -->
+  <div id="disposalRequestModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🗑️ 폐기 신청</h3>
+        <button class="modal-close" onclick="closeDisposalRequestModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>폐기 카테고리 <span style="color: var(--danger-color);">*</span></label>
+          <select id="disposalCategory">
+            <option value="">선택하세요</option>
+            <option value="케이크">케이크</option>
+            <option value="음료">음료</option>
+            <option value="식자재">식자재</option>
+            <option value="도구">도구</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>상세 내용 <span style="color: var(--danger-color);">*</span></label>
+          <textarea id="disposalDetails" rows="5" placeholder="폐기할 물품과 사유를 상세히 작성해주세요.&#10;&#10;예시:&#10;- 티라미수 케이크 3개: 유통기한 경과 (2024-01-15)&#10;- 아메리카노 원두 500g: 보관 상태 불량&#10;- 비고: 냉장고 온도 이상으로 인한 변질"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDisposalRequestModal()">취소</button>
+        <button class="btn btn-primary" onclick="submitDisposalRequest()">신청하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 퇴직서 신청 모달 -->
+  <div id="resignationRequestModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📄 퇴직서 신청</h3>
+        <button class="modal-close" onclick="closeResignationRequestModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>성함 <span style="color: var(--danger-color);">*</span></label>
+          <input type="text" id="resignationName" readonly>
+        </div>
+        <div class="form-group">
+          <label>희망 퇴직일자 <span style="color: var(--danger-color);">*</span></label>
+          <div style="display: flex; gap: var(--spacing-sm);">
+            <select id="resignationYear" style="flex: 1;">
+              <option value="">년</option>
+            </select>
+            <select id="resignationMonth" style="flex: 1;">
+              <option value="">월</option>
+              <option value="01">1월</option>
+              <option value="02">2월</option>
+              <option value="03">3월</option>
+              <option value="04">4월</option>
+              <option value="05">5월</option>
+              <option value="06">6월</option>
+              <option value="07">7월</option>
+              <option value="08">8월</option>
+              <option value="09">9월</option>
+              <option value="10">10월</option>
+              <option value="11">11월</option>
+              <option value="12">12월</option>
+            </select>
+            <select id="resignationDay" style="flex: 1;">
+              <option value="">일</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>퇴직 사유</label>
+          <textarea id="resignationReason" rows="3" placeholder="개인사정">개인사정</textarea>
+        </div>
+        <div class="form-group">
+          <label>직원 서명 <span style="color: var(--danger-color);">*</span></label>
+          <div style="border: 2px dashed var(--border-color); border-radius: var(--border-radius); padding: var(--spacing-md); text-align: center;">
+            <canvas id="resignationSignaturePad" style="border: 1px solid var(--border-color); border-radius: var(--border-radius); cursor: crosshair; max-width: 100%;"></canvas>
+            <div style="margin-top: var(--spacing-sm);">
+              <button class="btn btn-secondary btn-sm" onclick="clearResignationSignature()">지우기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeResignationRequestModal()">취소</button>
+        <button class="btn btn-primary" onclick="submitResignationRequest()">신청하기</button>
       </div>
     </div>
   </div>
