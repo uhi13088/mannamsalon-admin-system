@@ -78,6 +78,24 @@ async function loadUserInfo(uid, name) {
     
     if (userDoc.exists) {
       const userData = userDoc.data();
+      
+      // 승인 상태 확인
+      const status = userData.status || 'pending';
+      
+      if (status === 'pending') {
+        alert('⏳ 관리자의 승인을 기다리고 있습니다.\n승인 후 로그인이 가능합니다.');
+        logout();
+        return;
+      }
+      
+      if (status === 'rejected') {
+        alert('❌ 가입이 거부되었습니다.\n관리자에게 문의하세요.');
+        logout();
+        return;
+      }
+      
+      // status === 'approved'인 경우만 진행
+      
       currentUser = {
         uid: uid,
         ...userData

@@ -350,18 +350,18 @@
             <table>
               <thead>
                 <tr>
-                  <th>유형</th>
-                  <th>신청자</th>
-                  <th>신청일</th>
-                  <th>내용</th>
-                  <th>금액/수량</th>
-                  <th>상태</th>
+                  <th>이름</th>
+                  <th>이메일</th>
+                  <th>생년월일</th>
+                  <th>전화번호</th>
+                  <th>매장</th>
+                  <th>직급</th>
                   <th>처리</th>
                 </tr>
               </thead>
               <tbody id="approvalsTableBody">
                 <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 건을 불러오는 중...</td>
+                  <td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 중인 직원을 불러오는 중...</td>
                 </tr>
               </tbody>
             </table>
@@ -1762,10 +1762,118 @@
       tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
     }
 
-    function loadApprovals() {
+    async function loadApprovals() {
       const tbody = document.getElementById('approvalsTableBody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">승인 대기 건이 없습니다.</td></tr>';
+      
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">승인 대기 목록을 불러오는 중...</td></tr>';
+      
+      try {
+        // Firestore에서 승인 대기 중인 직원 조회
+        const snapshot = await db.collection('users')
+          .where('role', '==', 'employee')
+          .where('status', '==', 'pending')
+          .get();
+        
+        if (snapshot.empty) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">승인 대기 중인 직원이 없습니다.</td></tr>';
+          return;
+        }
+        
+        const pendingUsers = [];
+        snapshot.forEach(doc => {
+          pendingUsers.push({
+            uid: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        // 최신순 정렬
+        pendingUsers.sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.() || new Date(0);
+          const bTime = b.createdAt?.toDate?.() || new Date(0);
+          return bTime - aTime;
+        });
+        
+        tbody.innerHTML = pendingUsers.map(user => `
+          <tr>
+            <td>${user.name || '-'}</td>
+            <td>${user.email || '-'}</td>
+            <td>${user.birth || '-'}</td>
+            <td>${user.phone || '-'}</td>
+            <td>${user.store || '-'}</td>
+            <td>${user.position || '-'}</td>
+            <td>
+              <div style="display: flex; gap: 8px; justify-content: center;">
+                <button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="approveEmployee('${user.uid}', '${user.name}')">
+                  ✅ 승인
+                </button>
+                <button class="btn btn-sm" style="background: var(--danger-color, #dc3545); color: white;" onclick="rejectEmployee('${user.uid}', '${user.name}')">
+                  ❌ 거부
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        
+      } catch (error) {
+        console.error('❌ 승인 목록 로드 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger-color);">목록을 불러오는데 실패했습니다.</td></tr>';
+      }
+    }
+    
+    async function approveEmployee(uid, name) {
+      if (!confirm(`${name} 직원의 가입을 승인하시겠습니까?`)) {
+        return;
+      }
+      
+      try {
+        // users 컬렉션 업데이트
+        await db.collection('users').doc(uid).update({
+          status: 'approved',
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // employees 컬렉션도 업데이트
+        await db.collection('employees').doc(uid).update({
+          status: 'approved',
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`✅ ${name} 직원의 가입이 승인되었습니다.`);
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 승인 실패:', error);
+        alert('❌ 승인 처리에 실패했습니다.');
+      }
+    }
+    
+    async function rejectEmployee(uid, name) {
+      if (!confirm(`${name} 직원의 가입을 거부하시겠습니까?\n거부된 계정은 로그인할 수 없습니다.`)) {
+        return;
+      }
+      
+      try {
+        // users 컬렉션 업데이트
+        await db.collection('users').doc(uid).update({
+          status: 'rejected',
+          rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // employees 컬렉션도 업데이트
+        await db.collection('employees').doc(uid).update({
+          status: 'rejected',
+          rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        alert(`❌ ${name} 직원의 가입이 거부되었습니다.`);
+        loadApprovals(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 거부 실패:', error);
+        alert('❌ 거부 처리에 실패했습니다.');
+      }
     }
 
     async function loadContracts() {
