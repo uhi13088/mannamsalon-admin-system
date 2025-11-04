@@ -912,6 +912,19 @@
             ? `<button class="btn btn-sm" style="background: var(--success-color, #28a745); color: white;" onclick="switchTab('contracts')">✅ 계약서 ${contractCount}건</button>`
             : `<button class="btn btn-sm btn-primary" onclick="openContractPageForEmployee('${emp.uid}', '${emp.name}', '${emp.birth}', '${emp.phone}', '${emp.address}')">📝 계약서 작성</button>`;
           
+          // 상태 배지 결정
+          let statusBadge = '';
+          if (emp.status === 'approved') {
+            statusBadge = '<span class="badge badge-success">재직</span>';
+          } else if (emp.status === 'pending') {
+            statusBadge = '<span class="badge badge-warning" style="background: #ffc107; color: #000;">승인대기중</span>';
+          } else if (emp.status === 'rejected') {
+            statusBadge = '<span class="badge badge-danger">가입거부</span>';
+          } else {
+            // status가 'active' 또는 기타인 경우 (이전 데이터 호환)
+            statusBadge = '<span class="badge badge-success">재직</span>';
+          }
+          
           return `
             <tr>
               <td>${emp.name}</td>
@@ -919,7 +932,7 @@
               <td>${emp.position}</td>
               <td>${emp.phone}</td>
               <td>${emp.birth || '-'}</td>
-              <td><span class="badge ${emp.status === 'active' ? 'badge-success' : 'badge-danger'}">${emp.status === 'active' ? '재직' : '퇴사'}</span></td>
+              <td>${statusBadge}</td>
               <td>
                 <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                   ${contractButton}
@@ -978,7 +991,7 @@
     }
 
     async function deleteEmployee(uid, name) {
-      if (!confirm(`⚠️ ${name} 직원을 삭제하시겠습니까?\n\n삭제 시:\n- 직원 계정이 영구 삭제됩니다\n- 해당 직원의 Firebase 인증도 함께 삭제됩니다\n- 계약서 및 출퇴근 기록은 유지됩니다\n\n이 작업은 되돌릴 수 없습니다.`)) {
+      if (!confirm(`⚠️ ${name} 직원을 삭제하시겠습니까?\n\n삭제 시:\n- 직원 계정이 영구 삭제됩니다\n- 계약서 및 출퇴근 기록은 유지됩니다\n- Firebase 인증 계정은 해당 직원이 다음 로그인 시 자동 삭제됩니다\n\n이 작업은 되돌릴 수 없습니다.`)) {
         return;
       }
       
@@ -991,11 +1004,10 @@
         await db.collection('employees').doc(uid).delete();
         console.log('✅ employees 컬렉션에서 삭제 완료');
         
-        // 3. Firebase Authentication 사용자 삭제는 서버 측에서 처리해야 하므로
-        //    여기서는 Firestore 데이터만 삭제하고, 인증 삭제는 별도 처리 필요
-        //    (또는 Cloud Functions 사용)
+        // 3. Firebase Authentication 계정은 해당 직원이 로그인 시도할 때 자동으로 삭제됨
+        //    (employee-login.html 및 employee.js에서 처리)
         
-        alert(`✅ ${name} 직원이 삭제되었습니다.\n\n참고: Firebase 인증 계정은 수동으로 Firebase Console에서 삭제해주세요.`);
+        alert(`✅ ${name} 직원이 삭제되었습니다.\n\nFirebase 인증 계정은 해당 직원이 다음 로그인 시도 시 자동으로 삭제됩니다.`);
         
         // 직원 목록 새로고침
         loadEmployees();

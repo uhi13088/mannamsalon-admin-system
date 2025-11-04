@@ -102,6 +102,29 @@ async function loadUserInfo(uid, name) {
       };
       console.log('✅ currentUser 설정 완료 (Firestore):', currentUser);
     } else {
+      // Firestore에 사용자 정보가 없는 경우 (관리자가 삭제함)
+      console.log('⚠️ Firestore에 사용자 정보가 없습니다. Firebase Auth 계정 삭제 시도...');
+      
+      try {
+        // 현재 로그인된 사용자 가져오기
+        const currentAuthUser = firebase.auth().currentUser;
+        if (currentAuthUser && currentAuthUser.uid === uid) {
+          // Firebase Authentication 계정 삭제
+          await currentAuthUser.delete();
+          console.log('✅ Firebase Auth 계정 자동 삭제 완료');
+          alert('❌ 관리자에 의해 계정이 삭제되었습니다.\nFirebase 인증 계정도 자동으로 삭제되었습니다.');
+        }
+      } catch (deleteError) {
+        console.error('❌ Firebase Auth 계정 삭제 실패:', deleteError);
+        alert('❌ 관리자에 의해 계정이 삭제되었습니다.');
+      }
+      
+      logout();
+      return;
+    }
+    
+    // 기존 else 블록 제거 (Firestore 없으면 위에서 처리)
+    if (false) {
       // Firestore에 정보가 없으면 기본값 사용
       currentUser = {
         uid: uid,
