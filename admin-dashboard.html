@@ -210,6 +210,7 @@
               <thead>
                 <tr>
                   <th>이름</th>
+                  <th>이메일</th>
                   <th>매장</th>
                   <th>직급</th>
                   <th>연락처</th>
@@ -828,7 +829,7 @@
       // 로딩 표시
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 40px;">
+          <td colspan="8" style="text-align: center; padding: 40px;">
             <div>⏳ 직원 목록을 불러오는 중...</div>
           </td>
         </tr>
@@ -856,7 +857,7 @@
         if (usersSnapshot.empty) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                 <p style="margin-bottom: 16px;">등록된 직원이 없습니다.</p>
                 <p style="font-size: 14px; color: var(--text-secondary);">직원 가입 페이지에서 먼저 직원을 등록해주세요.</p>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
@@ -928,6 +929,7 @@
           return `
             <tr>
               <td>${emp.name}</td>
+              <td style="font-size: 12px; color: var(--text-secondary);">${emp.email}</td>
               <td>${emp.store}</td>
               <td>${emp.position}</td>
               <td>${emp.phone}</td>
@@ -967,6 +969,7 @@
           return `
             <tr>
               <td>${emp.name}</td>
+              <td style="font-size: 12px; color: var(--text-secondary);">${emp.email}</td>
               <td>${emp.store}</td>
               <td>${emp.position}</td>
               <td>${emp.phone}</td>
@@ -981,7 +984,7 @@
         
         tbody.innerHTML += `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 20px; background: #fff9e6; color: #8b6914;">
+            <td colspan="8" style="text-align: center; padding: 20px; background: #fff9e6; color: #8b6914;">
               <p style="margin-bottom: 8px;">⚠️ Firestore 연결 실패. 더미 데이터를 표시합니다.</p>
               <p style="font-size: 13px;">실제 직원이 <a href="employee-register.html" target="_blank" style="color: var(--primary-color);">가입</a>하면 여기에 표시됩니다.</p>
             </td>
