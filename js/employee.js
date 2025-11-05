@@ -587,11 +587,23 @@ function calculateSalary(records, hourlyWage = 10000) {
     deduction,
     netSalary,
     totalHours,
+    totalMinutes, // 추가: 분단위 표시용
     hourlyWage,
     insurance,
     tax,
     workDays: records.length
   };
+}
+
+/**
+ * 시간(분)을 "X시간 Y분" 형식으로 변환
+ */
+function formatHoursAndMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}분`;
+  if (minutes === 0) return `${hours}시간`;
+  return `${hours}시간 ${minutes}분`;
 }
 
 /**
@@ -631,7 +643,7 @@ function renderSalaryInfo(data) {
         </tr>
         <tr>
           <td>총 근무시간</td>
-          <td style="text-align: right; font-weight: 600;">${data.totalHours || 0}시간</td>
+          <td style="text-align: right; font-weight: 600;">${formatHoursAndMinutes(data.totalMinutes || 0)}</td>
         </tr>
         <tr>
           <td>시급</td>
