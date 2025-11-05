@@ -1794,15 +1794,17 @@
       alert('✅ 서명 링크가 복사되었습니다!');
     }
 
-    function sendContractLink(id) {
-      const contractData = localStorage.getItem(`contract_${id}`);
-      if (!contractData) {
-        alert('⚠️ 계약서를 찾을 수 없습니다.');
-        return;
-      }
-      
+    async function sendContractLink(id) {
       try {
-        const contract = JSON.parse(contractData);
+        // Firestore에서 계약서 가져오기
+        const contractDoc = await firebase.firestore().collection('contracts').doc(id).get();
+        
+        if (!contractDoc.exists) {
+          alert('⚠️ 계약서를 찾을 수 없습니다.');
+          return;
+        }
+        
+        const contract = contractDoc.data();
         // 서명 링크 생성 - 현재 디렉토리 기준
         const currentPath = window.location.pathname;
         const directory = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
@@ -1969,6 +1971,20 @@
     }
     
     /**
+     * 시간(소수점)을 "시간 분" 형식으로 변환
+     * @param {number} hours - 시간 (소수점)
+     * @returns {string} "X시간 Y분" 형식
+     */
+    function formatHoursAndMinutes(hours) {
+      const totalMinutes = Math.round(hours * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      if (h === 0) return `${m}분`;
+      if (m === 0) return `${h}시간`;
+      return `${h}시간 ${m}분`;
+    }
+    
+    /**
      * 두 시간 사이의 차이를 시간 단위로 계산
      * @param {string} startTime - "HH:MM"
      * @param {string} endTime - "HH:MM"
@@ -2128,11 +2144,13 @@
             totalOvertimeHours += (weekHours - 40);
           }
         });
+        result.overtimeHours = totalOvertimeHours;
         result.overtimePay = Math.round(result.hourlyWage * 1.5 * totalOvertimeHours);
       }
       
       // 야간근로수당 - 계약서에 설정된 경우만
       if (contract.allowances?.night && totalNightHours > 0) {
+        result.nightHours = totalNightHours;
         result.nightPay = Math.round(result.hourlyWage * 0.5 * totalNightHours);
       }
       
@@ -2238,11 +2256,9 @@
         for (const empDoc of employeesSnapshot.docs) {
           const employee = { uid: empDoc.id, ...empDoc.data() };
           
-          // 해당 직원의 계약서 찾기
+          // 해당 직원의 계약서 찾기 (복합 인덱스 없이 처리)
           const contractsSnapshot = await firebase.firestore().collection('contracts')
             .where('employeeName', '==', employee.name)
-            .orderBy('createdAt', 'desc')
-            .limit(1)
             .get();
           
           if (contractsSnapshot.empty) {
@@ -2250,7 +2266,17 @@
             continue;
           }
           
-          const contract = contractsSnapshot.docs[0].data();
+          // 클라이언트에서 최신 계약서 찾기
+          const contracts = [];
+          contractsSnapshot.forEach(doc => {
+            contracts.push({ id: doc.id, ...doc.data() });
+          });
+          contracts.sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          });
+          const contract = contracts[0];
           
           // 해당 월의 출퇴근 기록 가져오기
           const [year, month] = yearMonth.split('-');
@@ -2355,18 +2381,27 @@
         }
         const employee = { uid: empDoc.id, ...empDoc.data() };
         
-        // 계약서 찾기
+        // 계약서 찾기 (복합 인덱스 없이 처리)
         const contractsSnapshot = await firebase.firestore().collection('contracts')
           .where('employeeName', '==', employee.name)
-          .orderBy('createdAt', 'desc')
-          .limit(1)
           .get();
         
         if (contractsSnapshot.empty) {
           alert('❌ 계약서를 찾을 수 없습니다.');
           return;
         }
-        const contract = contractsSnapshot.docs[0].data();
+        
+        // 클라이언트에서 최신 계약서 찾기
+        const contracts = [];
+        contractsSnapshot.forEach(doc => {
+          contracts.push({ id: doc.id, ...doc.data() });
+        });
+        contracts.sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        });
+        const contract = contracts[0];
         
         // 출퇴근 기록 가져오기
         const [year, month] = yearMonth.split('-');
@@ -2396,12 +2431,13 @@
         
         // 지급 항목
         document.getElementById('salaryDetailHourlyWage').textContent = salary.hourlyWage.toLocaleString();
-        document.getElementById('salaryDetailTotalHours').textContent = salary.totalWorkHours.toFixed(1);
+        document.getElementById('salaryDetailTotalHours').textContent = formatHoursAndMinutes(salary.totalWorkHours);
         document.getElementById('salaryDetailBasePay').textContent = salary.basePay.toLocaleString() + '원';
         
         // 연장근로수당
         if (salary.overtimePay > 0) {
           document.getElementById('salaryDetailOvertimeRow').style.display = '';
+          document.getElementById('salaryDetailOvertimeHours').textContent = formatHoursAndMinutes(salary.overtimeHours || 0);
           document.getElementById('salaryDetailOvertimePay').textContent = '+' + salary.overtimePay.toLocaleString() + '원';
         } else {
           document.getElementById('salaryDetailOvertimeRow').style.display = 'none';
@@ -2410,6 +2446,7 @@
         // 야간근로수당
         if (salary.nightPay > 0) {
           document.getElementById('salaryDetailNightRow').style.display = '';
+          document.getElementById('salaryDetailNightHours').textContent = formatHoursAndMinutes(salary.nightHours || 0);
           document.getElementById('salaryDetailNightPay').textContent = '+' + salary.nightPay.toLocaleString() + '원';
         } else {
           document.getElementById('salaryDetailNightRow').style.display = 'none';
