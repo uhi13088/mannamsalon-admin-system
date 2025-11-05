@@ -329,11 +329,13 @@
                   <th>추가수당</th>
                   <th>공제</th>
                   <th>실지급액</th>
+                  <th>상태</th>
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody id="salaryTableBody">
                 <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td>
+                  <td colspan="8" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td>
                 </tr>
               </tbody>
             </table>
@@ -2271,29 +2273,64 @@
           salaryData.push(salary);
         }
         
+        // Firestore에서 확정된 급여 정보 가져오기
+        const confirmedSalaries = {};
+        const salariesSnapshot = await firebase.firestore().collection('salaries')
+          .where('yearMonth', '==', yearMonth)
+          .get();
+        
+        salariesSnapshot.forEach(doc => {
+          const data = doc.data();
+          confirmedSalaries[data.employeeUid] = {
+            status: data.status || 'confirmed',
+            paid: data.paid || false,
+            docId: doc.id
+          };
+        });
+        
         // 테이블 렌더링
         if (salaryData.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
           return;
         }
         
-        tbody.innerHTML = salaryData.map(salary => `
-          <tr>
-            <td><strong>${salary.employeeName}</strong></td>
-            <td>${salary.storeName || '-'}</td>
-            <td style="text-align: right;">${salary.basePay.toLocaleString()}원</td>
-            <td style="text-align: right; color: var(--success-color);">
-              +${salary.totalAllowances.toLocaleString()}원
-            </td>
-            <td style="text-align: right; color: var(--danger-color);">
-              -${salary.totalDeductions.toLocaleString()}원
-            </td>
-            <td style="text-align: right;">
-              <strong style="font-size: 15px;">${salary.netPay.toLocaleString()}원</strong>
-              <button class="btn btn-sm btn-secondary" onclick="showSalaryDetail('${salary.employeeUid}', '${yearMonth}')" style="margin-left: 8px;">상세</button>
-            </td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = salaryData.map(salary => {
+          const confirmed = confirmedSalaries[salary.employeeUid];
+          const isConfirmed = !!confirmed;
+          const isPaid = confirmed?.paid || false;
+          
+          let statusBadge = '<span class="badge badge-warning">미확정</span>';
+          if (isConfirmed && isPaid) {
+            statusBadge = '<span class="badge badge-success">지급완료</span>';
+          } else if (isConfirmed) {
+            statusBadge = '<span class="badge badge-info">확정됨</span>';
+          }
+          
+          let actionButtons = `<button class="btn btn-sm btn-secondary" onclick="showSalaryDetail('${salary.employeeUid}', '${yearMonth}')" style="margin-left: 4px;">상세</button>`;
+          
+          if (isConfirmed && !isPaid) {
+            actionButtons += `<button class="btn btn-sm btn-success" onclick="markAsPaid('${confirmed.docId}')" style="margin-left: 4px;">지급완료</button>`;
+          }
+          
+          return `
+            <tr>
+              <td><strong>${salary.employeeName}</strong></td>
+              <td>${salary.storeName || '-'}</td>
+              <td style="text-align: right;">${salary.basePay.toLocaleString()}원</td>
+              <td style="text-align: right; color: var(--success-color);">
+                +${salary.totalAllowances.toLocaleString()}원
+              </td>
+              <td style="text-align: right; color: var(--danger-color);">
+                -${salary.totalDeductions.toLocaleString()}원
+              </td>
+              <td style="text-align: right;">
+                <strong style="font-size: 15px;">${salary.netPay.toLocaleString()}원</strong>
+              </td>
+              <td style="text-align: center;">${statusBadge}</td>
+              <td style="text-align: center; white-space: nowrap;">${actionButtons}</td>
+            </tr>
+          `;
+        }).join('');
         
         console.log('✅ 급여 목록 로드 완료');
         
@@ -2487,6 +2524,31 @@
       } catch (error) {
         console.error('❌ 급여 확정 실패:', error);
         alert('급여 확정에 실패했습니다: ' + error.message);
+      }
+    }
+    
+    async function markAsPaid(docId) {
+      if (!confirm('이 급여를 지급 완료 처리하시겠습니까?')) {
+        return;
+      }
+      
+      try {
+        console.log('💵 지급 완료 처리:', docId);
+        
+        await firebase.firestore().collection('salaries').doc(docId).update({
+          paid: true,
+          paidAt: firebase.firestore.FieldValue.serverTimestamp(),
+          paidBy: firebase.auth().currentUser?.uid || 'unknown'
+        });
+        
+        console.log('✅ 지급 완료 처리 성공');
+        alert('✅ 지급 완료 처리되었습니다.');
+        
+        loadSalaryList(); // 목록 새로고침
+        
+      } catch (error) {
+        console.error('❌ 지급 완료 처리 실패:', error);
+        alert('지급 완료 처리에 실패했습니다: ' + error.message);
       }
     }
 
