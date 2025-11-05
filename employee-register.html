@@ -317,25 +317,30 @@
     const errorDiv = document.getElementById('error');
     const successDiv = document.getElementById('success');
 
-    // 매장 목록 로드
-    function loadStores() {
+    // 매장 목록 로드 (Firestore에서)
+    async function loadStores() {
       const storeSelect = document.getElementById('store');
-      const stores = JSON.parse(localStorage.getItem('stores') || '[]');
       
-      // 기본 매장이 없으면 추가
-      if (stores.length === 0) {
-        stores.push(
-          { id: '1', name: '부천시청점', address: '경기도 부천시 원미구', phone: '032-123-4567' },
-          { id: '2', name: '상동점', address: '경기도 부천시 상동', phone: '032-123-4568' },
-          { id: '3', name: '부천역사점', address: '경기도 부천시 부천역 인근', phone: '032-123-4569' }
-        );
-        localStorage.setItem('stores', JSON.stringify(stores));
+      try {
+        const snapshot = await db.collection('stores').orderBy('name').get();
+        
+        if (snapshot.empty) {
+          console.log('⚠️ 매장 정보가 없습니다.');
+          storeSelect.innerHTML = '<option value="">매장 정보가 없습니다</option>';
+          return;
+        }
+        
+        storeSelect.innerHTML = '<option value="">선택하세요</option>';
+        snapshot.forEach(doc => {
+          const store = doc.data();
+          storeSelect.innerHTML += `<option value="${store.name}">${store.name}</option>`;
+        });
+        
+        console.log(`✅ 매장 ${snapshot.size}개 로드 완료`);
+      } catch (error) {
+        console.error('❌ 매장 로드 실패:', error);
+        storeSelect.innerHTML = '<option value="">매장 로드 실패</option>';
       }
-      
-      storeSelect.innerHTML = '<option value="">선택하세요</option>';
-      stores.forEach(store => {
-        storeSelect.innerHTML += `<option value="${store.name}">${store.name}</option>`;
-      });
     }
 
     // 페이지 로드 시 매장 목록 로드
