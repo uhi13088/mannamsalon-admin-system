@@ -87,7 +87,10 @@ firebase deploy --only hosting
 - `employees`: 직원 정보 (users의 복사본)
 - `attendance`: 출퇴근 기록
 - `approvals`: 문서 승인 (구매/폐기/퇴직서)
-- `contracts`: 계약서
+- `contracts`: 계약서 (100% Firestore)
+- `savedContracts`: 임시 저장 계약서 (100% Firestore)
+- `signedContracts`: 서명된 계약서
+- `companies`: 회사 정보 (100% Firestore)
 - `notices`: 공지사항
 - `stores`: 매장 정보
 
@@ -105,6 +108,10 @@ firebase deploy --only hosting
 ## 📝 주요 업데이트
 
 ### 최신 업데이트 (2025-11-05)
+- ✅ **완전한 Firestore 마이그레이션 완료** - localStorage 의존성 제거
+- ✅ 회사 정보(companies) Firestore 전환
+- ✅ 임시 저장 계약서(savedContracts) Firestore 전환
+- ✅ 계약서(contracts) Firestore 전용 저장
 - ✅ 문서 승인 시스템 구현 (구매/폐기/퇴직서)
 - ✅ 관리자 목록 탭 추가
 - ✅ 관리자/매니저 가입 시스템 (역할별 권한 분리)
