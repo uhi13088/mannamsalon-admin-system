@@ -186,6 +186,11 @@ firebase deploy --only hosting
 
 ### 최신 업데이트 (2025-11-05)
 
+**직원 페이지 개선 (최신) ✅**
+- ✅ 급여 조회 상세내역 분단위 표시 ("8시간 30분" 형식)
+- ✅ 서명 완료 페이지에 대시보드 돌아가기 버튼 추가
+- ✅ formatHoursAndMinutes() 함수 구현
+
 **localStorage 완전 제거 완료 ✅**
 - ✅ 모든 localStorage 사용처를 Firestore로 변경
 - ✅ loadDashboardData()의 계약서 카운트 → Firestore
@@ -196,7 +201,7 @@ firebase deploy --only hosting
 **버그 수정 및 개선**
 - ✅ Firestore 복합 인덱스 오류 해결 (급여 조회 실패 수정)
 - ✅ 계약서 링크 전송 버튼 오류 수정 (Firestore 통합)
-- ✅ 근무시간 분 단위 표시 (정확한 급여 계산)
+- ✅ 관리자 페이지 근무시간 분 단위 표시 (정확한 급여 계산)
 - ✅ 연장/야간 근무시간 "X시간 Y분" 형식 표시
 
 **급여 자동 계산 시스템 완전 구현**
