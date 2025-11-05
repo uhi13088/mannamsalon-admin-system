@@ -130,6 +130,22 @@ service cloud.firestore {
                                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // approvals 컬렉션: 문서 승인 (구매/폐기/퇴직서)
+    match /approvals/{approvalId} {
+      // 읽기: 본인이 신청한 문서이거나 관리자
+      allow read: if request.auth != null && 
+                     (resource.data.applicantUid == request.auth.uid || 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // 생성: 인증된 사용자가 본인 UID로 신청
+      allow create: if request.auth != null && 
+                       request.resource.data.applicantUid == request.auth.uid;
+      
+      // 수정/삭제: 관리자만 가능
+      allow update, delete: if request.auth != null && 
+                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
     // 기타 모든 컬렉션: 관리자만 접근
     match /{document=**} {
       allow read, write: if request.auth != null && 
