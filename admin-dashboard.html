@@ -510,6 +510,32 @@
           <label for="storeBusinessNumber">사업자등록번호</label>
           <input type="text" id="storeBusinessNumber" placeholder="123-45-67890">
         </div>
+        
+        <!-- 수당 적용 옵션 -->
+        <div class="form-group" style="border-top: 2px solid var(--border-color); padding-top: var(--spacing-md); margin-top: var(--spacing-md);">
+          <label style="font-weight: 700; font-size: 15px; margin-bottom: var(--spacing-sm);">💰 수당 적용 옵션</label>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+            이 매장에서 적용할 수당 항목을 선택하세요. 계약서 작성 시 자동으로 반영됩니다.
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+            <label style="display: flex; align-items: center; cursor: pointer; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius);">
+              <input type="checkbox" id="storeOvertimeAllowance" style="width: auto; margin-right: 8px; cursor: pointer;">
+              <span style="font-size: 14px;">연장근로수당 (시급 × 1.5배)</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; cursor: pointer; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius);">
+              <input type="checkbox" id="storeNightAllowance" style="width: auto; margin-right: 8px; cursor: pointer;">
+              <span style="font-size: 14px;">야간근로수당 (22:00~06:00, 시급 × 0.5배)</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; cursor: pointer; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius);">
+              <input type="checkbox" id="storeHolidayAllowance" style="width: auto; margin-right: 8px; cursor: pointer;">
+              <span style="font-size: 14px;">휴일근로수당 (시급 × 1.5배)</span>
+            </label>
+          </div>
+        </div>
+        
         <div class="form-group">
           <label>대표 서명 이미지</label>
           <div style="margin-bottom: 10px;">
@@ -2650,6 +2676,11 @@
       document.getElementById('storeBusinessNumber').value = '';
       document.getElementById('deleteStoreBtn').style.display = 'none';
       
+      // 수당 옵션 초기화 (기본값: 모두 미적용)
+      document.getElementById('storeOvertimeAllowance').checked = false;
+      document.getElementById('storeNightAllowance').checked = false;
+      document.getElementById('storeHolidayAllowance').checked = false;
+      
       // 서명 초기화
       storeCeoSignatureData = null;
       document.getElementById('storeCeoSignaturePreview').innerHTML = '<span style="color: #999;">서명 이미지 선택 (선택사항)</span>';
@@ -2677,6 +2708,18 @@
         document.getElementById('storeCEO').value = store.ceo || '';
         document.getElementById('storeBusinessNumber').value = store.businessNumber || '';
         document.getElementById('deleteStoreBtn').style.display = 'block';
+        
+        // 수당 옵션 불러오기
+        if (store.allowances) {
+          document.getElementById('storeOvertimeAllowance').checked = store.allowances.overtime || false;
+          document.getElementById('storeNightAllowance').checked = store.allowances.night || false;
+          document.getElementById('storeHolidayAllowance').checked = store.allowances.holiday || false;
+        } else {
+          // 기본값 (모두 미적용)
+          document.getElementById('storeOvertimeAllowance').checked = false;
+          document.getElementById('storeNightAllowance').checked = false;
+          document.getElementById('storeHolidayAllowance').checked = false;
+        }
         
         // 서명 불러오기
         if (store.ceoSignature) {
@@ -2711,6 +2754,11 @@
         return;
       }
       
+      // 수당 적용 옵션 수집
+      const overtimeAllowance = document.getElementById('storeOvertimeAllowance').checked;
+      const nightAllowance = document.getElementById('storeNightAllowance').checked;
+      const holidayAllowance = document.getElementById('storeHolidayAllowance').checked;
+      
       try {
         const storeData = {
           name,
@@ -2719,6 +2767,11 @@
           ceo,
           businessNumber,
           ceoSignature: storeCeoSignatureData || null,
+          allowances: {
+            overtime: overtimeAllowance,
+            night: nightAllowance,
+            holiday: holidayAllowance
+          },
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
@@ -3272,6 +3325,57 @@
       document.getElementById('signLinkSection').style.display = 'none';
       switchContractTab('form');
     }
+    
+    // 4대보험 정보 업데이트
+    function updateInsuranceInfo() {
+      const insuranceType = document.getElementById('insuranceType').value;
+      const infoDiv = document.getElementById('insuranceInfo');
+      const infoP = infoDiv.querySelector('p');
+      
+      if (!insuranceType) {
+        infoDiv.style.display = 'none';
+        return;
+      }
+      
+      let infoText = '';
+      if (insuranceType === 'all') {
+        infoText = '📋 공제 항목: 국민연금 4.5% + 건강보험 3.545% + 장기요양 0.459% + 고용보험 0.9% + 소득세 약 3.3%';
+      } else if (insuranceType === 'employment_only') {
+        infoText = '📋 공제 항목: 고용보험 0.9% + 산재보험(사업주 부담) + 소득세 약 3.3%';
+      } else if (insuranceType === 'none') {
+        infoText = '📋 공제 항목: 소득세 3.3%만 적용 (프리랜서 세율)';
+      }
+      
+      infoP.textContent = infoText;
+      infoDiv.style.display = 'block';
+    }
+    
+    // 매장 선택 시 수당 자동 체크 (매장 설정 기반)
+    async function applyStoreAllowances(storeName) {
+      if (!storeName) return;
+      
+      try {
+        // Firestore에서 매장 정보 조회
+        const snapshot = await db.collection('stores')
+          .where('name', '==', storeName)
+          .limit(1)
+          .get();
+        
+        if (!snapshot.empty) {
+          const store = snapshot.docs[0].data();
+          const allowances = store.allowances || {};
+          
+          // 매장 설정에 따라 수당 체크박스 자동 설정
+          document.getElementById('allowOvertime').checked = allowances.overtime || false;
+          document.getElementById('allowNight').checked = allowances.night || false;
+          document.getElementById('allowHoliday').checked = allowances.holiday || false;
+          
+          console.log('✅ 매장 수당 설정 적용:', storeName, allowances);
+        }
+      } catch (error) {
+        console.error('❌ 매장 수당 설정 로드 실패:', error);
+      }
+    }
   </script>
   
   <!-- 계약서 전용 JavaScript (모든 코드 인라인) -->
@@ -3711,6 +3815,14 @@
           document.getElementById('companyPhone').value = store.phone || '';
           document.getElementById('companyAddress').value = store.address || '';
           document.getElementById('workStore').value = store.name || '';
+          
+          // 매장 수당 설정 자동 적용
+          const allowances = store.allowances || {};
+          console.log('💰 매장 수당 설정 자동 적용:', allowances);
+          document.getElementById('allowOvertime').checked = allowances.overtime || false;
+          document.getElementById('allowNight').checked = allowances.night || false;
+          document.getElementById('allowHoliday').checked = allowances.holiday || false;
+          
           updatePreview();
         }
       } catch (error) {
@@ -4312,7 +4424,19 @@
         contractContent: document.getElementById('contractContent')?.value || '',
         schedules: schedules || [],
         breakTimeData: breakTimeData || {},
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        // 급여 지급 항목 설정
+        allowances: {
+          weeklyHoliday: document.getElementById('allowWeeklyHoliday')?.checked || false,
+          overtime: document.getElementById('allowOvertime')?.checked || false,
+          night: document.getElementById('allowNight')?.checked || false,
+          holiday: document.getElementById('allowHoliday')?.checked || false
+        },
+        // 4대보험 적용 설정
+        insurance: {
+          type: document.getElementById('insuranceType')?.value || '',
+          severancePay: document.getElementById('allowSeverancePay')?.checked || false
+        }
       };
       
       try {
@@ -4438,6 +4562,21 @@
         document.getElementById('paymentMethod').value = contract.paymentMethod;
         document.getElementById('contractContent').value = contract.contractContent;
         
+        // 급여 지급 항목 복원
+        if (contract.allowances) {
+          document.getElementById('allowWeeklyHoliday').checked = contract.allowances.weeklyHoliday || false;
+          document.getElementById('allowOvertime').checked = contract.allowances.overtime || false;
+          document.getElementById('allowNight').checked = contract.allowances.night || false;
+          document.getElementById('allowHoliday').checked = contract.allowances.holiday || false;
+        }
+        
+        // 4대보험 설정 복원
+        if (contract.insurance) {
+          document.getElementById('insuranceType').value = contract.insurance.type || '';
+          updateInsuranceInfo(); // 보험 정보 표시 업데이트
+          document.getElementById('allowSeverancePay').checked = contract.insurance.severancePay || false;
+        }
+        
         if (contract.schedules && contract.schedules.length > 0) {
           restoreScheduleData(contract.schedules, contract.breakTimeData);
         }
@@ -4507,6 +4646,7 @@
         companyAddress: store?.address || '',
         contractType: document.getElementById('contractType').value,
         workStore: document.getElementById('workStore').value,
+        storeId: document.getElementById('storeSelect').value,
         startDate: document.getElementById('startDate').value,
         endDate: document.getElementById('endDate').value || '기간의 정함이 없음',
         position: document.getElementById('position').value,
@@ -4521,7 +4661,19 @@
         contractDate: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
         createdAt: new Date().toISOString(),
         signLink: signLink,
-        createdBy: firebase.auth().currentUser?.uid || 'unknown'
+        createdBy: firebase.auth().currentUser?.uid || 'unknown',
+        // 급여 지급 항목 설정
+        allowances: {
+          weeklyHoliday: document.getElementById('allowWeeklyHoliday').checked,
+          overtime: document.getElementById('allowOvertime').checked,
+          night: document.getElementById('allowNight').checked,
+          holiday: document.getElementById('allowHoliday').checked
+        },
+        // 4대보험 적용 설정
+        insurance: {
+          type: document.getElementById('insuranceType').value,
+          severancePay: document.getElementById('allowSeverancePay').checked
+        }
       };
       
       console.log('💾 계약서 데이터 Firestore 저장:', contractId);
@@ -4829,9 +4981,64 @@
             </div>
           </div>
 
-          <!-- 5. 계약서 본문 -->
+          <!-- 5. 지급 항목 설정 -->
+          <div class="form-section" style="border: 2px solid var(--primary-color); padding: var(--spacing-lg);">
+            <h3>5. 급여 지급 항목 설정</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+              💡 이 직원의 급여 계산 시 적용할 수당 항목을 선택하세요. (매장 설정 기준으로 자동 선택됨)
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+              <label style="display: flex; align-items: center; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius); cursor: pointer;">
+                <input type="checkbox" id="allowWeeklyHoliday" style="width: auto; margin-right: 8px;">
+                <span style="font-size: 14px;">주휴수당 (주 15시간 이상 근무 시)</span>
+              </label>
+              
+              <label style="display: flex; align-items: center; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius); cursor: pointer;">
+                <input type="checkbox" id="allowOvertime" style="width: auto; margin-right: 8px;">
+                <span style="font-size: 14px;">연장근로수당 (시급 × 1.5배)</span>
+              </label>
+              
+              <label style="display: flex; align-items: center; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius); cursor: pointer;">
+                <input type="checkbox" id="allowNight" style="width: auto; margin-right: 8px;">
+                <span style="font-size: 14px;">야간근로수당 (22:00~06:00)</span>
+              </label>
+              
+              <label style="display: flex; align-items: center; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius); cursor: pointer;">
+                <input type="checkbox" id="allowHoliday" style="width: auto; margin-right: 8px;">
+                <span style="font-size: 14px;">휴일근로수당 (시급 × 1.5배)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 6. 공제 항목 설정 -->
+          <div class="form-section" style="border: 2px solid var(--danger-color); padding: var(--spacing-lg);">
+            <h3>6. 4대보험 적용</h3>
+            <div class="form-group">
+              <label for="insuranceType">4대보험 적용 방식 *</label>
+              <select id="insuranceType" required onchange="updateInsuranceInfo()">
+                <option value="">선택하세요</option>
+                <option value="all">전체 적용 (국민연금+건강+장기요양+고용+산재)</option>
+                <option value="employment_only">고용·산재보험만 (단시간 근로자)</option>
+                <option value="none">적용 안 함 (프리랜서 등)</option>
+              </select>
+            </div>
+            
+            <div id="insuranceInfo" style="background: #f8f9fa; padding: var(--spacing-md); border-radius: var(--border-radius); font-size: 13px; color: #666; display: none;">
+              <p style="margin: 0;"></p>
+            </div>
+            
+            <div style="margin-top: var(--spacing-md);">
+              <label style="display: flex; align-items: center; padding: var(--spacing-sm); background: var(--bg-light); border-radius: var(--border-radius); cursor: pointer;">
+                <input type="checkbox" id="allowSeverancePay" style="width: auto; margin-right: 8px;">
+                <span style="font-size: 14px;"><strong>퇴직금 적용 대상</strong> (주 15시간 이상 근무, 1년 이상 근속)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 7. 계약서 본문 -->
           <div class="form-section">
-            <h3>5. 계약서 본문 (선택사항)</h3>
+            <h3>7. 계약서 본문 (선택사항)</h3>
             <div class="form-group">
               <label for="contractContent">계약서 추가 내용</label>
               <textarea id="contractContent" placeholder="기본 템플릿이 자동으로 제공됩니다. 필요시 수정하세요." style="min-height: 500px; height: auto;"></textarea>

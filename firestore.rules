@@ -171,6 +171,18 @@ service cloud.firestore {
                                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // salaries 컬렉션: 급여 정보
+    match /salaries/{salaryId} {
+      // 읽기: 본인의 급여이거나 관리자
+      allow read: if request.auth != null && 
+                     (resource.data.employeeUid == request.auth.uid || 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // 생성/수정/삭제: 관리자만 가능
+      allow create, update, delete: if request.auth != null && 
+                                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
     // 기타 모든 컬렉션: 관리자만 접근
     match /{document=**} {
       allow read, write: if request.auth != null && 
