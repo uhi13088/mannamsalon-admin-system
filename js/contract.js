@@ -192,34 +192,55 @@ function loadEmployeeInfo() {
 // 회사 정보
 // ===================================================================
 
-function loadCompanyList() {
-  // localStorage에서 로드
-  const saved = localStorage.getItem('companies');
-  companies = saved ? JSON.parse(saved) : [
-    { 
-      id: '1', 
-      name: '(주)ABC디저트센터', 
-      ceo: '홍길동', 
-      businessNumber: '123-45-67890',
-      phone: '032-123-4567',
-      address: '경기도 부천시 원미구 74'
-    }
-  ];
-  
+async function loadCompanyList() {
   const select = document.getElementById('companySelect');
-  select.innerHTML = '<option value="">선택하세요</option>';
+  select.innerHTML = '<option value="">불러오는 중...</option>';
   
-  companies.forEach(company => {
-    const option = document.createElement('option');
-    option.value = company.id;
-    option.textContent = company.name;
-    select.appendChild(option);
-  });
-  
-  // 첫 번째 회사 자동 선택
-  if (companies.length > 0) {
-    select.value = companies[0].id;
-    loadCompanyInfo();
+  try {
+    // Firestore에서 회사 목록 로드
+    const snapshot = await db.collection('companies').orderBy('name').get();
+    
+    companies = [];
+    snapshot.forEach(doc => {
+      companies.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // 기본 회사가 없으면 생성
+    if (companies.length === 0) {
+      console.log('📋 기본 회사 정보 생성 중...');
+      const defaultCompany = {
+        name: '(주)ABC디저트센터',
+        ceo: '홍길동',
+        businessNumber: '123-45-67890',
+        phone: '032-123-4567',
+        address: '경기도 부천시 원미구 74',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      const docRef = await db.collection('companies').add(defaultCompany);
+      companies.push({ id: docRef.id, ...defaultCompany });
+      console.log('✅ 기본 회사 정보 생성 완료');
+    }
+    
+    // 드롭다운 채우기
+    select.innerHTML = '<option value="">선택하세요</option>';
+    companies.forEach(company => {
+      const option = document.createElement('option');
+      option.value = company.id;
+      option.textContent = company.name;
+      select.appendChild(option);
+    });
+    
+    // 첫 번째 회사 자동 선택
+    if (companies.length > 0) {
+      select.value = companies[0].id;
+      loadCompanyInfo();
+    }
+    
+    console.log(`✅ ${companies.length}개 회사 정보 로드 완료`);
+  } catch (error) {
+    console.error('❌ 회사 정보 로드 실패:', error);
+    select.innerHTML = '<option value="">로드 실패</option>';
   }
 }
 
@@ -290,7 +311,7 @@ function closeAddCompanyModal() {
   document.getElementById('newCompanyAddress').value = '';
 }
 
-function saveCompany() {
+async function saveCompany() {
   const name = document.getElementById('newCompanyName').value.trim();
   const ceo = document.getElementById('newCompanyCEO').value.trim();
   const businessNumber = document.getElementById('newCompanyBusinessNumber').value.trim();
@@ -303,53 +324,49 @@ function saveCompany() {
     return;
   }
   
-  if (editId) {
-    // 수정 모드
-    const companyIndex = companies.findIndex(c => c.id === editId);
-    
-    if (companyIndex >= 0) {
-      companies[companyIndex] = {
-        id: editId,
+  try {
+    if (editId) {
+      // 수정 모드 - Firestore 업데이트
+      await db.collection('companies').doc(editId).update({
         name: name,
         ceo: ceo,
         businessNumber: businessNumber,
         phone: phone,
-        address: address
-      };
+        address: address,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       
-      localStorage.setItem('companies', JSON.stringify(companies));
-      
-      loadCompanyList();
+      await loadCompanyList();
       document.getElementById('companySelect').value = editId;
       loadCompanyInfo();
       closeAddCompanyModal();
       
       alert('✅ 회사 정보가 수정되었습니다.');
+    } else {
+      // 추가 모드 - Firestore 추가
+      const docRef = await db.collection('companies').add({
+        name: name,
+        ceo: ceo,
+        businessNumber: businessNumber,
+        phone: phone,
+        address: address,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      
+      await loadCompanyList();
+      document.getElementById('companySelect').value = docRef.id;
+      loadCompanyInfo();
+      closeAddCompanyModal();
+      
+      alert('✅ 회사가 추가되었습니다.');
     }
-  } else {
-    // 추가 모드
-    const newCompany = {
-      id: Date.now().toString(),
-      name: name,
-      ceo: ceo,
-      businessNumber: businessNumber,
-      phone: phone,
-      address: address
-    };
-    
-    companies.push(newCompany);
-    localStorage.setItem('companies', JSON.stringify(companies));
-    
-    loadCompanyList();
-    document.getElementById('companySelect').value = newCompany.id;
-    loadCompanyInfo();
-    closeAddCompanyModal();
-    
-    alert('✅ 회사가 추가되었습니다.');
+  } catch (error) {
+    console.error('❌ 회사 저장 실패:', error);
+    alert('❌ 회사 정보 저장에 실패했습니다.');
   }
 }
 
-function deleteCompany() {
+async function deleteCompany() {
   const editId = document.getElementById('editCompanyId').value;
   
   if (!editId) {
@@ -366,14 +383,18 @@ function deleteCompany() {
     return;
   }
   
-  // 삭제
-  companies = companies.filter(c => c.id !== editId);
-  localStorage.setItem('companies', JSON.stringify(companies));
-  
-  closeAddCompanyModal();
-  loadCompanyList();
-  
-  alert('✅ 회사가 삭제되었습니다.');
+  try {
+    // Firestore에서 삭제
+    await db.collection('companies').doc(editId).delete();
+    
+    closeAddCompanyModal();
+    await loadCompanyList();
+    
+    alert('✅ 회사가 삭제되었습니다.');
+  } catch (error) {
+    console.error('❌ 회사 삭제 실패:', error);
+    alert('❌ 회사 삭제에 실패했습니다.');
+  }
 }
 
 // ===================================================================
@@ -849,7 +870,7 @@ function closeSaveContractModal() {
   document.getElementById('contractSaveName').value = '';
 }
 
-function saveContract() {
+async function saveContract() {
   const contractName = document.getElementById('contractSaveName').value.trim();
   
   if (!contractName) {
@@ -875,6 +896,13 @@ function saveContract() {
     endMinute: document.getElementById('breakEndMinute')?.value || ''
   };
   
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) {
+    alert('⚠️ 로그인이 필요합니다.');
+    closeSaveContractModal();
+    return;
+  }
+  
   const contractData = {
     name: contractName,
     employeeId: document.getElementById('employeeSelect').value,
@@ -898,36 +926,53 @@ function saveContract() {
     contractContent: document.getElementById('contractContent').value,
     schedules: schedules,
     breakTimeData: breakTimeData,
-    savedAt: new Date().toISOString()
+    createdBy: currentUser.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   
-  // localStorage에 저장
-  const saved = localStorage.getItem('savedContracts');
-  savedContracts = saved ? JSON.parse(saved) : [];
-  
-  // 중복 이름 체크
-  const existingIndex = savedContracts.findIndex(c => c.name === contractName);
-  if (existingIndex >= 0) {
-    if (!confirm('⚠️ 같은 이름의 계약서가 이미 존재합니다.\n덮어쓰시겠습니까?')) {
-      return;
+  try {
+    // Firestore에서 중복 이름 체크
+    const snapshot = await db.collection('savedContracts')
+      .where('createdBy', '==', currentUser.uid)
+      .where('name', '==', contractName)
+      .get();
+    
+    if (!snapshot.empty) {
+      if (!confirm('⚠️ 같은 이름의 계약서가 이미 존재합니다.\n덮어쓰시겠습니까?')) {
+        return;
+      }
+      // 기존 문서 업데이트
+      const docId = snapshot.docs[0].id;
+      await db.collection('savedContracts').doc(docId).update({
+        ...contractData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // 새 문서 추가
+      await db.collection('savedContracts').add(contractData);
     }
-    savedContracts[existingIndex] = contractData;
-  } else {
-    savedContracts.unshift(contractData);
+    
+    closeSaveContractModal();
+    alert('✅ 계약서가 저장되었습니다.');
+  } catch (error) {
+    console.error('❌ 계약서 저장 실패:', error);
+    alert('❌ 저장에 실패했습니다.');
   }
-  
-  localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
-  
-  closeSaveContractModal();
-  alert('✅ 계약서가 저장되었습니다.');
 }
 
 // ===================================================================
 // 임시 저장 및 불러오기
 // ===================================================================
 
-function saveDraft() {
+async function saveDraft() {
   if (!validateForm()) {
+    return;
+  }
+  
+  // 현재 로그인한 관리자 UID 가져오기
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) {
+    alert('⚠️ 로그인이 필요합니다.');
     return;
   }
   
@@ -951,53 +996,76 @@ function saveDraft() {
     paymentDay: document.getElementById('paymentDay').value,
     paymentMethod: document.getElementById('paymentMethod').value,
     contractContent: document.getElementById('contractContent').value,
-    savedAt: new Date().toISOString()
+    createdBy: currentUser.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   
-  // localStorage에 저장
-  const saved = localStorage.getItem('savedContracts');
-  savedContracts = saved ? JSON.parse(saved) : [];
-  savedContracts.unshift(contractData);
-  
-  // 최대 10개만 저장
-  if (savedContracts.length > 10) {
-    savedContracts = savedContracts.slice(0, 10);
+  try {
+    // Firestore에 저장
+    await db.collection('savedContracts').add(contractData);
+    alert('✅ 임시 저장되었습니다.');
+  } catch (error) {
+    console.error('❌ 임시 저장 실패:', error);
+    alert('❌ 임시 저장에 실패했습니다.');
   }
-  
-  localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
-  
-  alert('✅ 임시 저장되었습니다.');
 }
 
-function showLoadContractModal() {
-  const saved = localStorage.getItem('savedContracts');
-  savedContracts = saved ? JSON.parse(saved) : [];
-  
+async function showLoadContractModal() {
   const listDiv = document.getElementById('savedContractsList');
+  listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl);">불러오는 중...</p>';
   
-  if (savedContracts.length === 0) {
-    listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">저장된 계약서가 없습니다.</p>';
-  } else {
-    listDiv.innerHTML = savedContracts.map((contract, index) => {
-      const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
-      const savedDate = new Date(contract.savedAt).toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
-      return `
-        <div style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.backgroundColor='var(--bg-light)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='white';" onclick="loadSavedContract(${index})">
-          <div>
-            <div style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">📄 ${displayName}</div>
-            <div style="font-size: 13px; color: var(--text-secondary);">${savedDate}</div>
+  const currentUser = firebase.auth().currentUser;
+  if (!currentUser) {
+    listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--danger-color);">로그인이 필요합니다.</p>';
+    document.getElementById('loadContractModal').style.display = 'flex';
+    return;
+  }
+  
+  try {
+    // Firestore에서 현재 사용자의 임시 저장 계약서 로드
+    const snapshot = await db.collection('savedContracts')
+      .where('createdBy', '==', currentUser.uid)
+      .get();
+    
+    savedContracts = [];
+    snapshot.forEach(doc => {
+      savedContracts.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // 클라이언트 사이드 정렬 (최신순)
+    savedContracts.sort((a, b) => {
+      const aTime = a.createdAt?.toDate?.() || new Date(0);
+      const bTime = b.createdAt?.toDate?.() || new Date(0);
+      return bTime - aTime;
+    });
+    
+    if (savedContracts.length === 0) {
+      listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">저장된 계약서가 없습니다.</p>';
+    } else {
+      listDiv.innerHTML = savedContracts.map((contract, index) => {
+        const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
+        const savedDate = contract.createdAt?.toDate?.().toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) || '날짜 정보 없음';
+        
+        return `
+          <div style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.borderColor='var(--primary-color)'; this.style.backgroundColor='var(--bg-light)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.backgroundColor='white';" onclick="loadSavedContract(${index})">
+            <div>
+              <div style="font-weight: 600; margin-bottom: 4px; font-size: 15px;">📄 ${displayName}</div>
+              <div style="font-size: 13px; color: var(--text-secondary);">${savedDate}</div>
+            </div>
+            <button onclick="event.stopPropagation(); deleteSavedContract('${contract.id}', ${index});" style="padding: 6px 12px; background: var(--danger-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
           </div>
-          <button onclick="event.stopPropagation(); deleteSavedContract(${index});" style="padding: 6px 12px; background: var(--danger-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    }
+  } catch (error) {
+    console.error('❌ 임시 저장 계약서 로드 실패:', error);
+    listDiv.innerHTML = '<p style="text-align: center; padding: var(--spacing-xl); color: var(--danger-color);">불러오기 실패</p>';
   }
   
   document.getElementById('loadContractModal').style.display = 'flex';
@@ -1038,14 +1106,18 @@ function loadSavedContract(index) {
   }
 }
 
-function deleteSavedContract(index) {
+async function deleteSavedContract(contractId, index) {
   const contract = savedContracts[index];
   const displayName = contract.name || `${contract.employeeName} - ${contract.position}`;
   
   if (confirm(`"${displayName}" 계약서를 삭제하시겠습니까?`)) {
-    savedContracts.splice(index, 1);
-    localStorage.setItem('savedContracts', JSON.stringify(savedContracts));
-    showLoadContractModal(); // 목록 새로고침
+    try {
+      await db.collection('savedContracts').doc(contractId).delete();
+      showLoadContractModal(); // 목록 새로고침
+    } catch (error) {
+      console.error('❌ 임시 저장 계약서 삭제 실패:', error);
+      alert('❌ 삭제에 실패했습니다.');
+    }
     alert('✅ 계약서가 삭제되었습니다.');
   }
 }
@@ -1054,7 +1126,7 @@ function deleteSavedContract(index) {
 // 계약서 생성
 // ===================================================================
 
-function generateContract() {
+async function generateContract() {
   const contractId = 'C' + Date.now();
   // 상대 경로로 링크 생성 (현재 페이지와 같은 위치)
   const baseUrl = window.location.href.split('?')[0].replace('contract.html', '');
@@ -1088,21 +1160,28 @@ function generateContract() {
     paymentMethod: document.getElementById('paymentMethod').value,
     contractContent: document.getElementById('contractContent').value,
     contractDate: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
-    createdAt: new Date().toISOString()
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'unsigned'  // 서명 전 상태
   };
   
-  // localStorage에 저장 (서명용)
-  localStorage.setItem(`contract_${contractId}`, JSON.stringify(contractData));
-  
-  // 서명 링크 섹션 표시
-  document.getElementById('signLinkSection').style.display = 'block';
-  document.getElementById('contractIdDisplay').textContent = contractId;
-  document.getElementById('signLinkInput').value = signLink;
-  
-  alert('✅ 계약서가 생성되었습니다!');
-  
-  // 스크롤
-  document.getElementById('signLinkSection').scrollIntoView({ behavior: 'smooth' });
+  try {
+    // Firestore에 저장 (localStorage 제거)
+    await db.collection('contracts').doc(contractId).set(contractData);
+    console.log('✅ 계약서 Firestore 저장 완료:', contractId);
+    
+    // 서명 링크 섹션 표시
+    document.getElementById('signLinkSection').style.display = 'block';
+    document.getElementById('contractIdDisplay').textContent = contractId;
+    document.getElementById('signLinkInput').value = signLink;
+    
+    alert('✅ 계약서가 생성되었습니다!');
+    
+    // 스크롤
+    document.getElementById('signLinkSection').scrollIntoView({ behavior: 'smooth' });
+  } catch (error) {
+    console.error('❌ 계약서 생성 실패:', error);
+    alert('❌ 계약서 생성에 실패했습니다.');
+  }
 }
 
 function copySignLink() {
