@@ -1951,10 +1951,360 @@
       }
     }
 
-    function loadSalaryList() {
+    // ===========================================
+    // 급여 계산 유틸리티 함수들
+    // ===========================================
+    
+    /**
+     * 시간 문자열을 분 단위로 변환
+     * @param {string} timeStr - "HH:MM" 형식
+     * @returns {number} 총 분
+     */
+    function timeToMinutes(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') return 0;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return (hours || 0) * 60 + (minutes || 0);
+    }
+    
+    /**
+     * 두 시간 사이의 차이를 시간 단위로 계산
+     * @param {string} startTime - "HH:MM"
+     * @param {string} endTime - "HH:MM"
+     * @returns {number} 시간 (소수점)
+     */
+    function calculateWorkHours(startTime, endTime) {
+      const startMinutes = timeToMinutes(startTime);
+      let endMinutes = timeToMinutes(endTime);
+      
+      // 자정을 넘어가는 경우 처리
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60;
+      }
+      
+      return (endMinutes - startMinutes) / 60;
+    }
+    
+    /**
+     * 야간 근무 시간 계산 (22:00~06:00)
+     * @param {string} startTime - "HH:MM"
+     * @param {string} endTime - "HH:MM"
+     * @returns {number} 야간 근무 시간
+     */
+    function calculateNightHours(startTime, endTime) {
+      const start = timeToMinutes(startTime);
+      let end = timeToMinutes(endTime);
+      
+      if (end < start) end += 24 * 60;
+      
+      const nightStart = 22 * 60; // 22:00
+      const nightEnd = (24 + 6) * 60; // 다음날 06:00
+      
+      let nightMinutes = 0;
+      
+      // 22:00~24:00 구간
+      const overlap1Start = Math.max(start, nightStart);
+      const overlap1End = Math.min(end, 24 * 60);
+      if (overlap1Start < overlap1End) {
+        nightMinutes += overlap1End - overlap1Start;
+      }
+      
+      // 00:00~06:00 구간
+      if (end > 24 * 60) {
+        const overlap2Start = Math.max(start, 24 * 60);
+        const overlap2End = Math.min(end, nightEnd);
+        if (overlap2Start < overlap2End) {
+          nightMinutes += overlap2End - overlap2Start;
+        }
+      }
+      
+      return nightMinutes / 60;
+    }
+    
+    /**
+     * 한 달간 직원의 급여 계산
+     * @param {object} employee - 직원 정보
+     * @param {object} contract - 계약서 정보
+     * @param {array} attendances - 출퇴근 기록 배열
+     * @param {string} yearMonth - "YYYY-MM" 형식
+     * @returns {object} 급여 상세 내역
+     */
+    async function calculateMonthlySalary(employee, contract, attendances, yearMonth) {
+      console.log('💰 급여 계산 시작:', employee.name, yearMonth);
+      
+      const result = {
+        employeeName: employee.name,
+        employeeUid: employee.uid,
+        storeName: employee.store || contract.workStore,
+        yearMonth: yearMonth,
+        
+        // 기본 정보
+        hourlyWage: 0,
+        totalWorkHours: 0,
+        
+        // 지급 항목
+        basePay: 0,
+        overtimePay: 0,
+        nightPay: 0,
+        holidayPay: 0,
+        weeklyHolidayPay: 0,
+        totalAllowances: 0,
+        
+        // 공제 항목
+        nationalPension: 0,
+        healthInsurance: 0,
+        longTermCare: 0,
+        employmentInsurance: 0,
+        incomeTax: 0,
+        totalDeductions: 0,
+        
+        // 최종 금액
+        totalPay: 0,
+        netPay: 0,
+        
+        // 상세 정보
+        workDays: 0,
+        attendanceDetails: []
+      };
+      
+      // 시급 확인
+      if (contract.wageType !== '시급') {
+        console.log('⚠️ 시급제가 아님. 현재는 시급제만 지원');
+        return result;
+      }
+      
+      result.hourlyWage = parseFloat(contract.wageAmount) || 0;
+      
+      if (result.hourlyWage === 0) {
+        console.log('⚠️ 시급이 0원');
+        return result;
+      }
+      
+      // 출퇴근 기록 분석
+      let totalWorkHours = 0;
+      let totalOvertimeHours = 0;
+      let totalNightHours = 0;
+      let totalHolidayHours = 0;
+      let weeklyWorkHours = {}; // 주차별 근무시간
+      
+      attendances.forEach(att => {
+        if (att.status !== 'completed') return;
+        
+        const workHours = calculateWorkHours(att.checkIn, att.checkOut);
+        const nightHours = calculateNightHours(att.checkIn, att.checkOut);
+        
+        totalWorkHours += workHours;
+        result.workDays++;
+        
+        // 야간 근무 시간
+        if (contract.allowances?.night && nightHours > 0) {
+          totalNightHours += nightHours;
+        }
+        
+        // 주차별 근무시간 누적 (주휴수당 계산용)
+        const date = new Date(att.date);
+        const weekKey = getWeekOfMonth(date);
+        weeklyWorkHours[weekKey] = (weeklyWorkHours[weekKey] || 0) + workHours;
+        
+        result.attendanceDetails.push({
+          date: att.date,
+          checkIn: att.checkIn,
+          checkOut: att.checkOut,
+          workHours: workHours.toFixed(2),
+          nightHours: nightHours.toFixed(2)
+        });
+      });
+      
+      result.totalWorkHours = totalWorkHours;
+      
+      // 기본급 계산
+      result.basePay = Math.round(result.hourlyWage * totalWorkHours);
+      
+      // 연장근로수당 (주 40시간 초과분) - 계약서에 설정된 경우만
+      if (contract.allowances?.overtime) {
+        Object.values(weeklyWorkHours).forEach(weekHours => {
+          if (weekHours > 40) {
+            totalOvertimeHours += (weekHours - 40);
+          }
+        });
+        result.overtimePay = Math.round(result.hourlyWage * 1.5 * totalOvertimeHours);
+      }
+      
+      // 야간근로수당 - 계약서에 설정된 경우만
+      if (contract.allowances?.night && totalNightHours > 0) {
+        result.nightPay = Math.round(result.hourlyWage * 0.5 * totalNightHours);
+      }
+      
+      // 휴일근로수당 - 계약서에 설정된 경우만 (현재는 0)
+      if (contract.allowances?.holiday) {
+        result.holidayPay = 0; // TODO: 휴일 근무 판별 로직 필요
+      }
+      
+      // 주휴수당 - 주 15시간 이상 근무한 주에 대해서만
+      if (contract.allowances?.weeklyHoliday) {
+        let weeklyHolidayHours = 0;
+        Object.values(weeklyWorkHours).forEach(weekHours => {
+          if (weekHours >= 15) {
+            // 주휴수당 = (주 근무시간 / 40) × 8시간
+            weeklyHolidayHours += (weekHours / 40) * 8;
+          }
+        });
+        result.weeklyHolidayPay = Math.round(result.hourlyWage * weeklyHolidayHours);
+      }
+      
+      // 총 수당
+      result.totalAllowances = result.overtimePay + result.nightPay + result.holidayPay + result.weeklyHolidayPay;
+      
+      // 총 지급액 (공제 전)
+      result.totalPay = result.basePay + result.totalAllowances;
+      
+      // 4대보험 공제 계산
+      const insuranceType = contract.insurance?.type || 'none';
+      
+      if (insuranceType === 'all') {
+        // 전체 적용
+        result.nationalPension = Math.round(result.totalPay * 0.045); // 4.5%
+        result.healthInsurance = Math.round(result.totalPay * 0.03545); // 3.545%
+        result.longTermCare = Math.round(result.healthInsurance * 0.1295); // 건강보험의 12.95%
+        result.employmentInsurance = Math.round(result.totalPay * 0.009); // 0.9%
+        result.incomeTax = Math.round(result.totalPay * 0.033); // 3.3%
+      } else if (insuranceType === 'employment_only') {
+        // 고용·산재보험만
+        result.employmentInsurance = Math.round(result.totalPay * 0.009); // 0.9%
+        result.incomeTax = Math.round(result.totalPay * 0.033); // 3.3%
+      } else if (insuranceType === 'freelancer') {
+        // 프리랜서 - 소득세만
+        result.incomeTax = Math.round(result.totalPay * 0.033); // 3.3%
+      }
+      // 'none'인 경우 공제 없음
+      
+      result.totalDeductions = result.nationalPension + result.healthInsurance + 
+                               result.longTermCare + result.employmentInsurance + result.incomeTax;
+      
+      // 실지급액
+      result.netPay = result.totalPay - result.totalDeductions;
+      
+      console.log('✅ 급여 계산 완료:', result);
+      return result;
+    }
+    
+    /**
+     * 날짜가 속한 주차 구하기 (월 기준)
+     * @param {Date} date
+     * @returns {string} "YYYY-MM-W주차"
+     */
+    function getWeekOfMonth(date) {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const weekNum = Math.ceil(day / 7);
+      return `${year}-${month.toString().padStart(2, '0')}-W${weekNum}`;
+    }
+    
+    // ===========================================
+    // 급여 관리 UI 함수들
+    // ===========================================
+    
+    async function loadSalaryList() {
       const tbody = document.getElementById('salaryTableBody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
+      
+      const monthInput = document.getElementById('salaryMonth');
+      const yearMonth = monthInput.value;
+      
+      if (!yearMonth) {
+        alert('⚠️ 조회할 월을 선택해주세요.');
+        return;
+      }
+      
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 계산 중...</td></tr>';
+      
+      try {
+        console.log('💰 급여 조회 시작:', yearMonth);
+        
+        // 모든 직원 가져오기
+        const employeesSnapshot = await firebase.firestore().collection('users')
+          .where('role', '==', 'employee')
+          .get();
+        
+        if (employeesSnapshot.empty) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">등록된 직원이 없습니다.</td></tr>';
+          return;
+        }
+        
+        const salaryData = [];
+        
+        for (const empDoc of employeesSnapshot.docs) {
+          const employee = { uid: empDoc.id, ...empDoc.data() };
+          
+          // 해당 직원의 계약서 찾기
+          const contractsSnapshot = await firebase.firestore().collection('contracts')
+            .where('employeeName', '==', employee.name)
+            .orderBy('createdAt', 'desc')
+            .limit(1)
+            .get();
+          
+          if (contractsSnapshot.empty) {
+            console.log('⚠️ 계약서 없음:', employee.name);
+            continue;
+          }
+          
+          const contract = contractsSnapshot.docs[0].data();
+          
+          // 해당 월의 출퇴근 기록 가져오기
+          const [year, month] = yearMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const endDate = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+          
+          const attendancesSnapshot = await firebase.firestore().collection('attendance')
+            .where('uid', '==', employee.uid)
+            .where('date', '>=', startDate)
+            .where('date', '<=', endDate)
+            .get();
+          
+          const attendances = [];
+          attendancesSnapshot.forEach(doc => {
+            attendances.push(doc.data());
+          });
+          
+          // 급여 계산
+          const salary = await calculateMonthlySalary(employee, contract, attendances, yearMonth);
+          salaryData.push(salary);
+        }
+        
+        // 테이블 렌더링
+        if (salaryData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">급여 정보가 없습니다.</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = salaryData.map(salary => `
+          <tr>
+            <td><strong>${salary.employeeName}</strong></td>
+            <td>${salary.storeName || '-'}</td>
+            <td style="text-align: right;">${salary.basePay.toLocaleString()}원</td>
+            <td style="text-align: right; color: var(--success-color);">
+              +${salary.totalAllowances.toLocaleString()}원
+            </td>
+            <td style="text-align: right; color: var(--danger-color);">
+              -${salary.totalDeductions.toLocaleString()}원
+            </td>
+            <td style="text-align: right;">
+              <strong style="font-size: 15px;">${salary.netPay.toLocaleString()}원</strong>
+              <button class="btn btn-sm btn-secondary" onclick="showSalaryDetail('${salary.employeeUid}', '${yearMonth}')" style="margin-left: 8px;">상세</button>
+            </td>
+          </tr>
+        `).join('');
+        
+        console.log('✅ 급여 목록 로드 완료');
+        
+      } catch (error) {
+        console.error('❌ 급여 조회 실패:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger-color);">급여 조회 중 오류가 발생했습니다.</td></tr>';
+      }
+    }
+    
+    function showSalaryDetail(employeeUid, yearMonth) {
+      alert('급여 상세 모달은 다음 단계에서 구현됩니다.');
     }
 
     // 관리자 목록 로드
