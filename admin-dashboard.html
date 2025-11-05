@@ -3342,8 +3342,10 @@
         infoText = '📋 공제 항목: 국민연금 4.5% + 건강보험 3.545% + 장기요양 0.459% + 고용보험 0.9% + 소득세 약 3.3%';
       } else if (insuranceType === 'employment_only') {
         infoText = '📋 공제 항목: 고용보험 0.9% + 산재보험(사업주 부담) + 소득세 약 3.3%';
-      } else if (insuranceType === 'none') {
+      } else if (insuranceType === 'freelancer') {
         infoText = '📋 공제 항목: 소득세 3.3%만 적용 (프리랜서 세율)';
+      } else if (insuranceType === 'none') {
+        infoText = '📋 공제 항목: 없음 (세금 및 보험 전혀 적용 안 함)';
       }
       
       infoP.textContent = infoText;
@@ -5015,12 +5017,13 @@
           <div class="form-section" style="border: 2px solid var(--danger-color); padding: var(--spacing-lg);">
             <h3>6. 4대보험 적용</h3>
             <div class="form-group">
-              <label for="insuranceType">4대보험 적용 방식 *</label>
+              <label for="insuranceType">4대보험 및 세금 적용 방식 *</label>
               <select id="insuranceType" required onchange="updateInsuranceInfo()">
                 <option value="">선택하세요</option>
                 <option value="all">전체 적용 (국민연금+건강+장기요양+고용+산재)</option>
                 <option value="employment_only">고용·산재보험만 (단시간 근로자)</option>
-                <option value="none">적용 안 함 (프리랜서 등)</option>
+                <option value="freelancer">소득세만 적용 (프리랜서 3.3%)</option>
+                <option value="none">완전 적용 안 함 (세금 없음)</option>
               </select>
             </div>
             
