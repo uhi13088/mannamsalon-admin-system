@@ -1513,6 +1513,8 @@ function removePurchaseItem(index) {
 
 // 구매 신청 제출
 async function submitPurchaseRequest() {
+  console.log('🔍 submitPurchaseRequest 호출, currentUser:', currentUser);
+  
   if (!currentUser) {
     alert('❌ 로그인이 필요합니다.');
     return;
@@ -1546,6 +1548,8 @@ async function submitPurchaseRequest() {
   }
   
   try {
+    console.log('📤 Firestore에 저장 시도:', { items, currentUser });
+    
     await db.collection('approvals').add({
       type: 'purchase',
       applicantUid: currentUser.uid,
@@ -1558,13 +1562,16 @@ async function submitPurchaseRequest() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     
+    console.log('✅ Firestore 저장 성공');
     alert('✅ 구매 신청이 완료되었습니다.');
     closePurchaseRequestModal();
     loadMyApprovals();
     
   } catch (error) {
-    console.error('❌ 구매 신청 실패:', error);
-    alert('❌ 신청에 실패했습니다.');
+    console.error('❌ 구매 신청 실패 상세:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    alert(`❌ 신청에 실패했습니다.\n\n${error.message}\n\n개발자 도구 콘솔을 확인해주세요.`);
   }
 }
 
@@ -1581,6 +1588,8 @@ function closeDisposalRequestModal() {
 
 // 폐기 신청 제출
 async function submitDisposalRequest() {
+  console.log('🔍 submitDisposalRequest 호출, currentUser:', currentUser);
+  
   if (!currentUser) {
     alert('❌ 로그인이 필요합니다.');
     return;
@@ -1595,6 +1604,8 @@ async function submitDisposalRequest() {
   }
   
   try {
+    console.log('📤 Firestore에 저장 시도:', { category, details, currentUser });
+    
     await db.collection('approvals').add({
       type: 'disposal',
       applicantUid: currentUser.uid,
@@ -1613,8 +1624,10 @@ async function submitDisposalRequest() {
     loadMyApprovals();
     
   } catch (error) {
-    console.error('❌ 폐기 신청 실패:', error);
-    alert('❌ 신청에 실패했습니다.');
+    console.error('❌ 폐기 신청 실패 상세:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    alert(`❌ 신청에 실패했습니다.\n\n${error.message}\n\n개발자 도구 콘솔을 확인해주세요.`);
   }
 }
 
@@ -1783,8 +1796,10 @@ async function submitResignationRequest() {
     loadMyApprovals();
     
   } catch (error) {
-    console.error('❌ 퇴직서 신청 실패:', error);
-    alert('❌ 신청에 실패했습니다.');
+    console.error('❌ 퇴직서 신청 실패 상세:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    alert(`❌ 신청에 실패했습니다.\n\n${error.message}\n\n개발자 도구 콘솔을 확인해주세요.`);
   }
 }
 
